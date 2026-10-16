@@ -8,7 +8,7 @@ import {
   Outlet,
   RouterProvider,
 } from '@tanstack/react-router'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
@@ -381,15 +381,15 @@ describe('editeur de design, les pages', () => {
   // Review Focus 5 : une page calendrier n'a pas de toile. L'editeur doit le dire.
   it('explique qu une page calendrier ne se compose pas', async () => {
     monter(true)
-    await userEvent.click(
-      within(await screen.findByTestId('page-calendrier')).getByRole('button', {
-        name: 'Afficher Calendrier',
-      }),
-    )
+    // La vignette EST le bouton depuis que les pages sont en colonne : plus de rangee de
+    // boutons sous chacune, la suppression est passee dans l'inspecteur.
+    await userEvent.click(await screen.findByTestId('page-calendrier'))
 
+    // L'inspecteur l'explique, et la toile en montre la forme sans inventer de planning.
     expect(
-      screen.getByText(/produite à partir des rendez-vous/i),
+      screen.getByText(/remplie à l'export avec les rendez-vous du patient/i),
     ).toBeInTheDocument()
+    expect(screen.getByTestId('apercu-calendrier')).toBeInTheDocument()
   })
 
   it('ne propose pas une seconde page calendrier', async () => {
@@ -467,7 +467,9 @@ describe('editeur de design, les pages', () => {
     const poignee = await screen.findByTestId('poignee-deplacement-fond')
     await userEvent.click(poignee)
     await userEvent.click(screen.getByLabelText('Image'))
-    await userEvent.click(await screen.findByRole('option', { name: 'fond.png' }))
+    await userEvent.click(
+      await screen.findByRole('option', { name: 'fond.png' }),
+    )
 
     await waitFor(() => {
       const images = screen.getAllByRole('presentation')
@@ -501,7 +503,10 @@ describe('editeur de design, les pages', () => {
     const trop = new File([new Uint8Array(3 * 1024 * 1024)], 'trop.png', {
       type: 'image/png',
     })
-    await userEvent.upload(screen.getByLabelText(/Déposer une image/), trop)
+    await userEvent.upload(
+      screen.getByLabelText(/Déposer un PNG ou JPEG/),
+      trop,
+    )
 
     await waitFor(() => {
       expect(

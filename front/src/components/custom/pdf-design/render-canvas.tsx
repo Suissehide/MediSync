@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 
 import lines from '../../../assets/images/pdf/lines.png'
 import logoCHU from '../../../assets/images/pdf/logo_chx-bdx.png'
@@ -9,10 +9,11 @@ import {
   type PdfBuiltinImage,
   type PdfCanvasPage,
   type PdfElement,
+  type PdfFieldKey,
   type PdfFill,
   type PdfTextElement,
 } from '../../../types/pdfDesign.ts'
-import { SAMPLE_FIELD_VALUES } from './fields.ts'
+import { LIBELLES_DONNEES, SAMPLE_FIELD_VALUES } from './fields.ts'
 
 // Ce moteur est une APPROXIMATION du rendu PDF, et c'est assume : les metriques d'Helvetica
 // different entre react-pdf et le navigateur, donc une ligne peut se couper ailleurs.
@@ -92,7 +93,23 @@ export function elementStyle(
   }
 }
 
-const contenu = (element: PdfElement, sources?: SourcesImages) => {
+// Interrupteur coupe : une donnee se montre comme une ETIQUETTE portant son nom, plutot que
+// par sa valeur d'exemple. C'est le seul moyen de voir d'un coup d'oeil ce qui, dans un texte,
+// changera d'un patient a l'autre.
+const donnee = (cle: PdfFieldKey, exemple: boolean): ReactNode =>
+  exemple ? (
+    SAMPLE_FIELD_VALUES[cle]
+  ) : (
+    <span className="rounded-[3px] px-1 bg-blue-100 text-primary-dark">
+      {LIBELLES_DONNEES[cle]}
+    </span>
+  )
+
+const contenu = (
+  element: PdfElement,
+  sources?: SourcesImages,
+  donneesExemple = true,
+) => {
   switch (element.kind) {
     case 'text':
       // Un bloc qui porte tous les runs : le conteneur est en colonne pour `vAlign`, et sans
@@ -109,7 +126,7 @@ const contenu = (element: PdfElement, sources?: SourcesImages) => {
                 fontStyle: run.italic ? 'italic' : undefined,
               }}
             >
-              {'field' in run ? SAMPLE_FIELD_VALUES[run.field] : run.text}
+              {'field' in run ? donnee(run.field, donneesExemple) : run.text}
             </span>
           ))}
         </span>
@@ -146,6 +163,9 @@ type CanvasPageProps = {
   // Les octets des images deposees, deja resolus. Optionnel : un design qui n'en porte pas
   // n'a rien a fournir.
   sources?: SourcesImages
+  // `false` remplace chaque valeur d'exemple par le NOM de la donnee, en etiquette. Vrai par
+  // defaut : une vignette montre le document tel qu'il sortira.
+  donneesExemple?: boolean
 }
 
 export default function CanvasPage({
@@ -155,6 +175,7 @@ export default function CanvasPage({
   onSelect,
   interactif = true,
   sources,
+  donneesExemple = true,
 }: CanvasPageProps) {
   return (
     <div
@@ -175,7 +196,9 @@ export default function CanvasPage({
         const selectionne = selectionId === element.id
         const style = {
           ...elementStyle(element, echelle),
-          outline: selectionne ? '1px solid var(--color-primary)' : 'none',
+          // 1,5 px comme le cadre que la toile editable dessine par-dessus : les deux bords
+          // se superposent au lieu de faire un double trait d'epaisseurs differentes.
+          outline: selectionne ? '1.5px solid var(--color-primary)' : undefined,
           padding: 0,
           border: 'none',
           // Les formes gardent leur remplissage : seuls le texte et l'image laissent
@@ -196,7 +219,7 @@ export default function CanvasPage({
         if (!interactif) {
           return (
             <div key={element.id} {...commun} style={style}>
-              {contenu(element, sources)}
+              {contenu(element, sources, donneesExemple)}
             </div>
           )
         }
@@ -206,9 +229,15 @@ export default function CanvasPage({
             key={element.id}
             {...commun}
             onClick={() => onSelect?.(element.id)}
+            // Le survol souligne ce que le clic prendra. En classe et non en style : un
+            // `:hover` ne s'ecrit pas en style inline, et l'outline de la selection,
+            // lui, doit rester inline pour gagner sur celui du survol.
+            className={
+              selectionne ? undefined : 'hover:outline-1 hover:outline-ring'
+            }
             style={{ ...style, cursor: 'move' }}
           >
-            {contenu(element, sources)}
+            {contenu(element, sources, donneesExemple)}
           </button>
         )
       })}

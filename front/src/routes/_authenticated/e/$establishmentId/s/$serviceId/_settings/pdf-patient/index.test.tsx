@@ -144,6 +144,13 @@ const monter = (liste: Liste) => {
   return fetchMock
 }
 
+// Les actions secondaires d'une carte vivent dans son menu « … » : une seule action
+// principale par carte, le reste a un clic de plus.
+const ouvrirMenu = async (nom: string) =>
+  userEvent.click(
+    await screen.findByRole('button', { name: `Actions sur ${nom}` }),
+  )
+
 const carteDe = async (nom: string) => {
   const titre = await screen.findByText(nom)
   const carte = titre.closest('article')
@@ -193,8 +200,10 @@ describe('ecran des designs de PDF patient', () => {
     expect(
       carte.queryByRole('button', { name: /Modifier/ }),
     ).not.toBeInTheDocument()
+    // Pas de menu non plus : un modele livre n'a rien a renommer, poser par defaut ni
+    // supprimer depuis un service.
     expect(
-      carte.queryByRole('button', { name: /Supprimer/ }),
+      carte.queryByRole('button', { name: /Actions sur/ }),
     ).not.toBeInTheDocument()
   })
 
@@ -259,10 +268,11 @@ describe('ecran des designs de PDF patient', () => {
       presets: [],
       designs: [design('d1', 'Mon programme')],
     })
-    const carte = await carteDe('Mon programme')
+    await screen.findByText('Mon programme')
 
+    await ouvrirMenu('Mon programme')
     await userEvent.click(
-      carte.getByRole('button', { name: /Définir par défaut/ }),
+      await screen.findByRole('menuitem', { name: 'Définir par défaut' }),
     )
 
     await waitFor(() => {
@@ -284,7 +294,7 @@ describe('ecran des designs de PDF patient', () => {
     })
     await screen.findByText('Mon programme')
 
-    await userEvent.click(screen.getByLabelText('Supprimés'))
+    await userEvent.click(screen.getByText('Supprimés'))
 
     await waitFor(() => {
       expect(
@@ -305,9 +315,12 @@ describe('ecran des designs de PDF patient', () => {
       presets: [],
       designs: [design('d1', 'Mon programme')],
     })
-    const carte = await carteDe('Mon programme')
+    await screen.findByText('Mon programme')
 
-    await userEvent.click(carte.getByRole('button', { name: /Supprimer/ }))
+    await ouvrirMenu('Mon programme')
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: 'Supprimer' }),
+    )
     const dialogue = within(await screen.findByRole('dialog'))
     await userEvent.click(dialogue.getByRole('button', { name: /Supprimer/ }))
 
@@ -325,9 +338,12 @@ describe('ecran des designs de PDF patient', () => {
       presets: [],
       designs: [design('d1', 'Mon programme')],
     })
-    const carte = await carteDe('Mon programme')
+    await screen.findByText('Mon programme')
 
-    await userEvent.click(carte.getByRole('button', { name: /Renommer/ }))
+    await ouvrirMenu('Mon programme')
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: 'Renommer' }),
+    )
     const dialogue = within(await screen.findByRole('dialog'))
     const champ = dialogue.getByLabelText(/Nom du design/)
     await userEvent.clear(champ)

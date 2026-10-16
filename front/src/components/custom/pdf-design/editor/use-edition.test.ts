@@ -364,3 +364,61 @@ describe('useEdition, operations sur les pages', () => {
     expect(result.current.pageCourante?.kind).toBe('calendar')
   })
 })
+
+describe('useEdition, glisser-deposer et duplication de page', () => {
+  it('reordonne par depot, au rang d insertion', () => {
+    const { result } = renderHook(() => useEdition(CONTENU))
+
+    act(() => result.current.deposerPage('tips', 0))
+
+    expect(result.current.pages.map((p) => p.id)).toEqual([
+      'tips',
+      'cover',
+      'calendrier',
+    ])
+  })
+
+  // Meme racine que les fleches d'avant : la page affichee est epinglee PAR IDENTIFIANT avant
+  // de toucher a l'ordre, sinon la zone centrale saute sur la toile qui vient de passer
+  // devant, en laissant la selection sur un element de l'ancienne.
+  it('garde la page affichee quand une autre passe devant', () => {
+    const deuxToiles: PdfDesignContent = {
+      version: 1,
+      pages: [
+        CONTENU.pages[0] as PdfPage,
+        { kind: 'canvas', id: 'tips', background: '#ffffff', elements: [] },
+      ],
+    }
+    const { result } = renderHook(() => useEdition(deuxToiles))
+    act(() => result.current.choisirElement('titre'))
+
+    act(() => result.current.deposerPage('tips', 0))
+
+    expect(result.current.pageCourante?.id).toBe('cover')
+    expect(result.current.selection).toBe('titre')
+  })
+
+  it('duplique la page courante juste apres elle, et s y place', () => {
+    const { result } = renderHook(() => useEdition(CONTENU))
+
+    act(() => result.current.dupliquerPage())
+
+    const ids = result.current.pages.map((p) => p.id)
+    expect(ids).toHaveLength(4)
+    expect(ids[0]).toBe('cover')
+    // La copie suit son original, et c'est elle qu'on edite ensuite.
+    expect(result.current.pageCourante?.id).toBe(ids[1])
+    expect(ids[1]).not.toBe('cover')
+  })
+
+  // Le calendrier est unique : le dupliquer donnerait un document que le rendu refuse de
+  // remplir deux fois.
+  it('ne duplique pas la page calendrier', () => {
+    const { result } = renderHook(() => useEdition(CONTENU))
+    act(() => result.current.choisirPage('calendrier'))
+
+    act(() => result.current.dupliquerPage())
+
+    expect(result.current.pages).toHaveLength(3)
+  })
+})

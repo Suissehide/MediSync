@@ -10,6 +10,15 @@ export type PdfFieldContext = {
   serviceName: string
 }
 
+// Le nom VISIBLE d'une donnee, partout : l'etiquette dans le texte de la toile, le bouton
+// d'insertion de l'inspecteur et le libelle du calque. Trois endroits, un seul libelle.
+export const LIBELLES_DONNEES: Record<PdfFieldKey, string> = {
+  'patient.name': 'Nom du patient',
+  'pathway.name': 'Nom du parcours',
+  'program.dates': 'Dates du programme',
+  'service.name': 'Nom du service',
+}
+
 // Une donnee nouvelle = une entree ici plus son cas dans fields.test.ts.
 const RESOLVERS: Record<PdfFieldKey, (ctx: PdfFieldContext) => string> = {
   'patient.name': ({ patient }) => `${patient.lastName} ${patient.firstName}`,

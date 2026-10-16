@@ -99,6 +99,18 @@ describe('CanvasPage', () => {
     expect(screen.getByText(/DUPONT Jean/)).toBeInTheDocument()
   })
 
+  // L'interrupteur coupe : on voit alors QUELLES parties du texte changeront d'un patient a
+  // l'autre, ce qu'une valeur d'exemple ne dit pas.
+  it('nomme la donnee au lieu de l echantillon quand les donnees d exemple sont coupees', () => {
+    render(
+      <CanvasPage page={page([texte])} echelle={1} donneesExemple={false} />,
+    )
+    expect(screen.getByText('Nom du patient')).toBeInTheDocument()
+    expect(screen.queryByText(/DUPONT Jean/)).not.toBeInTheDocument()
+    // Le texte fixe, lui, reste du texte.
+    expect(screen.getByText(/Bonjour/)).toBeInTheDocument()
+  })
+
   it('garde le texte fixe autour de la donnee', () => {
     render(<CanvasPage page={page([texte])} echelle={1} />)
     expect(screen.getByText(/Bonjour/)).toBeInTheDocument()

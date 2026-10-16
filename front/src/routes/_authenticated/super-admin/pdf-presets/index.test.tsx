@@ -156,6 +156,13 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
+// Les actions secondaires d'une carte vivent dans son menu « … » : une seule action
+// principale par carte, le reste a un clic de plus.
+const ouvrirMenu = async (nom: string) =>
+  userEvent.click(
+    await screen.findByRole('button', { name: `Actions sur ${nom}` }),
+  )
+
 describe('liste des modeles livres', () => {
   it('liste les modeles avec leur vignette', async () => {
     monter()
@@ -192,8 +199,10 @@ describe('liste des modeles livres', () => {
   it('duplique un modele', async () => {
     const { ecritures } = monter()
 
-    const boutons = await screen.findAllByRole('button', { name: /Dupliquer/ })
-    await userEvent.click(boutons[0])
+    await ouvrirMenu('Alpha')
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: 'Dupliquer' }),
+    )
 
     await waitFor(() => {
       expect(ecritures).toContainEqual(
@@ -230,8 +239,10 @@ describe('liste des modeles livres', () => {
   it('renomme un modele', async () => {
     const { ecritures } = monter()
 
-    const boutons = await screen.findAllByRole('button', { name: 'Renommer' })
-    await userEvent.click(boutons[0])
+    await ouvrirMenu('Alpha')
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: 'Renommer' }),
+    )
 
     const champ = await screen.findByLabelText(/Nom du mod/)
     await userEvent.clear(champ)

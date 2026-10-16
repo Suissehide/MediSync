@@ -7,6 +7,7 @@ const touche = (over: Partial<ToucheClavier> = {}): ToucheClavier => ({
   shiftKey: false,
   metaKey: false,
   ctrlKey: false,
+  altKey: false,
   dansUnChamp: false,
   ...over,
 })

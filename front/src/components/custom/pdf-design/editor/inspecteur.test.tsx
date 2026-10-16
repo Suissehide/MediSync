@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
@@ -8,6 +8,7 @@ import {
   A4_HEIGHT,
   A4_WIDTH,
   type PdfElement,
+  type PdfPage,
 } from '../../../../types/pdfDesign.ts'
 import Inspecteur from './inspecteur.tsx'
 
@@ -31,6 +32,23 @@ const texte: PdfElement = {
 // L'inspecteur est monte avec un ETAT qui applique vraiment les modifications : sans cela les
 // champs restent a leur valeur d'origine et chaque frappe se concatene a elle, ce qui mesure
 // l'artefact du harnais et non le composant.
+const page = (elements: PdfElement[]): PdfPage => ({
+  kind: 'canvas',
+  id: 'p1',
+  background: '#ffffff',
+  elements,
+})
+
+// Les trois props de PAGE, identiques d'un test a l'autre : l'inspecteur en a besoin pour
+// choisir son etat, et aucun test d'element ne porte sur elles.
+const propsDePage = {
+  nomPage: 'Page 1',
+  onChoisirElement: vi.fn(),
+  onDupliquerPage: vi.fn(),
+  onSupprimerPage: vi.fn(),
+  pageSupprimable: true,
+}
+
 const monter = (
   depart: PdfElement = texte,
   options: {
@@ -43,6 +61,8 @@ const monter = (
     const [element, setElement] = useState(depart)
     return (
       <Inspecteur
+        {...propsDePage}
+        page={page([element])}
         element={element}
         assets={options.assets}
         onDeposer={options.onDeposer}
@@ -78,9 +98,43 @@ const valeurs = (vus: Partial<PdfElement>[], champ: 'h' | 'w' | 'x') =>
     .filter((v): v is number => v !== undefined)
 
 describe('Inspecteur', () => {
-  it('ne montre rien sans selection', () => {
+  // Sans selection, l'inspecteur parle de la PAGE : ses calques sont la seconde prise sur
+  // les elements, celle qui attrape un decor d'arriere-plan qu'on clique mal sur la toile.
+  it('liste les calques du premier plan au fond quand rien n est selectionne', async () => {
+    const onChoisirElement = vi.fn()
     render(
       <Inspecteur
+        {...propsDePage}
+        onChoisirElement={onChoisirElement}
+        page={page([
+          texte,
+          {
+            ...texte,
+            id: 'e2',
+            runs: [{ text: 'Devant', bold: false, italic: false }],
+          },
+        ])}
+        element={null}
+        onModifier={vi.fn()}
+        onSupprimer={vi.fn()}
+        onDupliquer={vi.fn()}
+        onOrdre={vi.fn()}
+      />,
+    )
+    const calques = screen.getAllByRole('button', { name: /Bonjour|Devant/ })
+    expect(calques.map((n) => n.textContent)).toEqual(['Devant', 'Bonjour'])
+
+    await userEvent.click(calques[1] as HTMLElement)
+    expect(onChoisirElement).toHaveBeenCalledWith('e1')
+  })
+
+  // La page calendrier n'a ni element ni propriete : seule sa place se choisit.
+  it('explique la page calendrier au lieu d en montrer les proprietes', () => {
+    render(
+      <Inspecteur
+        {...propsDePage}
+        nomPage="Calendrier"
+        page={{ kind: 'calendar', id: 'c1' }}
         element={null}
         onModifier={vi.fn()}
         onSupprimer={vi.fn()}
@@ -89,8 +143,28 @@ describe('Inspecteur', () => {
       />,
     )
     expect(
-      screen.getByText(/Sélectionnez un élément pour le modifier/),
+      screen.getByText(/remplie à l'export avec les rendez-vous du patient/),
     ).toBeInTheDocument()
+    expect(screen.queryByLabelText('X')).not.toBeInTheDocument()
+  })
+
+  // Le schema exige au moins une page : l'ecran l'empeche avant le 400.
+  it('ne propose pas de retirer la seule page', () => {
+    render(
+      <Inspecteur
+        {...propsDePage}
+        pageSupprimable={false}
+        page={page([texte])}
+        element={null}
+        onModifier={vi.fn()}
+        onSupprimer={vi.fn()}
+        onDupliquer={vi.fn()}
+        onOrdre={vi.fn()}
+      />,
+    )
+    expect(
+      screen.getByRole('button', { name: 'Supprimer la page' }),
+    ).toBeDisabled()
   })
 
   // Revue de branche, I4 : vider le champ donnait `Number('') === 0`, donc une boite de
@@ -195,7 +269,7 @@ describe('Inspecteur', () => {
   // Une image supprimee, ou un design venu d'un autre service : son `assetId` n'est dans
   // aucune option, et Radix affiche alors un champ VIDE — indiscernable de « aucune image
   // choisie ». Le reste de l'etape prend soin de nommer ce qui manque ; ici aussi.
-  it('dit qu une image a disparu au lieu de laisser le champ vide', async () => {
+  it('dit qu une image a disparu au lieu de laisser le champ vide', () => {
     const disparue: PdfElement = {
       ...image,
       kind: 'image',
@@ -220,7 +294,10 @@ describe('Inspecteur', () => {
     const fichier = new File([new Uint8Array([1, 2, 3])], 'fond.png', {
       type: 'image/png',
     })
-    await userEvent.upload(screen.getByLabelText(/Déposer une image/), fichier)
+    await userEvent.upload(
+      screen.getByLabelText(/Déposer un PNG ou JPEG/),
+      fichier,
+    )
 
     await waitFor(() => {
       expect(deposer).toHaveBeenCalledWith(fichier)
@@ -239,7 +316,7 @@ describe('Inspecteur', () => {
       .mockResolvedValue({ id: 'a2', fileName: 'f.png', mimeType: 'image/png' })
     monter(image, { onDeposer: deposer })
 
-    const champ = screen.getByLabelText(/Déposer une image/)
+    const champ = screen.getByLabelText(/Déposer un PNG ou JPEG/)
     const fichier = new File([new Uint8Array([1])], 'f.png', {
       type: 'image/png',
     })
@@ -263,7 +340,10 @@ describe('Inspecteur', () => {
     const fichier = new File([new Uint8Array([1])], 'trop.png', {
       type: 'image/png',
     })
-    await userEvent.upload(screen.getByLabelText(/Déposer une image/), fichier)
+    await userEvent.upload(
+      screen.getByLabelText(/Déposer un PNG ou JPEG/),
+      fichier,
+    )
 
     await waitFor(() => {
       expect(deposer).toHaveBeenCalled()
@@ -280,5 +360,43 @@ describe('Inspecteur', () => {
 
     const dernier = vus.at(-1) as { runs?: PdfElement[] }
     expect(dernier.runs).toHaveLength(3)
+  })
+
+  // A LA POSITION DU CURSEUR, pas a la fin : le run de texte courant est coupe en deux et la
+  // donnee se glisse entre les morceaux. Ajouter a la fin obligeait a tout retaper pour
+  // mettre un nom au milieu d'une phrase.
+  it('insere la donnee a la position du curseur', async () => {
+    const vus = monter()
+    const champ = screen.getByLabelText('Texte 1') as HTMLInputElement
+
+    champ.focus()
+    champ.setSelectionRange(3, 3)
+    fireEvent.select(champ)
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Nom du patient' }),
+    )
+
+    const dernier = vus.at(-1) as { runs?: { text?: string; field?: string }[] }
+    expect(dernier.runs).toEqual([
+      { text: 'Bon', bold: false, italic: false },
+      { field: 'patient.name', bold: false, italic: false },
+      { text: 'jour', bold: false, italic: false },
+    ])
+  })
+
+  // Le schema exige au moins un run : retirer le dernier produirait un contenu que
+  // l'enregistrement refuserait, et l'utilisateur ne l'apprendrait qu'au 400.
+  it('ne vide jamais completement le contenu en retirant une donnee', async () => {
+    const vus = monter({
+      ...texte,
+      runs: [{ field: 'patient.name', bold: false, italic: false }],
+    })
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Retirer Nom du patient' }),
+    )
+
+    const dernier = vus.at(-1) as { runs?: { text?: string }[] }
+    expect(dernier.runs).toEqual([{ text: '', bold: false, italic: false }])
   })
 })

@@ -7,9 +7,7 @@ import DesignCard from '@/components/custom/pdf-design/design-card.tsx'
 import { ConfirmDeleteForm } from '@/components/custom/popup/confirmDeleteForm.tsx'
 import RenamePdfDesignForm from '@/components/custom/popup/renamePdfDesignForm.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
-import { Button } from '@/components/ui/button.tsx'
-import { Label } from '@/components/ui/label.tsx'
-import { Switch } from '@/components/ui/switch.tsx'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group.tsx'
 import { can } from '@/hooks/useCan.ts'
 import { useSourcesImages } from '@/queries/usePdfAsset.ts'
 import {
@@ -33,6 +31,8 @@ export const Route = createFileRoute(
   },
   component: PdfPatientSettings,
 })
+
+const GRILLE = 'grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
 
 function PdfPatientSettings() {
   const navigate = useNavigate()
@@ -60,58 +60,47 @@ function PdfPatientSettings() {
 
   return (
     <DashboardLayout>
-      <div className="flex-1 min-h-0 bg-background p-6 rounded-lg flex flex-col w-full gap-6 overflow-auto">
-        <div className="flex flex-wrap justify-between items-center gap-3">
-          <h1 className="h-9 flex items-center text-text-dark text-xl font-semibold">
-            Document patient
-          </h1>
-          <div className="flex items-center gap-3">
-            {!montrerSupprimes && (
-              <Button
-                variant="outline"
-                onClick={() => createBlankDesign.mutate()}
-                isLoading={createBlankDesign.isPending}
-              >
-                <FilePlus className="w-4 h-4" />
-                Partir d'une page blanche
-              </Button>
-            )}
-            <div className="flex items-center gap-2">
-              <Switch
-                id="designs-supprimes"
-                checked={montrerSupprimes}
-                onCheckedChange={setMontrerSupprimes}
-              />
-              <Label htmlFor="designs-supprimes">Supprimés</Label>
-            </div>
+      <div className="flex-1 min-h-0 bg-background p-6 rounded-lg flex flex-col w-full gap-7 overflow-auto">
+        <div className="flex flex-wrap justify-between items-start gap-3">
+          <div className="flex flex-col gap-1">
+            <h1 className="text-text-dark text-[22px] font-semibold">
+              Document patient
+            </h1>
+            <p className="text-sm text-text-light">
+              Le modèle de PDF utilisé pour exporter les rendez-vous d'un
+              patient.
+            </p>
           </div>
+          {/* Un segmente, pas un interrupteur : « Supprimés » n'est pas une option qu'on
+              ajoute a la vue, c'est l'AUTRE vue — les deux listes ne se melangent jamais. */}
+          <ToggleGroup
+            aria-label="Designs à afficher"
+            value={montrerSupprimes ? 'supprimes' : 'actifs'}
+            // Radix laisse un segmente simple se DESELECTIONNER : sans cette garde, un
+            // second clic sur l'onglet actif n'afficherait plus aucune des deux vues.
+            onValueChange={(valeur) =>
+              valeur && setMontrerSupprimes(valeur === 'supprimes')
+            }
+          >
+            <ToggleGroupItem value="actifs">Actifs</ToggleGroupItem>
+            <ToggleGroupItem value="supprimes">Supprimés</ToggleGroupItem>
+          </ToggleGroup>
         </div>
 
-        {!montrerSupprimes && (
-          <section className="flex flex-col gap-3">
-            <div>
-              <h2 className="font-semibold text-foreground">Modèles livrés</h2>
-              <p className="text-sm text-text-light">
-                Ils ne se modifient pas. Dupliquez-en un pour en faire le vôtre.
+        <section className="flex flex-col gap-3.5">
+          <div className="flex flex-col gap-0.5">
+            <h2 className="text-base font-semibold text-foreground">
+              {montrerSupprimes
+                ? 'Designs supprimés'
+                : 'Les designs du service'}
+            </h2>
+            {!montrerSupprimes && (
+              <p className="text-[13px] text-text-light">
+                Celui par défaut sert à chaque export ; les autres restent
+                proposés au moment d'exporter.
               </p>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {presets.map((preset) => (
-                <DesignCard
-                  key={preset.id}
-                  design={preset}
-                  lectureSeule
-                  onDupliquer={() => duplicateDesign.mutate(preset.id)}
-                />
-              ))}
-            </div>
-          </section>
-        )}
-
-        <section className="flex flex-col gap-3">
-          <h2 className="font-semibold text-foreground">
-            {montrerSupprimes ? 'Designs supprimés' : 'Les designs du service'}
-          </h2>
+            )}
+          </div>
           {!isPending && designs.length === 0 && (
             <p className="text-sm text-text-light">
               {montrerSupprimes
@@ -119,7 +108,7 @@ function PdfPatientSettings() {
                 : 'Aucun design propre à ce service. Dupliquez un modèle pour le personnaliser.'}
             </p>
           )}
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className={GRILLE}>
             {designs.map((design) => (
               <DesignCard
                 key={design.id}
@@ -139,8 +128,52 @@ function PdfPatientSettings() {
                 onRestaurer={() => restoreDesign.mutate(design.id)}
               />
             ))}
+            {/* Une case de la grille, et non plus un bouton de l'en-tete : creer un design
+                est un geste de la meme famille que dupliquer celui d'a cote. Jamais dans la
+                corbeille, ou rien ne se cree. */}
+            {!montrerSupprimes && (
+              <button
+                type="button"
+                onClick={() => createBlankDesign.mutate()}
+                disabled={createBlankDesign.isPending}
+                className="border-[1.5px] border-dashed border-border-dark rounded-xl min-h-[300px] p-5 flex flex-col items-center justify-center gap-2.5 cursor-pointer hover:border-primary disabled:opacity-50"
+              >
+                <span className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
+                  <FilePlus className="w-5 h-5 text-primary" />
+                </span>
+                <span className="text-[15px] font-semibold text-foreground">
+                  Partir d'une page blanche
+                </span>
+                <span className="text-[13px] text-text-light text-center">
+                  Ou dupliquez un modèle livré ci-dessous.
+                </span>
+              </button>
+            )}
           </div>
         </section>
+
+        {!montrerSupprimes && (
+          <section className="flex flex-col gap-3.5">
+            <div className="flex flex-col gap-0.5">
+              <h2 className="text-base font-semibold text-foreground">
+                Modèles livrés
+              </h2>
+              <p className="text-[13px] text-text-light">
+                Ils ne se modifient pas. Dupliquez-en un pour en faire le vôtre.
+              </p>
+            </div>
+            <div className={GRILLE}>
+              {presets.map((preset) => (
+                <DesignCard
+                  key={preset.id}
+                  design={preset}
+                  lectureSeule
+                  onDupliquer={() => duplicateDesign.mutate(preset.id)}
+                />
+              ))}
+            </div>
+          </section>
+        )}
 
         <RenamePdfDesignForm
           design={aRenommer}

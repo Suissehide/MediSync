@@ -1,5 +1,16 @@
-import { Copy, Pencil, RotateCcw, Star, Trash2 } from 'lucide-react'
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
+import {
+  Copy,
+  Ellipsis,
+  Lock,
+  Pencil,
+  RotateCcw,
+  Star,
+  TextCursorInput,
+  Trash2,
+} from 'lucide-react'
 
+import { cn } from '../../../libs/utils.ts'
 import type { SourcesImages } from '../../../types/pdfAsset.ts'
 import type { PdfDesignSummary } from '../../../types/pdfDesignList.ts'
 import { MoveButtons } from '../../settings/iconButton.tsx'
@@ -28,6 +39,41 @@ type DesignCardProps = {
   descendreImpossible?: boolean
 }
 
+const LARGEUR_VIGNETTE = 149
+
+// Ce que le nombre de pages ne dit pas : si le planning du patient en fait partie.
+const meta = (design: DesignCardProps['design']) => {
+  const pages = design.content.pages
+  const compte = `${pages.length} page${pages.length > 1 ? 's' : ''}`
+  return pages.some((page) => page.kind === 'calendar')
+    ? `${compte} · calendrier inclus`
+    : compte
+}
+
+const Item = ({
+  libelle,
+  Icone,
+  onSelect,
+  danger = false,
+}: {
+  libelle: string
+  Icone: typeof Copy
+  onSelect: () => void
+  danger?: boolean
+}) => (
+  <DropdownMenu.Item
+    onSelect={onSelect}
+    className={cn(
+      'h-[34px] px-2.5 rounded-md flex items-center gap-2.5 text-sm cursor-pointer outline-none',
+      'data-[highlighted]:bg-surface-douce',
+      danger ? 'text-red-700' : 'text-foreground',
+    )}
+  >
+    <Icone className="w-[15px] h-[15px]" />
+    {libelle}
+  </DropdownMenu.Item>
+)
+
 export default function DesignCard({
   design,
   lectureSeule,
@@ -44,96 +90,161 @@ export default function DesignCard({
   monterImpossible = false,
   descendreImpossible = false,
 }: DesignCardProps) {
-  const pages = design.content.pages.length
-  // La premiere page en miniature : le nombre de pages ne dit pas a quoi le design ressemble.
-  const premierePage = design.content.pages[0]
+  // La premiere page COMPOSABLE, pas la premiere page : un design qui commence par le
+  // calendrier afficherait l'icone du planning au lieu de son visuel.
+  const pages = design.content.pages
+  const apercu = pages.find((page) => page.kind === 'canvas') ?? pages[0]
+
   return (
-    <article className="border border-border rounded-lg p-4 flex flex-col gap-3">
-      <div className="flex items-start gap-3">
-        {premierePage && (
-          <Vignette page={premierePage} largeur={64} sources={sources} />
+    <article
+      className={cn(
+        'flex flex-col bg-background border rounded-xl relative',
+        design.isDefault ? 'border-ring' : 'border-border',
+      )}
+    >
+      <div className="h-[236px] bg-surface-douce border-b border-border rounded-t-xl flex items-center justify-center relative">
+        {apercu &&
+          // Le grand apercu EST le raccourci vers l'editeur : la carte entiere serait un
+          // piege au clavier, et le bouton « Modifier » plus bas ne fait pas une cible.
+          (onModifier && !supprime ? (
+            <button
+              type="button"
+              aria-label={`Ouvrir ${design.name}`}
+              onClick={onModifier}
+              className="cursor-pointer"
+            >
+              <Vignette
+                page={apercu}
+                largeur={LARGEUR_VIGNETTE}
+                sources={sources}
+                className="shadow-[0_2px_8px_rgba(4,24,43,.12)]"
+              />
+            </button>
+          ) : (
+            <Vignette
+              page={apercu}
+              largeur={LARGEUR_VIGNETTE}
+              sources={sources}
+              className="shadow-[0_2px_8px_rgba(4,24,43,.12)]"
+            />
+          ))}
+
+        {design.isDefault && (
+          <span className="absolute top-2.5 left-2.5 h-6 px-2.5 rounded-full bg-primary text-primary-foreground text-xs font-semibold flex items-center gap-1.5">
+            <Star className="w-3 h-3" />
+            Par défaut
+          </span>
         )}
-        <div className="flex items-start justify-between gap-2 flex-1 min-w-0">
-          <div className="min-w-0">
-            <h3 className="font-semibold text-foreground truncate">
-              {design.name}
-            </h3>
-            <p className="text-sm text-text-light">
-              {pages} page{pages > 1 ? 's' : ''}
-            </p>
-          </div>
-          {design.isDefault && (
-            <span className="text-xs font-medium px-2 py-1 rounded bg-primary/10 text-primary whitespace-nowrap">
-              Par défaut
-            </span>
-          )}
-        </div>
+        {lectureSeule && (
+          <span className="absolute top-2.5 left-2.5 h-6 px-2.5 rounded-full bg-background border border-border text-text-light text-xs font-semibold flex items-center gap-1.5">
+            <Lock className="w-3 h-3" />
+            Lecture seule
+          </span>
+        )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        {supprime ? (
-          <Button variant="outline" size="sm" onClick={onRestaurer}>
-            <RotateCcw className="w-4 h-4" />
-            Restaurer
-          </Button>
-        ) : (
-          <>
-            {/* `lectureSeule` ne veut PAS dire « c'est un modele livre » : il veut dire
+      <div className="p-3 pl-3.5 flex flex-col gap-2.5">
+        <div className="flex flex-col gap-0.5 min-w-0">
+          <h3 className="text-[15px] font-semibold text-foreground truncate">
+            {design.name}
+          </h3>
+          <p className="text-[13px] text-text-light">{meta(design)}</p>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          {supprime ? (
+            <Button variant="outline" className="flex-1" onClick={onRestaurer}>
+              <RotateCcw className="w-4 h-4" />
+              Restaurer
+            </Button>
+          ) : /* `lectureSeule` ne veut PAS dire « c'est un modele livre » : il veut dire
                 « on ne le modifie pas d'ici ». Un modele livre vu par un SERVICE est en
                 lecture seule — il ne peut que le dupliquer — alors que le meme modele, vu
-                par le super-admin, ne l'est pas. */}
-            {lectureSeule ? (
-              <Button variant="outline" size="sm" onClick={onDupliquer}>
-                <Copy className="w-4 h-4" />
-                Dupliquer
+                par le super-admin, ne l'est pas. */
+          lectureSeule ? (
+            <Button variant="outline" className="flex-1" onClick={onDupliquer}>
+              <Copy className="w-4 h-4" />
+              Dupliquer
+            </Button>
+          ) : (
+            <>
+              <Button
+                className="flex-1 h-[34px] bg-foreground text-background hover:bg-foreground/80"
+                onClick={onModifier}
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                Modifier
               </Button>
-            ) : (
-              <>
-                <Button variant="outline" size="sm" onClick={onModifier}>
-                  <Pencil className="w-4 h-4" />
-                  Modifier
-                </Button>
-                {/* Gate sur le geste : rendre ce bouton sans `onRenommer` donnait un
-                    bouton MORT, qui ne disait pas pourquoi il ne faisait rien. */}
-                {onRenommer && (
-                  <Button variant="outline" size="sm" onClick={onRenommer}>
-                    Renommer
+
+              {onMonter && onDescendre && (
+                <MoveButtons
+                  upLabel={`Monter ${design.name}`}
+                  downLabel={`Descendre ${design.name}`}
+                  upDisabled={monterImpossible}
+                  downDisabled={descendreImpossible}
+                  onUp={onMonter}
+                  onDown={onDescendre}
+                />
+              )}
+
+              <DropdownMenu.Root>
+                <DropdownMenu.Trigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    aria-label={`Actions sur ${design.name}`}
+                    className="h-[34px] w-[34px]"
+                  >
+                    <Ellipsis className="w-4 h-4" />
                   </Button>
-                )}
-                {onDupliquer && (
-                  <Button variant="outline" size="sm" onClick={onDupliquer}>
-                    <Copy className="w-4 h-4" />
-                    Dupliquer
-                  </Button>
-                )}
-                {/* « Definir par defaut », jamais « Par defaut » : le badge porte deja
-                    ce mot, et deux libelles identiques pour un etat et une action se lisent
-                    mal. Gate sur le GESTE autant que sur l'etat : un modele livre n'a pas de
-                    defaut a definir. */}
-                {onParDefaut && !design.isDefault && (
-                  <Button variant="outline" size="sm" onClick={onParDefaut}>
-                    <Star className="w-4 h-4" />
-                    Définir par défaut
-                  </Button>
-                )}
-                <Button variant="outline" size="sm" onClick={onSupprimer}>
-                  <Trash2 className="w-4 h-4" />
-                  Supprimer
-                </Button>
-                {onMonter && onDescendre && (
-                  <MoveButtons
-                    upLabel={`Monter ${design.name}`}
-                    downLabel={`Descendre ${design.name}`}
-                    upDisabled={monterImpossible}
-                    downDisabled={descendreImpossible}
-                    onUp={onMonter}
-                    onDown={onDescendre}
-                  />
-                )}
-              </>
-            )}
-          </>
-        )}
+                </DropdownMenu.Trigger>
+                <DropdownMenu.Portal>
+                  <DropdownMenu.Content
+                    align="end"
+                    sideOffset={6}
+                    className="w-[210px] p-1 bg-popover border border-border rounded-[10px] shadow-[0_10px_30px_rgba(4,24,43,.14)] z-50"
+                  >
+                    {/* Gate sur le GESTE autant que sur l'etat : un bouton sans geste
+                        derriere etait un bouton MORT, qui ne disait pas pourquoi il ne
+                        faisait rien. Et un modele livre n'a pas de defaut a definir. */}
+                    {onRenommer && (
+                      <Item
+                        libelle="Renommer"
+                        Icone={TextCursorInput}
+                        onSelect={onRenommer}
+                      />
+                    )}
+                    {onParDefaut && !design.isDefault && (
+                      <Item
+                        libelle="Définir par défaut"
+                        Icone={Star}
+                        onSelect={onParDefaut}
+                      />
+                    )}
+                    {onDupliquer && (
+                      <Item
+                        libelle="Dupliquer"
+                        Icone={Copy}
+                        onSelect={onDupliquer}
+                      />
+                    )}
+                    {onSupprimer && (
+                      <>
+                        <DropdownMenu.Separator className="my-1 h-px bg-muted" />
+                        <Item
+                          libelle="Supprimer"
+                          Icone={Trash2}
+                          onSelect={onSupprimer}
+                          danger
+                        />
+                      </>
+                    )}
+                  </DropdownMenu.Content>
+                </DropdownMenu.Portal>
+              </DropdownMenu.Root>
+            </>
+          )}
+        </div>
       </div>
     </article>
   )

@@ -18,7 +18,7 @@ function SuperAdminPdfPresetEditor() {
   const navigate = useNavigate()
   const { presetId } = Route.useParams()
   const { presets, isPending } = usePdfDesignPresetQueries()
-  const { saveContent } = usePdfDesignPresetMutations()
+  const { saveContent, renamePreset } = usePdfDesignPresetMutations()
   const preset = presets.find((p) => p.id === presetId)
 
   // NI `assets` NI `onDeposer` : un modele livre n'utilise que les images de l'application
@@ -33,6 +33,7 @@ function SuperAdminPdfPresetEditor() {
       onEnregistrer={(contenu) =>
         saveContent.mutateAsync({ id: presetId, content: contenu })
       }
+      onRenommer={(name) => renamePreset.mutateAsync({ id: presetId, name })}
       onRetour={() => navigate({ to: '/super-admin/pdf-presets' })}
       messageAbsent="Ce modèle n'existe plus, ou vient d'être supprimé."
     />

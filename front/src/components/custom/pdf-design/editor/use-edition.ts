@@ -13,9 +13,12 @@ import {
 import {
   ajouterPage,
   aUnCalendrier,
+  copieDePage,
   deplacerPage,
+  insererApres,
   pageCalendrier,
   pageVierge,
+  reordonnerPages,
   type SensDePage,
   supprimerPage,
 } from './pages.ts'
@@ -165,6 +168,31 @@ export function useEdition(contenuInitial: PdfDesignContent) {
     [majPages, idCourant],
   )
 
+  // Meme epinglage que ci-dessus, et pour la meme raison : un depot qui fait passer une autre
+  // toile devant ferait sauter la zone centrale sur une page que personne n'a demandee.
+  // La page courante est gardee PAR IDENTIFIANT, pas par rang — c'est tout le point.
+  const deposerPage = useCallback(
+    (id: string, cible: number) => {
+      if (idCourant) {
+        setPageId(idCourant)
+      }
+      majPages((avant) => reordonnerPages(avant, id, cible))
+    },
+    [majPages, idCourant],
+  )
+
+  // Comme `dupliquerSelection` : la copie se fabrique AVANT la mise a jour, sinon son
+  // identifiant arriverait trop tard pour que l'editeur s'y place.
+  const dupliquerPageCourante = useCallback(() => {
+    if (pageCourante?.kind !== 'canvas') {
+      return
+    }
+    const copie = copieDePage(pageCourante)
+    majPages((avant) => insererApres(avant, pageCourante.id, copie))
+    setPageId(copie.id)
+    setSelection(null)
+  }, [majPages, pageCourante])
+
   // La copie se fabrique AVANT la mise a jour, jamais dans l'updater : React y appelle la
   // fonction au rendu suivant, donc un identifiant pris la-dedans arriverait trop tard pour
   // la selection — et deux fois en mode strict.
@@ -223,6 +251,8 @@ export function useEdition(contenuInitial: PdfDesignContent) {
     ajouterCalendrier,
     supprimerPage: supprimerUnePage,
     deplacerPage: deplacerUnePage,
+    deposerPage,
+    dupliquerPage: dupliquerPageCourante,
     selection,
     choisirElement: setSelection,
     modifierElement,

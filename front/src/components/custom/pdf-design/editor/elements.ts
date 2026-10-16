@@ -68,13 +68,16 @@ export const nouvelElement = (kind: KindElement): PdfElement => {
   }
 }
 
-export const dupliquerElement = (element: PdfElement): PdfElement => {
-  const base = {
-    ...element,
-    id: crypto.randomUUID(),
-    x: element.x + DECALAGE,
-    y: element.y + DECALAGE,
-  }
-  // Les runs sont un tableau : partages, chaque frappe sur l'original suivrait la copie.
+// Le meme element, sous une autre identite et a la meme place. Sert a la copie d'une PAGE,
+// ou decaler chaque element de 10 pt deplacerait tout le dessin.
+// Les runs sont un tableau : partages, chaque frappe sur l'original suivrait la copie.
+export const copieDElement = (element: PdfElement): PdfElement => {
+  const base = { ...element, id: crypto.randomUUID() }
   return base.kind === 'text' ? { ...base, runs: [...base.runs] } : base
 }
+
+export const dupliquerElement = (element: PdfElement): PdfElement => ({
+  ...copieDElement(element),
+  x: element.x + DECALAGE,
+  y: element.y + DECALAGE,
+})

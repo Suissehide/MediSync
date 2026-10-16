@@ -33,7 +33,7 @@ function PdfDesignEditor() {
   const navigate = useNavigate()
   const { establishmentId, serviceId, designId } = Route.useParams()
   const { designs, isPending } = usePdfDesignQueries()
-  const { saveContent } = usePdfDesignMutations()
+  const { saveContent, renameDesign } = usePdfDesignMutations()
   const design = designs.find((d) => d.id === designId)
 
   const { assets } = usePdfAssetQueries()
@@ -47,6 +47,7 @@ function PdfDesignEditor() {
       onEnregistrer={(contenu) =>
         saveContent.mutateAsync({ id: designId, content: contenu })
       }
+      onRenommer={(name) => renameDesign.mutateAsync({ id: designId, name })}
       onRetour={() =>
         navigate({
           to: '/e/$establishmentId/s/$serviceId/pdf-patient',

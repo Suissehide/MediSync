@@ -45,6 +45,7 @@ type ToileEditableProps = {
   onSelect: (id: string | null) => void
   onModifier: (elementId: string, champs: Partial<PdfElement>) => void
   sources?: SourcesImages
+  donneesExemple?: boolean
 }
 
 export default function ToileEditable({
@@ -54,6 +55,7 @@ export default function ToileEditable({
   onSelect,
   onModifier,
   sources,
+  donneesExemple,
 }: ToileEditableProps) {
   // Pointer events natifs plutot qu'une bibliotheque : @dnd-kit vise les listes triables, et
   // react-rnd se bat avec le facteur d'echelle — qui doit de toute facon diviser chaque delta.
@@ -112,7 +114,7 @@ export default function ToileEditable({
     // Les gestionnaires vivent sur le conteneur : la capture du pointeur y renvoie les
     // evenements meme quand le curseur sort de la page.
     <div
-      className="relative"
+      className="relative shadow-[0_4px_18px_rgba(4,24,43,.12)]"
       onPointerMove={bouger}
       onPointerUp={finir}
       onPointerCancel={finir}
@@ -123,6 +125,7 @@ export default function ToileEditable({
         echelle={echelle}
         selectionId={selection}
         onSelect={onSelect}
+        donneesExemple={donneesExemple}
       />
 
       {/* Une couche de saisie par element, PAR-DESSUS la toile : celle-ci reste un

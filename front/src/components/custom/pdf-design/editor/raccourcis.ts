@@ -3,6 +3,7 @@ export type ToucheClavier = {
   shiftKey: boolean
   metaKey: boolean
   ctrlKey: boolean
+  altKey: boolean
   // Une frappe venue d'un champ de saisie ne commande pas l'editeur : sinon taper « z » dans
   // l'inspecteur annulerait le geste precedent.
   dansUnChamp: boolean
@@ -39,7 +40,9 @@ export const actionDuClavier = (
   if (touche.key === 'Delete' || touche.key === 'Backspace') {
     return { type: 'supprimer' }
   }
-  const fleche = FLECHES[touche.key]
+  // Alt+fleche appartient a la colonne des pages (reordonner au clavier). Sans cette garde,
+  // une seule frappe deplacait la page ET l'element selectionne d'un point.
+  const fleche = touche.altKey ? undefined : FLECHES[touche.key]
   if (!fleche) {
     return null
   }
