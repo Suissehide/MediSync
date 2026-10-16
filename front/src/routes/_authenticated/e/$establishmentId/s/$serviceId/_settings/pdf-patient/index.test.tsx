@@ -254,6 +254,31 @@ describe('ecran des designs de PDF patient', () => {
     })
   })
 
+  // On duplique aussi un design DEJA FAIT du service, pas seulement un modele livre : c'est
+  // la seule facon de partir d'un design maison pour en faire une variante.
+  it('duplique un design du service depuis son menu', async () => {
+    const fetchMock = monter({
+      presets: [],
+      designs: [design('d1', 'Mon programme')],
+    })
+    await screen.findByText('Mon programme')
+
+    await ouvrirMenu('Mon programme')
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: 'Dupliquer' }),
+    )
+
+    await waitFor(() => {
+      const post = fetchMock.mock.calls.find(
+        ([, init]) => init?.method === 'POST',
+      )
+      expect(post).toBeDefined()
+      expect(JSON.parse(String(post?.[1]?.body))).toEqual({
+        sourceDesignId: 'd1',
+      })
+    })
+  })
+
   it('un design du service mene a son editeur', async () => {
     monter({ presets: [], designs: [design('d1', 'Mon programme')] })
     const carte = await carteDe('Mon programme')

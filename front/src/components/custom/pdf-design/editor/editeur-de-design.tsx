@@ -42,6 +42,7 @@ import {
 import { useEdition } from './use-edition.ts'
 import { useHistorique } from './use-historique.ts'
 import ZoneToile from './zone-toile.tsx'
+import { palierSuivant } from './zoom.ts'
 
 // L'EDITEUR, SANS SA SOURCE DE DONNEES. Deux ecrans le montent : les designs d'un service
 // (sous un tenant) et les modeles livres du super-admin (hors tenant). Les deux ont le meme
@@ -275,7 +276,11 @@ export default function EditeurDeDesign({
   // a l'autre. L'interrupteur montre ensuite le document tel qu'il sortira.
   const [donneesExemple, setDonneesExemple] = useState(false)
   const cadre = useRef<HTMLDivElement>(null)
-  const [echelle, setEchelle] = useState(0.6)
+  // Deux echelles, et c'est volontaire : celle qui fait tenir la page dans le cadre (mesuree,
+  // elle suit la fenetre) et celle que l'utilisateur a choisie. `null` = on suit la mesure.
+  const [ajustee, setAjustee] = useState(0.6)
+  const [zoom, setZoom] = useState<number | null>(null)
+  const echelle = zoom ?? ajustee
 
   // La decision est dans `actionDuClavier`, pure et testee ; l'execution est dans
   // `executer`, au niveau du module. Memorise pour que l'effet du clavier ci-dessous ait des
@@ -352,7 +357,7 @@ export default function EditeurDeDesign({
     }
     const observateur = new ResizeObserver(([entree]) => {
       const { width, height } = entree.contentRect
-      setEchelle(Math.min(1, width / A4_WIDTH, height / A4_HEIGHT))
+      setAjustee(Math.min(1, width / A4_WIDTH, height / A4_HEIGHT))
     })
     observateur.observe(element)
     return () => observateur.disconnect()
@@ -494,6 +499,9 @@ export default function EditeurDeDesign({
               donneesExemple={donneesExemple}
               onDonneesExemple={setDonneesExemple}
               sources={sources}
+              ajuste={zoom === null}
+              onZoomer={(sens) => setZoom(palierSuivant(echelle, sens))}
+              onAjuster={() => setZoom(null)}
             />
 
             <aside className="border-l border-border overflow-y-auto">

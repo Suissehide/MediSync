@@ -24,10 +24,14 @@ export const pdfDesignIdParamsSchema = z.object({
   designID: z.cuid(),
 })
 
-// `sourcePresetId` absent = design vierge. Pas de cuid ici : les presets ont des ids ecrits a
-// la main. `name` reste optionnel, le domaine suffixe « (copie) » tout seul.
+// Aucune source = design vierge. Pas de cuid pour `sourcePresetId` : les presets ont des ids
+// ecrits a la main, la ou un design du service porte bien un cuid. `name` reste optionnel, le
+// domaine suffixe « (copie) » tout seul.
 export const createPdfDesignSchema = z.object({
   sourcePresetId: z.string().min(1).optional(),
+  // Dupliquer un design DU SERVICE. Le domaine le lit en premier : les deux sources a la fois
+  // n'ont pas de sens, et il n'y a pas d'ecran qui les envoie ensemble.
+  sourceDesignId: z.cuid().optional(),
   // `trim()` AVANT `min(1)` : « Mon design   » se stockait avec ses espaces, et un nom fait
   // d'espaces seuls passait pour un nom.
   name: z.string().trim().min(1).optional(),

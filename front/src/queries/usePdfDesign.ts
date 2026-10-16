@@ -6,6 +6,7 @@ import { TOAST_SEVERITY } from '../constants/ui.constant.ts'
 import { useDataFetching } from '../hooks/useDataFetching.ts'
 import { useToast } from '../hooks/useToast.ts'
 import type { PdfDesignContent } from '../types/pdfDesign.ts'
+import type { CreatePdfDesignParams } from '../types/pdfDesignList.ts'
 
 // * QUERIES
 
@@ -53,10 +54,11 @@ export const usePdfDesignMutations = () => {
     onSettled: invalider,
   })
 
+  // La SOURCE en parametre, pas un identifiant de preset : on duplique aussi bien un modele
+  // livre (`sourcePresetId`) qu'un design deja fait du service (`sourceDesignId`).
   const duplicateDesign = useMutation({
     mutationKey: [PDF_DESIGN.CREATE],
-    mutationFn: (sourcePresetId: string) =>
-      PdfDesignApi.create({ sourcePresetId }),
+    mutationFn: (source: CreatePdfDesignParams) => PdfDesignApi.create(source),
     ...avecToast('Design dupliqué', 'Erreur lors de la duplication'),
   })
 

@@ -261,6 +261,77 @@ describe('routes des designs de PDF', () => {
     expect(res.statusCode).toBe(404)
   })
 
+  // On duplique aussi un design DEJA FAIT du service, pas seulement un modele livre : c'est
+  // la seule facon de partir d'un design maison pour en faire une variante.
+  it('duplique un design du service, contenu copie et filiation conservee', async () => {
+    const preset = await testDb.pdfDesignPreset.findFirstOrThrow({
+      where: { name: 'Programme de reference' },
+    })
+    const source = await testDb.pdfDesign.create({
+      data: {
+        name: 'Mon programme',
+        content: CONTENT,
+        sourcePresetId: preset.id,
+        establishmentId: scenario.est.id,
+        serviceId: scenario.serviceA.id,
+      },
+    })
+
+    const res = await creer(scenario.serviceA.id, scenario.cookiesA, {
+      sourceDesignId: source.id,
+    })
+
+    expect(res.statusCode).toBe(201)
+    expect(res.json()).toMatchObject({
+      name: 'Mon programme (copie)',
+      // La copie n'herite pas du statut de defaut : un seul design par defaut par service.
+      isDefault: false,
+    })
+    const enBase = await testDb.pdfDesign.findFirstOrThrow({
+      where: { serviceId: scenario.serviceA.id, name: 'Mon programme (copie)' },
+    })
+    expect(enBase.content).toEqual(CONTENT)
+    // La filiation se transmet : une copie de copie vient toujours du meme preset.
+    expect(enBase.sourcePresetId).toBe(preset.id)
+  })
+
+  it('refuse de dupliquer un design d un autre service', async () => {
+    const chezB = await testDb.pdfDesign.create({
+      data: {
+        name: 'Design de B a dupliquer',
+        content: CONTENT,
+        establishmentId: scenario.est.id,
+        serviceId: scenario.serviceB.id,
+      },
+    })
+
+    const res = await creer(scenario.serviceA.id, scenario.cookiesA, {
+      sourceDesignId: chezB.id,
+    })
+
+    expect(res.statusCode).toBe(404)
+  })
+
+  // Meme raison qu'un preset archive : un design supprime n'est plus propose, il ne doit pas
+  // rester duplicable par qui connait son id.
+  it('refuse de dupliquer un design supprime', async () => {
+    const supprime = await testDb.pdfDesign.create({
+      data: {
+        name: 'Design retire',
+        content: CONTENT,
+        archivedAt: new Date(),
+        establishmentId: scenario.est.id,
+        serviceId: scenario.serviceA.id,
+      },
+    })
+
+    const res = await creer(scenario.serviceA.id, scenario.cookiesA, {
+      sourceDesignId: supprime.id,
+    })
+
+    expect(res.statusCode).toBe(404)
+  })
+
   // Revue de branche, minor 6 : « Mon design   » se stockait avec ses espaces, et deux noms
   // qui se lisent pareil cohabitaient dans la liste.
   it('rogne les espaces autour du nom', async () => {

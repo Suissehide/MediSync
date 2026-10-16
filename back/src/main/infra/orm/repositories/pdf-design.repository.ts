@@ -34,6 +34,15 @@ class PdfDesignRepository implements PdfDesignRepositoryInterface {
     })
   }
 
+  // `this.scope` ET `archivedAt: null` : un design d'un autre service, ou supprime, ne doit
+  // pas rester duplicable par qui connait son id. Une route ne se garde pas sur la foi de son
+  // ecran.
+  findByID(designID: string): Promise<PdfDesignEntityRepo | null> {
+    return this.prisma.pdfDesign.findFirst({
+      where: { ...this.scope, id: designID, archivedAt: null },
+    })
+  }
+
   // Modele GLOBAL : aucun filtre de tenant a porter. Permis sous contexte de service parce
   // qu'`assertTenantScope` sort par `assertGlobalScope` des que la famille est globale.
   findAllPresets(): Promise<PdfDesignPresetEntityRepo[]> {

@@ -13,8 +13,10 @@ export type PdfDesignList = {
   designs: PdfDesignSummary[]
 }
 
+// Une source, ou aucune (design vierge) : un modele livre, ou un design du service.
 export type CreatePdfDesignParams = {
   sourcePresetId?: string
+  sourceDesignId?: string
   name?: string
 }
 

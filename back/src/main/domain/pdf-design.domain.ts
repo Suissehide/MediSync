@@ -128,6 +128,26 @@ class PdfDesignDomain implements PdfDesignDomainInterface {
   async create(params: PdfDesignCreateDomain): Promise<PdfDesignSummaryDomain> {
     const pris = await this.pdfDesignRepository.namesInService()
 
+    // Dupliquer un design DU SERVICE. Lu avant le preset : c'est la source la plus precise,
+    // et les deux a la fois n'ont pas de sens.
+    if (params.sourceDesignId) {
+      const source = await this.pdfDesignRepository.findByID(
+        params.sourceDesignId,
+      )
+      if (!source) {
+        throw Boom.notFound('PdfDesign not found')
+      }
+      return this.#resume(
+        await this.pdfDesignRepository.create({
+          name: params.name ?? nomDeCopie(source.name, pris),
+          content: source.content,
+          // La filiation se transmet : une copie de copie vient toujours du meme preset, et
+          // perdre la trace ici la rendrait indiscernable d'un design parti de rien.
+          sourcePresetId: source.sourcePresetId,
+        }),
+      )
+    }
+
     if (!params.sourcePresetId) {
       return this.#resume(
         await this.pdfDesignRepository.create({

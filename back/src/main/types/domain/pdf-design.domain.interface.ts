@@ -17,6 +17,7 @@ export type PdfDesignListDomain = {
 
 export type PdfDesignCreateDomain = {
   sourcePresetId?: string
+  sourceDesignId?: string
   name?: string
 }
 

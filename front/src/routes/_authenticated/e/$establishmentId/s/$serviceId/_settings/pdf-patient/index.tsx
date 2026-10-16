@@ -124,6 +124,9 @@ function PdfPatientSettings() {
                 }
                 onRenommer={() => setARenommer(design)}
                 onParDefaut={() => setDefaultDesign.mutate(design.id)}
+                onDupliquer={() =>
+                  duplicateDesign.mutate({ sourceDesignId: design.id })
+                }
                 onSupprimer={() => setASupprimer(design.id)}
                 onRestaurer={() => restoreDesign.mutate(design.id)}
               />
@@ -168,7 +171,9 @@ function PdfPatientSettings() {
                   key={preset.id}
                   design={preset}
                   lectureSeule
-                  onDupliquer={() => duplicateDesign.mutate(preset.id)}
+                  onDupliquer={() =>
+                    duplicateDesign.mutate({ sourcePresetId: preset.id })
+                  }
                 />
               ))}
             </div>

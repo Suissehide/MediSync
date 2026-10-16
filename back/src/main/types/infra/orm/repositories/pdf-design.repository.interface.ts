@@ -22,6 +22,8 @@ export type PdfDesignUpdateEntityRepo = {
 
 export interface PdfDesignRepositoryInterface {
   findAllForService: (archived?: boolean) => Promise<PdfDesignEntityRepo[]>
+  // Un design du service courant, pour le dupliquer. `null` s'il est supprime ou d'ailleurs.
+  findByID: (designID: string) => Promise<PdfDesignEntityRepo | null>
   // Modele global : les presets sont les memes pour tous les services.
   findAllPresets: () => Promise<PdfDesignPresetEntityRepo[]>
   findPresetByID: (

@@ -441,6 +441,24 @@ describe('editeur de design, les pages', () => {
     }
   })
 
+  // Le zoom : l'echelle de depart fait tenir la page dans le cadre, les boutons la posent
+  // ensuite sur un palier, et le pourcentage ramene a l'ajustement.
+  it('zoome, dezoome et revient a l ajustement', async () => {
+    monter()
+    await screen.findByTestId('page-cover')
+    const ajuste = screen.getByTitle('Ajuster à la fenêtre')
+    expect(ajuste).toBeDisabled()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Zoomer' }))
+    expect(ajuste).toHaveTextContent('75 %')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Dézoomer' }))
+    expect(ajuste).toHaveTextContent('50 %')
+
+    await userEvent.click(ajuste)
+    expect(ajuste).toBeDisabled()
+  })
+
   // Etape 4 : les octets d'une image deposee sont demandes au serveur et donnes aux deux
   // moteurs. Sans ce chemin, l'image s'affiche dans l'inspecteur mais nulle part sur la page.
   it('montre une image deposee sur la toile', async () => {
