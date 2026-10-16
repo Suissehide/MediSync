@@ -304,7 +304,6 @@ function IndicateursSettings() {
         <SettingsPageHeader
           title="Indicateurs"
           subtitle="Jeux d'indicateurs consultés dans Pilotage."
-          switchId="indicateurs-supprimes"
           showDeleted={showArchived}
           onShowDeletedChange={setShowArchived}
           deletedCount={supprimes}

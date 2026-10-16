@@ -6,10 +6,9 @@ import { getLocationColumns } from '@/columns/location.column.tsx'
 import AddLocationForm from '@/components/custom/popup/addLocationForm.tsx'
 import { ConfirmDeleteForm } from '@/components/custom/popup/confirmDeleteForm.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
+import { VueSupprimesToggle } from '@/components/settings/vueSupprimesToggle.tsx'
 import ReactTable from '@/components/table/reactTable.tsx'
 import { Input } from '@/components/ui/input.tsx'
-import { Label } from '@/components/ui/label.tsx'
-import { Switch } from '@/components/ui/switch.tsx'
 import { can, useCan } from '@/hooks/useCan.ts'
 import {
   useLocationMutations,
@@ -82,14 +81,12 @@ function LocationSettings() {
               placeholder="Nom de la salle..."
               className="w-72"
             />
-            <div className="flex items-center gap-2">
-              <Switch
-                id="salles-archivees"
-                checked={showArchived}
-                onCheckedChange={setShowArchived}
-              />
-              <Label htmlFor="salles-archivees">Supprimées</Label>
-            </div>
+            <VueSupprimesToggle
+              showDeleted={showArchived}
+              onShowDeletedChange={setShowArchived}
+              feminin
+              label="Salles à afficher"
+            />
             {canManage && !showArchived && <AddLocationForm />}
           </div>
         </div>

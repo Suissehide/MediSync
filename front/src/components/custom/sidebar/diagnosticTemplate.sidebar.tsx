@@ -14,9 +14,8 @@ import {
   useDiagnosticTemplatesQuery,
 } from '../../../queries/useDiagnosticEducatif.ts'
 import { useDiagnosticTemplateStore } from '../../../store/useDiagnosticTemplateStore.ts'
+import { VueSupprimesToggle } from '../../settings/vueSupprimesToggle.tsx'
 import { Button } from '../../ui/button.tsx'
-import { Label } from '../../ui/label.tsx'
-import { Switch } from '../../ui/switch.tsx'
 import { ConfirmDeleteForm } from '../popup/confirmDeleteForm.tsx'
 
 function SidebarDiagnosticTemplate() {
@@ -46,22 +45,18 @@ function SidebarDiagnosticTemplate() {
     <>
       <div className="pl-4 pr-2 flex justify-between items-center text-text-sidebar py-2">
         <p>Modèles</p>
-        <div className="flex items-center gap-2">
-          <Switch
-            id="modeles-archives"
-            checked={showArchived}
-            onCheckedChange={setShowArchived}
-          />
-          <Label htmlFor="modeles-archives" className="text-text-sidebar">
-            Supprimés
-          </Label>
-          {canManage && !showArchived && (
-            <Button variant="gradient" size="icon" onClick={handleCreate}>
-              <Plus className="w-5 h-5" />
-            </Button>
-          )}
-        </div>
+        {canManage && !showArchived && (
+          <Button variant="gradient" size="icon" onClick={handleCreate}>
+            <Plus className="w-5 h-5" />
+          </Button>
+        )}
       </div>
+      <VueSupprimesToggle
+        showDeleted={showArchived}
+        onShowDeletedChange={setShowArchived}
+        label="Modèles à afficher"
+        className="mx-4 mb-2"
+      />
 
       <div className="px-2 pb-2 flex-1 flex flex-col min-h-0">
         {isPending ? (

@@ -218,7 +218,7 @@ describe('liste des modeles livres', () => {
     const { ecritures } = monter()
     await screen.findByText('Alpha')
 
-    await userEvent.click(screen.getByLabelText('Supprimés'))
+    await userEvent.click(screen.getByRole('radio', { name: /Supprimés/ }))
 
     await userEvent.click(
       await screen.findByRole('button', { name: /Restaurer/ }),
