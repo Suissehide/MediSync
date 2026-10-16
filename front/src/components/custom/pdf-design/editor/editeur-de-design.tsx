@@ -385,7 +385,9 @@ export default function EditeurDeDesign({
     <DashboardLayout>
       <div className="flex-1 min-h-0 bg-background rounded-lg flex flex-col w-full overflow-hidden border border-border">
         <div className="h-16 flex-shrink-0 flex items-center gap-3.5 px-5 border-b border-border">
-          <Button variant="secondary" onClick={onRetour}>
+          {/* `ghost` et non `secondary` : la variante secondaire de ce depot est ROSE, la
+              couleur d'accent — un retour n'est pas une action mise en avant. */}
+          <Button variant="ghost" onClick={onRetour}>
             <ArrowLeft className="w-4 h-4" />
             Retour
           </Button>
