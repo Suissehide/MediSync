@@ -501,7 +501,12 @@ export default function EditeurDeDesign({
               sources={sources}
               ajuste={zoom === null}
               onZoomer={(sens) => setZoom(palierSuivant(echelle, sens))}
-              onAjuster={() => setZoom(null)}
+              onAjuster={() => {
+                setZoom(null)
+                // Le cadre cesse de defiler en meme temps : sans ce retour en haut, il reste
+                // fige sur la position atteinte zoome et la page ajustee s'affiche coupee.
+                cadre.current?.scrollTo(0, 0)
+              }}
             />
 
             <aside className="border-l border-border overflow-y-auto">
