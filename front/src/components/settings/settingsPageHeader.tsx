@@ -1,13 +1,11 @@
 import { Archive } from 'lucide-react'
 import type { ReactNode } from 'react'
 
-import { Label } from '@/components/ui/label.tsx'
-import { Switch } from '@/components/ui/switch.tsx'
+import { VueSupprimesToggle } from '@/components/settings/vueSupprimesToggle.tsx'
 
 interface SettingsPageHeaderProps {
   title: string
   subtitle: string
-  switchId: string
   showDeleted: boolean
   onShowDeletedChange: (checked: boolean) => void
   deletedCount: number
@@ -17,7 +15,6 @@ interface SettingsPageHeaderProps {
 export function SettingsPageHeader({
   title,
   subtitle,
-  switchId,
   showDeleted,
   onShowDeletedChange,
   deletedCount,
@@ -30,13 +27,10 @@ export function SettingsPageHeader({
         <p className="text-sm text-text-light">{subtitle}</p>
       </div>
       <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <Switch
-            id={switchId}
-            checked={showDeleted}
-            onCheckedChange={onShowDeletedChange}
-          />
-          <Label htmlFor={switchId}>Supprimés</Label>
+        <VueSupprimesToggle
+          showDeleted={showDeleted}
+          onShowDeletedChange={onShowDeletedChange}
+        >
           <span
             data-testid="compteur-supprimes"
             className="text-xs px-[7px] rounded-full bg-border text-[#475569] tabular-nums"
@@ -44,7 +38,7 @@ export function SettingsPageHeader({
             {deletedCount}
             <span className="sr-only"> éléments supprimés</span>
           </span>
-        </div>
+        </VueSupprimesToggle>
         {action}
       </div>
     </div>

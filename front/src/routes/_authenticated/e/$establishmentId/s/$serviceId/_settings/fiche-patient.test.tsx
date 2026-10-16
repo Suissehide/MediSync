@@ -483,7 +483,7 @@ describe('ecran de configuration de la fiche patient', () => {
     monter([routeGetServiceFields([ancienDiagnostic])])
 
     await screen.findByText('Parcours & Inclusion')
-    await userEvent.click(screen.getByLabelText('Supprimés'))
+    await userEvent.click(screen.getByRole('radio', { name: /Supprimés/ }))
 
     expect(await screen.findByText('Ancien diagnostic')).toBeInTheDocument()
     expect(
@@ -549,7 +549,7 @@ describe('ecran de configuration — blocs de catégories', () => {
     await screen.findByText('Parcours & Inclusion')
     expect(screen.queryByText('Suivi diététique')).not.toBeInTheDocument()
 
-    await userEvent.click(screen.getByLabelText('Supprimés'))
+    await userEvent.click(screen.getByRole('radio', { name: /Supprimés/ }))
 
     expect(await screen.findByText('Suivi diététique')).toBeInTheDocument()
     expect(
@@ -576,7 +576,7 @@ describe('ecran de configuration — blocs de catégories', () => {
     )
 
     await screen.findByText('Parcours & Inclusion')
-    await userEvent.click(screen.getByLabelText('Supprimés'))
+    await userEvent.click(screen.getByRole('radio', { name: /Supprimés/ }))
 
     expect(await screen.findByText('Comorbidité')).toBeInTheDocument()
     const restaurer = screen.getByRole('button', { name: /^restaurer$/i })
@@ -1029,7 +1029,7 @@ describe('ecran de configuration — cartes', () => {
     expect(
       screen.getAllByRole('button', { name: /ajouter un champ/i }),
     ).toHaveLength(2)
-    await userEvent.click(screen.getByLabelText('Supprimés'))
+    await userEvent.click(screen.getByRole('radio', { name: /Supprimés/ }))
     expect(
       screen.queryByRole('button', { name: /ajouter un champ/i }),
     ).not.toBeInTheDocument()

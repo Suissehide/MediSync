@@ -6,9 +6,8 @@ import DesignCard from '@/components/custom/pdf-design/design-card.tsx'
 import { ConfirmDeleteForm } from '@/components/custom/popup/confirmDeleteForm.tsx'
 import RenamePdfDesignForm from '@/components/custom/popup/renamePdfDesignForm.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
+import { VueSupprimesToggle } from '@/components/settings/vueSupprimesToggle.tsx'
 import { Button } from '@/components/ui/button.tsx'
-import { Label } from '@/components/ui/label.tsx'
-import { Switch } from '@/components/ui/switch.tsx'
 import {
   usePdfDesignPresetMutations,
   usePdfDesignPresetQueries,
@@ -71,14 +70,11 @@ function SuperAdminPdfPresets() {
                 Partir d'une page blanche
               </Button>
             )}
-            <div className="flex items-center gap-2">
-              <Switch
-                id="modeles-supprimes"
-                checked={montrerSupprimes}
-                onCheckedChange={setMontrerSupprimes}
-              />
-              <Label htmlFor="modeles-supprimes">Supprimés</Label>
-            </div>
+            <VueSupprimesToggle
+              showDeleted={montrerSupprimes}
+              onShowDeletedChange={setMontrerSupprimes}
+              label="Modèles à afficher"
+            />
           </div>
         </div>
 

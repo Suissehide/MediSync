@@ -445,7 +445,7 @@ describe('liste des jeux', () => {
       route('PATCH', '/indicator-sets/j3', () => ok(ancien)),
     ])
     await carteDuJeu('Grille ARS')
-    await userEvent.click(screen.getByLabelText('Supprimés'))
+    await userEvent.click(screen.getByRole('radio', { name: /Supprimés/ }))
     const carte = await carteDuJeu('Ancien jeu')
     await userEvent.click(
       carte.getByRole('button', { name: /^restaurer le jeu$/i }),
@@ -523,7 +523,7 @@ describe('un jeu', () => {
       route('PATCH', '/indicator-sets/j1/indicators/i4', () => ok({})),
     ])
     await carteDuJeu('Grille ARS')
-    await userEvent.click(screen.getByLabelText('Supprimés'))
+    await userEvent.click(screen.getByRole('radio', { name: /Supprimés/ }))
     const ligne = await ligneIndicateur('Ancien indicateur')
     expect(
       ligne.queryByRole('button', { name: /^modifier$/i }),
@@ -599,7 +599,7 @@ describe('cartes', () => {
     expect(
       screen.getAllByRole('button', { name: /ajouter un indicateur/i }),
     ).toHaveLength(2)
-    await userEvent.click(screen.getByLabelText('Supprimés'))
+    await userEvent.click(screen.getByRole('radio', { name: /Supprimés/ }))
     expect(
       screen.queryByRole('button', { name: /ajouter un indicateur/i }),
     ).not.toBeInTheDocument()

@@ -32,13 +32,17 @@ describe('purge d un modele de diagnostic', () => {
 
     render(
       <QueryClientProvider
-        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
       >
         <SidebarDiagnosticTemplate />
       </QueryClientProvider>,
     )
 
-    await userEvent.click(await screen.findByRole('switch'))
+    await userEvent.click(
+      await screen.findByRole('radio', { name: 'Supprimés' }),
+    )
     await userEvent.click(
       await screen.findByRole('button', {
         name: 'Supprimer définitivement Vieux modèle',

@@ -7,7 +7,7 @@ import DesignCard from '@/components/custom/pdf-design/design-card.tsx'
 import { ConfirmDeleteForm } from '@/components/custom/popup/confirmDeleteForm.tsx'
 import RenamePdfDesignForm from '@/components/custom/popup/renamePdfDesignForm.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group.tsx'
+import { VueSupprimesToggle } from '@/components/settings/vueSupprimesToggle.tsx'
 import { can } from '@/hooks/useCan.ts'
 import { useSourcesImages } from '@/queries/usePdfAsset.ts'
 import {
@@ -71,20 +71,11 @@ function PdfPatientSettings() {
               patient.
             </p>
           </div>
-          {/* Un segmente, pas un interrupteur : « Supprimés » n'est pas une option qu'on
-              ajoute a la vue, c'est l'AUTRE vue — les deux listes ne se melangent jamais. */}
-          <ToggleGroup
-            aria-label="Designs à afficher"
-            value={montrerSupprimes ? 'supprimes' : 'actifs'}
-            // Radix laisse un segmente simple se DESELECTIONNER : sans cette garde, un
-            // second clic sur l'onglet actif n'afficherait plus aucune des deux vues.
-            onValueChange={(valeur) =>
-              valeur && setMontrerSupprimes(valeur === 'supprimes')
-            }
-          >
-            <ToggleGroupItem value="actifs">Actifs</ToggleGroupItem>
-            <ToggleGroupItem value="supprimes">Supprimés</ToggleGroupItem>
-          </ToggleGroup>
+          <VueSupprimesToggle
+            showDeleted={montrerSupprimes}
+            onShowDeletedChange={setMontrerSupprimes}
+            label="Designs à afficher"
+          />
         </div>
 
         <section className="flex flex-col gap-3.5">

@@ -358,7 +358,6 @@ function FichePatientSettings() {
         <SettingsPageHeader
           title="Fiche patient"
           subtitle="Champs remplis sur la fiche de chaque patient du service."
-          switchId="elements-supprimes"
           showDeleted={showDeleted}
           onShowDeletedChange={setShowDeleted}
           deletedCount={fields.filter((f) => f.archived).length}

@@ -6,10 +6,9 @@ import { getThematicColumns } from '@/columns/thematic.column.tsx'
 import AddThematicForm from '@/components/custom/popup/addThematicForm.tsx'
 import { ConfirmDeleteForm } from '@/components/custom/popup/confirmDeleteForm.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
+import { VueSupprimesToggle } from '@/components/settings/vueSupprimesToggle.tsx'
 import ReactTable from '@/components/table/reactTable.tsx'
 import { Input } from '@/components/ui/input.tsx'
-import { Label } from '@/components/ui/label.tsx'
-import { Switch } from '@/components/ui/switch.tsx'
 import { can, useCan } from '@/hooks/useCan.ts'
 import { useSoignantQueries } from '@/queries/useSoignant.ts'
 import {
@@ -93,14 +92,12 @@ function ThematicSettings() {
               placeholder="Nom de la thématique..."
               className="w-72"
             />
-            <div className="flex items-center gap-2">
-              <Switch
-                id="thematiques-archivees"
-                checked={showArchived}
-                onCheckedChange={setShowArchived}
-              />
-              <Label htmlFor="thematiques-archivees">Supprimées</Label>
-            </div>
+            <VueSupprimesToggle
+              showDeleted={showArchived}
+              onShowDeletedChange={setShowArchived}
+              feminin
+              label="Thématiques à afficher"
+            />
             {canManage && !showArchived && <AddThematicForm />}
           </div>
         </div>
