@@ -21,7 +21,9 @@ export type ServicePermission =
   | 'clinical:write'
   | 'appointment:write'
   | 'pdf:export'
-  | 'todo:own'
+  | 'tasks:read'
+  | 'tasks:write'
+  | 'notifications:own'
   | 'members:read'
   // Gerer l'equipe du SEUL service courant : inviter, changer le role de service, retirer.
   // Distincte de `members:manage` (etablissement), qui porte les comptes et les
@@ -89,7 +91,7 @@ const READ_ALL: readonly ServicePermission[] = [
   'planning:read',
   'referentials:read',
   'patient:read',
-  'todo:own',
+  'notifications:own',
   'members:read',
 ]
 
@@ -107,6 +109,8 @@ export const SERVICE_PERMISSIONS: Record<
     'clinical:write',
     'appointment:write',
     'pdf:export',
+    'tasks:read',
+    'tasks:write',
     'consultations:read',
     'service-members:manage',
     'service-journal:read',
@@ -121,12 +125,16 @@ export const SERVICE_PERMISSIONS: Record<
     'clinical:write',
     'appointment:write',
     'pdf:export',
+    'tasks:read',
+    'tasks:write',
   ],
   SECRETARIAT: [
     ...READ_ALL,
     'patient:write',
     'appointment:write',
     'pdf:export',
+    'tasks:read',
+    'tasks:write',
   ],
   LECTURE: [...READ_ALL, 'activity:read'],
 }

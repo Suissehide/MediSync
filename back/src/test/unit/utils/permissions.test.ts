@@ -22,7 +22,7 @@ describe('permissions', () => {
         'clinical:write',
         'appointment:write',
         'pdf:export',
-        'todo:own',
+        'notifications:own',
         'members:read',
       ]),
     )
@@ -51,9 +51,18 @@ describe('permissions', () => {
       expect(SERVICE_PERMISSIONS[role]).toContain('planning:read')
       expect(SERVICE_PERMISSIONS[role]).toContain('referentials:read')
       expect(SERVICE_PERMISSIONS[role]).toContain('patient:read')
-      expect(SERVICE_PERMISSIONS[role]).toContain('todo:own')
+      expect(SERVICE_PERMISSIONS[role]).toContain('notifications:own')
       expect(SERVICE_PERMISSIONS[role]).toContain('members:read')
     }
+  })
+
+  it('donne les taches a tous les roles sauf la lecture', () => {
+    for (const role of ['COORDINATEUR', 'INTERVENANT', 'SECRETARIAT'] as const) {
+      expect(SERVICE_PERMISSIONS[role]).toContain('tasks:read')
+      expect(SERVICE_PERMISSIONS[role]).toContain('tasks:write')
+    }
+    expect(SERVICE_PERMISSIONS.LECTURE).not.toContain('tasks:read')
+    expect(SERVICE_PERMISSIONS.LECTURE).not.toContain('tasks:write')
   })
 
   it('reserve la gestion des membres a l administrateur d etablissement', () => {

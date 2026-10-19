@@ -64,7 +64,9 @@ associe les permissions aux rôles. C'est cette matrice qui fait foi.
 | `clinical:write` | Idem en écriture | ✔ | ✔ | | |
 | `appointment:write` | Rendez-vous, ajout et retrait de patients d'un créneau, présences, motif de refus, accompagnant | ✔ | ✔ | ✔ | |
 | `pdf:export` | Export PDF du programme remis au patient | ✔ | ✔ | ✔ | |
-| `todo:own` | Ses propres tâches | ✔ | ✔ | ✔ | ✔ |
+| `tasks:read` | Lire les tâches du service | ✔ | ✔ | ✔ | — |
+| `tasks:write` | Créer, cocher les tâches du service | ✔ | ✔ | ✔ | — |
+| `notifications:own` | Ses propres notifications | ✔ | ✔ | ✔ | ✔ |
 | `members:read` | Voir les membres du service et leur rôle | ✔ | ✔ | ✔ | ✔ |
 | `consultations:read` | Lire le journal des consultations (`PatientAccessLog`) du service courant : qui a ouvert quel dossier, quand — jamais un contenu clinique | ✔ | | | |
 | `service-members:manage` | Gérer l'équipe du **seul service courant** : inviter (y compris en créant le compte et son lien de première connexion), changer le rôle de service, retirer du service — depuis le 2026-10-05, MDS-17 | ✔ | | | |
