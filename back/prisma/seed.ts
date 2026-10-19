@@ -13,14 +13,12 @@ import seedPdfDesignPresets from './seed/pdfDesignPreset'
 import seedSoignants from './seed/soignant'
 import seedTenant from './seed/tenant'
 import seedThematics from './seed/thematic'
-import type { TodoData } from './seed/todo'
-import seedTodos from './seed/todo'
 import seedUsers from './seed/user'
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
 const prisma = new PrismaClient({ adapter })
 
-type ServiceContent = { patients: PatientData[]; todos: TodoData[] }
+type ServiceContent = { patients: PatientData[] }
 
 // Un établissement, deux services : les fonctions de peuplement service par
 // service prennent toutes le même couple (establishmentId, serviceId) en
@@ -30,35 +28,10 @@ type ServiceContent = { patients: PatientData[]; todos: TodoData[] }
 // défaut de cloisonnement ne se verrait pas à l'œil.
 const CARDIOLOGIE: ServiceContent = {
   patients: PATIENTS_CARDIOLOGIE,
-  todos: [
-    {
-      title: 'Vérifier le dossier médical de Claire',
-      description: 'S’assurer que les derniers résultats sont à jour.',
-      completed: false,
-    },
-    {
-      title: 'Préparer atelier nutrition',
-      description:
-        'Réviser la présentation PowerPoint et les supports imprimés.',
-      completed: true,
-    },
-  ],
 }
 
 const PNEUMOLOGIE: ServiceContent = {
   patients: PATIENTS_PNEUMOLOGIE,
-  todos: [
-    {
-      title: 'Vérifier le dossier médical de Nadia',
-      description: 'S’assurer que la dernière spirométrie est à jour.',
-      completed: false,
-    },
-    {
-      title: 'Préparer atelier souffle',
-      description: 'Réviser les supports de réhabilitation respiratoire.',
-      completed: true,
-    },
-  ],
 }
 
 async function seedService(
@@ -78,7 +51,6 @@ async function seedService(
   await seedArsIndicatorSet(prisma, tenant)
   await seedPatients(prisma, tenant, content.patients)
   await seedPathwayTemplates(prisma, soignants, locations, thematics, tenant)
-  await seedTodos(prisma, tenant, content.todos)
   return soignants
 }
 

@@ -125,17 +125,6 @@ describe('archivage des salles, soignants et modeles de diagnostic', () => {
         establishmentId,
       },
     })
-    const tache = await testDb.todo.create({
-      data: {
-        createDate: new Date('2026-04-01T09:00:00Z'),
-        title: 'Préparer la séance',
-        completed: false,
-        soignantID: soignant.id,
-        serviceId,
-        establishmentId,
-      },
-    })
-
     expect((await archive(`/soignant/${soignant.id}`)).statusCode).toBe(204)
 
     expect(
@@ -148,10 +137,6 @@ describe('archivage des salles, soignants et modeles de diagnostic', () => {
         where: { soignantId: soignant.id },
       }),
     ).toBe(1)
-    expect(
-      (await testDb.todo.findUnique({ where: { id: tache.id } }))?.soignantID,
-    ).toBe(soignant.id)
-
     expect(noms(await get('/soignant'))).not.toContain('Diététicienne')
     expect(noms(await get('/soignant?archived=true'))).toContain(
       'Diététicienne',

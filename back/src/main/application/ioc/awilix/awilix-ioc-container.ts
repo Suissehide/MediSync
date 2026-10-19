@@ -33,7 +33,6 @@ import { SlotTemplateDomain } from '../../../domain/slotTemplate.domain'
 import { SoignantDomain } from '../../../domain/soignant.domain'
 import { SuperAdminGrantDomain } from '../../../domain/superAdminGrant.domain'
 import { ThematicDomain } from '../../../domain/thematic.domain'
-import { TodoDomain } from '../../../domain/todo.domain'
 import { UserDomain } from '../../../domain/user.domain'
 import { HttpClient } from '../../../infra/http/http-client'
 import { PinoLogger } from '../../../infra/logger/pino/pino-logger'
@@ -68,7 +67,6 @@ import { SlotRepository } from '../../../infra/orm/repositories/slot.repository'
 import { SlotTemplateRepository } from '../../../infra/orm/repositories/slotTemplate.repository'
 import { SoignantRepository } from '../../../infra/orm/repositories/soignant.repository'
 import { ThematicRepository } from '../../../infra/orm/repositories/thematic.repository'
-import { TodoRepository } from '../../../infra/orm/repositories/todo.repository'
 import { UserRepository } from '../../../infra/orm/repositories/user.repository'
 import { FastifyHttpServer } from '../../../interfaces/http/fastify/fastify-http-server'
 import { ActivityLogSubscriber } from '../../../services/activity-log.subscriber'
@@ -146,9 +144,6 @@ class AwilixIocContainer {
     // Location
     this.#registerLocationDomain()
     this.#registerLocationRepository()
-    // Todo
-    this.#registerTodoDomain()
-    this.#registerTodoRepository()
     // DiagnosticEducatif
     this.#registerDiagnosticEducatifDomain()
     this.#registerDiagnosticEducatifRepository()
@@ -447,14 +442,6 @@ class AwilixIocContainer {
       'indicatorSetRepository',
       asClass(IndicatorSetRepository).singleton(),
     )
-  }
-
-  // Todo
-  #registerTodoDomain(): void {
-    this.register('todoDomain', asClass(TodoDomain).singleton())
-  }
-  #registerTodoRepository(): void {
-    this.register('todoRepository', asClass(TodoRepository).singleton())
   }
 
   // DiagnosticEducatif

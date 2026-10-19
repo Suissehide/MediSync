@@ -125,23 +125,6 @@ const cases: IsolationCase[] = [
     ownerStatus: 200,
   },
   {
-    name: 'todo',
-    create: (s, e) =>
-      testDb.todo
-        .create({
-          data: {
-            title: 't',
-            createDate: new Date(),
-            completed: false,
-            serviceId: s,
-            establishmentId: e,
-          },
-        })
-        .then((r) => r.id),
-    path: (id) => `/todo/${id}`,
-    ownerStatus: 200,
-  },
-  {
     name: 'forbidden-week',
     create: (s, e) =>
       testDb.forbiddenWeek

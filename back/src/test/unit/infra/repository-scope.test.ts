@@ -17,7 +17,6 @@ import { SlotRepository } from '../../../main/infra/orm/repositories/slot.reposi
 import { SlotTemplateRepository } from '../../../main/infra/orm/repositories/slotTemplate.repository'
 import { SoignantRepository } from '../../../main/infra/orm/repositories/soignant.repository'
 import { ThematicRepository } from '../../../main/infra/orm/repositories/thematic.repository'
-import { TodoRepository } from '../../../main/infra/orm/repositories/todo.repository'
 import { assertTenantScope } from '../../../main/infra/orm/tenant-guard'
 import type { IocContainer } from '../../../main/types/application/ioc'
 import type { Tenant } from '../../../main/types/utils/tenant-context'
@@ -919,96 +918,6 @@ describe('scoping des repositories de service simples', () => {
         },
       },
     })
-  })
-
-  it('TodoRepository ne voit que les taches du soignant courant', async () => {
-    const { prisma, calls } = buildFakePrisma()
-    const ctx = new TenantContext()
-    const repo = new TodoRepository(buildContainer(prisma, ctx))
-    await ctx.run(tenant, async () => {
-      await repo.findAll()
-      await repo.create({
-        title: 't',
-        createDate: new Date().toISOString(),
-        completed: false,
-      } as never)
-    })
-    expect(calls[0]).toMatchObject({
-      model: 'todo',
-      op: 'findMany',
-      args: { where: { serviceId: 's1', soignantID: 'so1' } },
-    })
-    expect(calls[1]).toMatchObject({
-      model: 'todo',
-      op: 'create',
-      args: {
-        data: { serviceId: 's1', establishmentId: 'e1', soignantID: 'so1' },
-      },
-    })
-  })
-
-  // `findAll` filtrait bien sur soignantID, mais `findByID`, `update` et
-  // `delete` ne filtraient que sur le tenant : n'importe quel membre du
-  // service pouvait lire, modifier ou supprimer la tache d'un collegue en
-  // connaissant son identifiant — en contradiction avec la permission
-  // `todo:own` que le code pretend appliquer.
-  it('TodoRepository exige le soignant courant a la lecture unitaire, a la mise a jour et a la suppression', async () => {
-    const { prisma, calls } = buildFakePrisma()
-    const ctx = new TenantContext()
-    const repo = new TodoRepository(buildContainer(prisma, ctx))
-    await ctx.run(tenant, async () => {
-      await repo.findByID('td1')
-      await repo.update('td1', { completed: true } as never)
-      await repo.delete('td1')
-    })
-
-    // Lecture unitaire : findFirstOrThrow, le filtre soignantID n'etant pas
-    // exprimable dans la cle unique composite id_serviceId.
-    expect(calls[0]).toMatchObject({
-      model: 'todo',
-      op: 'findFirstOrThrow',
-      args: {
-        where: {
-          id: 'td1',
-          serviceId: 's1',
-          establishmentId: 'e1',
-          soignantID: 'so1',
-        },
-        include: { soignant: true },
-      },
-    })
-    // Ecritures : lecture de garde scopee sur le soignant AVANT l'ecriture.
-    expect(calls[1]).toMatchObject({
-      model: 'todo',
-      op: 'findFirstOrThrow',
-      args: { where: { id: 'td1', serviceId: 's1', soignantID: 'so1' } },
-    })
-    expect(calls[2]).toMatchObject({ model: 'todo', op: 'update' })
-    expect(calls[3]).toMatchObject({
-      model: 'todo',
-      op: 'findFirstOrThrow',
-      args: { where: { id: 'td1', serviceId: 's1', soignantID: 'so1' } },
-    })
-    expect(calls[4]).toMatchObject({ model: 'todo', op: 'delete' })
-    // Les include des retours actuels sont conserves.
-    expect(calls[2]?.args).toMatchObject({ include: { soignant: true } })
-  })
-
-  it('TodoRepository garde le filtre sur soignantID null, il ne disparait pas', async () => {
-    const { prisma, calls } = buildFakePrisma()
-    const ctx = new TenantContext()
-    const repo = new TodoRepository(buildContainer(prisma, ctx))
-    await ctx.run({ ...tenant, soignantId: null }, async () => {
-      await repo.findAll()
-      await repo.findByID('td1')
-      await repo.update('td1', { completed: true } as never)
-      await repo.delete('td1')
-    })
-    for (const call of calls.filter(
-      (c) => c.op !== 'update' && c.op !== 'delete',
-    )) {
-      expect(call.args.where).toMatchObject({ soignantID: null })
-    }
   })
 
   it('PlanningCycleRepository travaille par serviceId', async () => {
