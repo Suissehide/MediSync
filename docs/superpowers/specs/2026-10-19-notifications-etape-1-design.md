@@ -31,11 +31,10 @@ model Task {
   serviceId       String
   text            String
   authorId        String?   // User.id, sans relation (pont global) ; nul seulement pour un Todo migré sans auteur
-  patientId       String?
+  patientId       String?   // Patient.id, sans relation : voir plus bas
   dueDate         DateTime? @db.Date
   doneAt          DateTime?
   createdAt       DateTime  @default(now())
-  patient         Patient?  @relation(fields: [patientId, establishmentId], references: [id, establishmentId])
   assignees       TaskAssignee[]
 }
 
@@ -65,7 +64,7 @@ model Notification {
 ```
 
 - Payload `MENTION` : `{ taskId, authorId, text }`. Le texte est copié : la notification reste lisible si la tâche change.
-- La suppression d'un patient (`PatientDomain.delete`) remet `Task.patientId` à nul dans la même transaction.
+- `patientId` est une colonne simple, sans relation : une clé composite `[patientId, establishmentId]` ne pourrait pas passer à nul (`establishmentId` est obligatoire), et un service ne peut pas nettoyer les tâches d'un autre. Le nom est résolu à la lecture (`Patient` de l'établissement) ; un patient supprimé disparaît simplement de l'étiquette.
 - `TaskAssignee` est créé en écriture imbriquée depuis `Task` : il va dans `NESTED_RELATIONS`.
 
 ### Migration des Todos
@@ -121,7 +120,10 @@ Permissions (`utils/permissions.ts`, identique côté front, et `docs/multi-tena
 
 - `useQueries`, une requête par service, `refetchInterval: 60_000`, `refetchOnWindowFocus`. Clés `['taches', serviceId]` et `['notifications', serviceId]`.
 - Mutations sur l'URL du service de l'élément ; invalidation de la seule clé du service.
-- Noms des auteurs et tagués : `useServiceMembersQuery` du service (y compris désactivés, pour l'historique).
+- Noms des auteurs et tagués : `GET /membres` du service, sur son URL explicite (`useServiceMembersQuery` passe par `tenantApiUrl()`), désactivés compris pour l'historique.
+- Services interrogés : les vraies affectations (`affecte !== false`) ; ni le coordinateur implicite d'un chef d'établissement, ni un octroi temporaire.
+- Le bloc est monté avec `key={tenantKey(context)}` : un changement de contexte remplace le client de requêtes (`useTenantSwitch`), le remontage relie les observateurs au nouveau.
+- `api/inbox.api.ts` et `queries/useInbox.ts` nomment `serviceId` : exception déclarée dans `src/test/conventions-tenant-api-queries.test.ts`, comme `setOwnSoignant`.
 - Aucun store Zustand : React Query suffit. Rien à ajouter à `resetTenantStores()`.
 
 ### Panneau Notifications
