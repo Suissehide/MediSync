@@ -19,8 +19,11 @@ describe('taches partagees et mentions', () => {
   let leo: string
   let lecteur: string
   let ancien: string
-  let leoC: Cookies
+  let psychologue: string
+  let psychologueArchive: string
+  let psychologueB: string
   let claireC: Cookies
+  let leoC: Cookies
   let lecteurC: Cookies
 
   const call = (
@@ -38,25 +41,47 @@ describe('taches partagees et mentions', () => {
     E = est.id
     A = (await createService(E, 'Cardio')).id
     B = (await createService(E, 'Diabeto')).id
-    const membre = (serviceId: string, role: 'INTERVENANT' | 'LECTURE') => [
-      { establishmentId: E, services: [{ serviceId, role }] },
-    ]
+    psychologue = (
+      await testDb.soignant.create({
+        data: { name: 'Psychologue', establishmentId: E, serviceId: A },
+      })
+    ).id
+    psychologueArchive = (
+      await testDb.soignant.create({
+        data: {
+          name: 'Psychologue archivé',
+          establishmentId: E,
+          serviceId: A,
+          archivedAt: new Date(),
+        },
+      })
+    ).id
+    psychologueB = (
+      await testDb.soignant.create({
+        data: { name: 'Psychologue B', establishmentId: E, serviceId: B },
+      })
+    ).id
+    const membre = (
+      serviceId: string,
+      role: 'INTERVENANT' | 'LECTURE',
+      soignantId?: string,
+    ) => [{ establishmentId: E, services: [{ serviceId, role, soignantId }] }]
     leo = (
       await createUser({
         email: 'leo@t.fr',
-        memberships: membre(A, 'INTERVENANT'),
+        memberships: membre(A, 'INTERVENANT', psychologue),
       })
     ).id
     claire = (
       await createUser({
         email: 'claire@t.fr',
-        memberships: membre(A, 'INTERVENANT'),
+        memberships: membre(A, 'INTERVENANT', psychologue),
       })
     ).id
     lecteur = (
       await createUser({
         email: 'lecteur@t.fr',
-        memberships: membre(A, 'LECTURE'),
+        memberships: membre(A, 'LECTURE', psychologue),
       })
     ).id
     ancien = (
@@ -108,6 +133,84 @@ describe('taches partagees et mentions', () => {
     expect(
       (await call(leoC, 'GET', tenantUrl(E, A, '/notifications'))).json(),
     ).toEqual([])
+  })
+
+  it('@Psychologue seul : notifie les deux psychologues actifs, pas le LECTURE ni l auteur', async () => {
+    const res = await call(leoC, 'POST', tenantUrl(E, A, '/taches'), {
+      text: 'Voir le psychologue',
+      soignantIds: [psychologue],
+    })
+    expect(res.statusCode).toBe(201)
+    const tache = res.json()
+    expect(tache.soignantIds).toEqual([psychologue])
+    expect(tache.assigneeIds).toEqual([])
+
+    const deClaire = (
+      await call(claireC, 'GET', tenantUrl(E, A, '/notifications'))
+    ).json()
+    expect(
+      deClaire.filter(
+        (n: { payload: { taskId: string } }) => n.payload.taskId === tache.id,
+      ),
+    ).toHaveLength(1)
+    expect(
+      (await call(leoC, 'GET', tenantUrl(E, A, '/notifications')))
+        .json()
+        .filter(
+          (n: { payload: { taskId: string } }) => n.payload.taskId === tache.id,
+        ),
+    ).toHaveLength(0)
+    expect(
+      (await call(lecteurC, 'GET', tenantUrl(E, A, '/notifications')))
+        .json()
+        .filter(
+          (n: { payload: { taskId: string } }) => n.payload.taskId === tache.id,
+        ),
+    ).toHaveLength(0)
+  })
+
+  it('personne et metier recouvrants : une seule notification pour Claire', async () => {
+    const res = await call(leoC, 'POST', tenantUrl(E, A, '/taches'), {
+      text: 'Pour Claire, psychologue',
+      assigneeIds: [claire],
+      soignantIds: [psychologue],
+    })
+    expect(res.statusCode).toBe(201)
+    const tache = res.json()
+    const deClaire = (
+      await call(claireC, 'GET', tenantUrl(E, A, '/notifications'))
+    )
+      .json()
+      .filter(
+        (n: { payload: { taskId: string } }) => n.payload.taskId === tache.id,
+      )
+    expect(deClaire).toHaveLength(1)
+  })
+
+  it.each([
+    ['archive', () => psychologueArchive],
+    ["d'un autre service", () => psychologueB],
+    ['inconnu du service', () => 'cl_inconnu_du_service_00000'],
+  ])('refuse un soignant %s, sans rien creer', async (_, id) => {
+    const taches = await testDb.task.count()
+    const notifs = await testDb.notification.count()
+    const res = await call(leoC, 'POST', tenantUrl(E, A, '/taches'), {
+      text: 'x',
+      soignantIds: [id()],
+    })
+    expect(res.statusCode).toBe(400)
+    expect(await testDb.task.count()).toBe(taches)
+    expect(await testDb.notification.count()).toBe(notifs)
+  })
+
+  it('GET /taches rend soignantIds', async () => {
+    const res = await call(leoC, 'POST', tenantUrl(E, A, '/taches'), {
+      text: 'Avec metier',
+      soignantIds: [psychologue],
+    })
+    const liste = (await call(leoC, 'GET', tenantUrl(E, A, '/taches'))).json()
+    const tache = liste.find((x: { id: string }) => x.id === res.json().id)
+    expect(tache.soignantIds).toEqual([psychologue])
   })
 
   it('sans tague, l auteur est tague et personne n est notifie', async () => {

@@ -3,6 +3,7 @@ export type TaskDTO = {
   text: string
   authorId: string | null
   assigneeIds: string[]
+  soignantIds: string[]
   patient: { id: string; firstName: string; lastName: string } | null
   dueDate: string | null
   doneAt: Date | null
@@ -11,6 +12,7 @@ export type TaskDTO = {
 export type TaskCreateDomain = {
   text: string
   assigneeIds: string[]
+  soignantIds: string[]
   patientId?: string
   dueDate?: string
 }

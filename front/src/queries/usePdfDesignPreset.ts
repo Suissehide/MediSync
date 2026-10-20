@@ -63,6 +63,28 @@ export const usePdfDesignPresetMutations = () => {
     ...avecToast('Modèle dupliqué', 'Erreur lors de la duplication'),
   })
 
+  // Terminer un brouillon, ou y remettre un modele fini. Les deux sens par la meme mutation :
+  // c'est un seul reglage, et le toast dit lequel des deux vient de se produire.
+  const setDraftPreset = useMutation({
+    mutationKey: [PDF_DESIGN_PRESET.UPDATE],
+    mutationFn: ({ id, isDraft }: { id: string; isDraft: boolean }) =>
+      PdfDesignPresetApi.update({ id, isDraft }),
+    onSuccess: (preset) => {
+      toast({
+        title: preset.isDraft ? 'Modèle remis en brouillon' : 'Modèle terminé',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erreur lors du changement d’état',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
+    },
+    onSettled: invalider,
+  })
+
   const renamePreset = useMutation({
     mutationKey: [PDF_DESIGN_PRESET.UPDATE],
     mutationFn: ({ id, name }: { id: string; name: string }) =>
@@ -116,6 +138,7 @@ export const usePdfDesignPresetMutations = () => {
   return {
     createBlankPreset,
     duplicatePreset,
+    setDraftPreset,
     renamePreset,
     saveContent,
     archivePreset,

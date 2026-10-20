@@ -16,6 +16,17 @@ import { Button } from '../../../ui/button.tsx'
 import { assetIdsDe } from '../../pdf-design/assets.ts'
 import ProgrammePDF from './programme.pdf.tsx'
 
+// Ceux du service d'abord, puis les presets. Un BROUILLON n'apparait pas : il se compose dans
+// les reglages du service, il ne part pas encore chez un patient. Exporte pour etre tenu par
+// un test : c'est la seule chose qui empeche un design non termine de sortir chez un patient.
+export const designsProposables = (
+  designs: PdfDesignSummary[],
+  presets: PdfDesignSummary[],
+): PdfDesignSummary[] => [
+  ...designs.filter((design) => !design.isDraft),
+  ...presets,
+]
+
 // Le choix explicite, sinon le design par defaut du service, sinon le premier disponible —
 // et les presets viennent apres les designs, donc « le premier disponible » est un preset des
 // que le service n'a plus de design a lui. C'est ce qui fait qu'un service dont le design par
@@ -52,9 +63,8 @@ export default function ProgrammePDFModal({
 
   const [selectedDesignId, setSelectedDesignId] = useState<string | null>(null)
 
-  // Ceux du service d'abord, puis les presets.
   const availableDesigns = useMemo<PdfDesignSummary[]>(
-    () => [...designs, ...presets],
+    () => designsProposables(designs, presets),
     [designs, presets],
   )
 

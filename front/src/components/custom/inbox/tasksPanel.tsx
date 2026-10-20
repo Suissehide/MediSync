@@ -23,13 +23,13 @@ export function TasksPanel({
   tasks,
   focus,
   onFocusDone,
-  onMentionOpenChange,
+  onSubPopupOpenChange,
 }: {
   services: InboxService[]
   tasks: InboxTask[]
   focus: Focus
   onFocusDone: () => void
-  onMentionOpenChange?: (open: boolean) => void
+  onSubPopupOpenChange?: (open: boolean) => void
 }) {
   const me = useAuthStore((state) => state.user?.id)
   const courant = useCurrentScale()
@@ -63,8 +63,11 @@ export function TasksPanel({
   }, [highlight])
 
   const isDone = (t: InboxTask) => pending[t.id] ?? t.doneAt !== null
+  const myMetier = (t: InboxTask) =>
+    t.service.soignantId !== null &&
+    t.soignantIds.includes(t.service.soignantId)
   const mine = (t: InboxTask) =>
-    me ? t.assigneeIds.includes(me) || t.authorId === me : false
+    me ? t.assigneeIds.includes(me) || t.authorId === me || myMetier(t) : false
   const visible = tasks.filter(
     (t) =>
       (serviceId === 'all' || t.service.serviceId === serviceId) &&
@@ -80,7 +83,7 @@ export function TasksPanel({
     ]),
   )
   const myOpen = tasks.filter(
-    (t) => !isDone(t) && me && t.assigneeIds.includes(me),
+    (t) => !isDone(t) && me && (t.assigneeIds.includes(me) || myMetier(t)),
   ).length
   const target =
     services.find((s) => s.serviceId === serviceId) ??
@@ -131,7 +134,7 @@ export function TasksPanel({
           key={target.serviceId}
           service={target}
           onCreated={setHighlight}
-          onMentionOpenChange={onMentionOpenChange}
+          onSubPopupOpenChange={onSubPopupOpenChange}
         />
       )}
       <div className="flex-1 overflow-y-auto">

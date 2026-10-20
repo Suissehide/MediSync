@@ -9,6 +9,9 @@ export const pdfDesignSummarySchema = z.object({
   name: z.string(),
   content: pdfDesignContentSchema,
   isDefault: z.boolean(),
+  // Un brouillon n'est pas propose au moment d'exporter : l'ecran de reglages le montre, la
+  // modale de generation non.
+  isDraft: z.boolean(),
 })
 
 export const pdfDesignListResponseSchema = z.object({
@@ -43,6 +46,8 @@ export const updatePdfDesignSchema = z.object({
   isDefault: z.boolean().optional(),
   // `false` restaure un design supprime ; la suppression passe par DELETE.
   archived: z.literal(false).optional(),
+  // `false` termine le brouillon, `true` l'y remet.
+  isDraft: z.boolean().optional(),
 })
 
 export type PdfDesignListResponse = z.infer<typeof pdfDesignListResponseSchema>

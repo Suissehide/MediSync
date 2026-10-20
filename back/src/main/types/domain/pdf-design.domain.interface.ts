@@ -8,6 +8,9 @@ export type PdfDesignSummaryDomain = {
   // sa ligne, pas propage jusqu'au serialiseur — qui en ferait un 500 sur la liste entiere.
   content: PdfDesignContent
   isDefault: boolean
+  // Un BROUILLON : il se compose et se modifie, mais n'est pas propose au moment d'exporter
+  // le document d'un patient. Toujours faux pour un preset — un modele livre est fini.
+  isDraft: boolean
 }
 
 export type PdfDesignListDomain = {
@@ -26,6 +29,7 @@ export type PdfDesignUpdateDomain = {
   content?: PdfDesignContent
   isDefault?: boolean
   archived?: boolean
+  isDraft?: boolean
 }
 
 export interface PdfDesignDomainInterface {

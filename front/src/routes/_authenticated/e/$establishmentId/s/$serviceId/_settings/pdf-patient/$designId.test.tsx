@@ -142,6 +142,7 @@ const design = (x: number, avecCalendrier = false) => ({
   name: 'Mon programme',
   content: contenu(x, avecCalendrier),
   isDefault: false,
+  isDraft: false,
 })
 
 // Le serveur garde ce qu'on lui ecrit : c'est ce qui permet de distinguer « l'ecran est revenu
@@ -156,6 +157,9 @@ const monter = (
   avecCalendrier = false,
   delaiGet = 0,
   avecImage: false | 'asset' | 'livree' = false,
+  // `true` monte l'editeur sur un BROUILLON : la pastille et le bouton « Terminer » n'y sont
+  // que dans ce cas.
+  brouillon = false,
 ) => {
   let enBase = avecImage
     ? {
@@ -165,6 +169,7 @@ const monter = (
         ),
       }
     : design(10, avecCalendrier)
+  enBase = { ...enBase, isDraft: brouillon }
   const ecritures: PdfDesignContent[] = []
   const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = input.toString()
@@ -206,10 +211,14 @@ const monter = (
     }
     const corps = JSON.parse(String(init?.body)) as {
       content?: PdfDesignContent
+      isDraft?: boolean
     }
     if (corps.content) {
       ecritures.push(corps.content)
       enBase = { ...enBase, content: corps.content }
+    }
+    if (corps.isDraft !== undefined) {
+      enBase = { ...enBase, isDraft: corps.isDraft }
     }
     return { ok: true, status: 200, url, json: async () => enBase }
   })
@@ -439,6 +448,46 @@ describe('editeur de design, les pages', () => {
     for (const ecrit of ecritures) {
       expect(ecrit.pages.map((p) => p.id)).toContain('cover')
     }
+  })
+
+  // « Terminer » n'existe que sur un brouillon, et il enregistre d'abord ce qui ne l'est pas :
+  // publier sur un contenu non enregistre proposerait a l'export un document different de
+  // celui qu'on vient de composer.
+  it('termine le brouillon en enregistrant d abord ce qui ne l est pas', async () => {
+    const { ecritures } = monter(false, 0, false, true)
+    const x = await selectionnerTitre()
+    expect(screen.getByText('Brouillon')).toBeInTheDocument()
+
+    await userEvent.clear(x)
+    await userEvent.type(x, '250')
+    await userEvent.click(screen.getByRole('button', { name: 'Terminer' }))
+
+    const fetchMock = globalThis.fetch as unknown as {
+      mock: { calls: [RequestInfo | URL, RequestInit?][] }
+    }
+    await waitFor(() => {
+      const corps = fetchMock.mock.calls
+        .filter(([, init]) => init?.method === 'PATCH')
+        .map(([, init]) => JSON.parse(String(init?.body)))
+      expect(corps).toContainEqual({ isDraft: false })
+      // Le contenu est parti AVANT la publication : on termine ce qu'on voit.
+      expect(corps[0]).toHaveProperty('content')
+    })
+    const page = ecritures.at(-1)?.pages[0]
+    if (page?.kind !== 'canvas') {
+      throw new Error('forme inattendue')
+    }
+    expect(page.elements[0]?.x).toBe(250)
+  })
+
+  it('ne propose pas de terminer un design qui l est deja', async () => {
+    monter()
+    await screen.findByTestId('page-cover')
+
+    expect(
+      screen.queryByRole('button', { name: 'Terminer' }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText('Brouillon')).not.toBeInTheDocument()
   })
 
   // Le zoom : l'echelle de depart fait tenir la page dans le cadre, les boutons la posent

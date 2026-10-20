@@ -39,7 +39,14 @@ describe('routes des designs de PDF', () => {
 
   it('rend les presets globaux a un membre du service', async () => {
     const preset = await testDb.pdfDesignPreset.create({
-      data: { name: 'Programme de reference', content: CONTENT, sortOrder: 0 },
+      data: {
+        name: 'Programme de reference',
+        content: CONTENT,
+        sortOrder: 0,
+        // TERMINE : un brouillon n'est propose a aucun service, et ces tests-la parlent de
+        // la liste, pas de l'etat du modele.
+        publishedAt: new Date(),
+      },
     })
 
     const res = await lire(scenario.serviceA.id, scenario.cookiesA)
@@ -111,6 +118,7 @@ describe('routes des designs de PDF', () => {
   it('ecarte un design au contenu invalide sans faire tomber la liste', async () => {
     await testDb.pdfDesignPreset.create({
       data: {
+        publishedAt: new Date(),
         name: 'Preset casse',
         content: {
           version: 1,
@@ -250,6 +258,7 @@ describe('routes des designs de PDF', () => {
         name: 'Preset retire',
         content: CONTENT,
         sortOrder: 50,
+        publishedAt: new Date(),
         archivedAt: new Date(),
       },
     })
@@ -332,6 +341,117 @@ describe('routes des designs de PDF', () => {
     expect(res.statusCode).toBe(404)
   })
 
+  // Un modele livre en BROUILLON se compose cote super-admin : aucun service ne le voit, et
+  // il ne se duplique pas davantage par qui connaitrait son identifiant.
+  it('ne propose pas un modele livre en brouillon, ni ne le laisse dupliquer', async () => {
+    const brouillon = await testDb.pdfDesignPreset.create({
+      data: { name: 'Modele en chantier', content: CONTENT, sortOrder: 90 },
+    })
+
+    const liste = await lire(scenario.serviceA.id, scenario.cookiesA)
+    expect(liste.json().presets.map((p: { id: string }) => p.id)).not.toContain(
+      brouillon.id,
+    )
+
+    const copie = await creer(scenario.serviceA.id, scenario.cookiesA, {
+      sourcePresetId: brouillon.id,
+    })
+    expect(copie.statusCode).toBe(404)
+  })
+
+  // Un design NEUF est un brouillon : il se compose dans les reglages, et n'est pas propose
+  // au moment d'exporter tant qu'il n'est pas termine.
+  it('cree un design en brouillon, modele livre ou page blanche', async () => {
+    const preset = await testDb.pdfDesignPreset.findFirstOrThrow({
+      where: { name: 'Programme de reference' },
+    })
+
+    const vierge = await creer(scenario.serviceA.id, scenario.cookiesA, {})
+    const copie = await creer(scenario.serviceA.id, scenario.cookiesA, {
+      sourcePresetId: preset.id,
+    })
+
+    expect(vierge.json().isDraft).toBe(true)
+    expect(copie.json().isDraft).toBe(true)
+  })
+
+  it('termine un brouillon, et le remet en brouillon', async () => {
+    const res = await creer(scenario.serviceA.id, scenario.cookiesA, {})
+    const id = res.json().id
+
+    const termine = await modifier(
+      scenario.serviceA.id,
+      scenario.cookiesA,
+      id,
+      {
+        isDraft: false,
+      },
+    )
+    expect(termine.json().isDraft).toBe(false)
+    const enBase = await testDb.pdfDesign.findFirstOrThrow({ where: { id } })
+    expect(enBase.publishedAt).not.toBeNull()
+
+    const remis = await modifier(scenario.serviceA.id, scenario.cookiesA, id, {
+      isDraft: true,
+    })
+    expect(remis.json().isDraft).toBe(true)
+  })
+
+  // Le design par defaut sert a CHAQUE export : un brouillon ne peut pas l'etre.
+  it('refuse de poser un brouillon comme design par defaut', async () => {
+    const res = await creer(scenario.serviceA.id, scenario.cookiesA, {})
+
+    const pose = await modifier(
+      scenario.serviceA.id,
+      scenario.cookiesA,
+      res.json().id,
+      { isDefault: true },
+    )
+
+    expect(pose.statusCode).toBe(400)
+  })
+
+  it('accepte de terminer et de poser le defaut d un seul geste', async () => {
+    const res = await creer(scenario.serviceA.id, scenario.cookiesA, {})
+
+    const pose = await modifier(
+      scenario.serviceA.id,
+      scenario.cookiesA,
+      res.json().id,
+      { isDraft: false, isDefault: true },
+    )
+
+    expect(pose.statusCode).toBe(200)
+    expect(pose.json()).toMatchObject({ isDraft: false, isDefault: true })
+  })
+
+  // Meme regle que la suppression : un design qui n'est plus propose a l'export n'est le
+  // defaut de rien, et le laisser marque ferait DEUX defauts des qu'un autre est pose.
+  it('decroche le defaut en remettant le design en brouillon', async () => {
+    const res = await creer(scenario.serviceA.id, scenario.cookiesA, {})
+    const id = res.json().id
+    await modifier(scenario.serviceA.id, scenario.cookiesA, id, {
+      isDraft: false,
+      isDefault: true,
+    })
+
+    const remis = await modifier(scenario.serviceA.id, scenario.cookiesA, id, {
+      isDraft: true,
+    })
+
+    expect(remis.json()).toMatchObject({ isDraft: true, isDefault: false })
+  })
+
+  // Un modele livre est fini par construction : il n'a pas d'etat de brouillon a porter.
+  it('ne dit jamais brouillon d un modele livre', async () => {
+    const res = await lire(scenario.serviceA.id, scenario.cookiesA)
+
+    expect(res.json().presets.length).toBeGreaterThan(0)
+    for (const preset of res.json().presets) {
+      expect(preset.isDraft).toBe(false)
+    }
+  })
+
   // Revue de branche, minor 6 : « Mon design   » se stockait avec ses espaces, et deux noms
   // qui se lisent pareil cohabitaient dans la liste.
   it('rogne les espaces autour du nom', async () => {
@@ -401,10 +521,13 @@ describe('routes des designs de PDF', () => {
       take: 2,
     })
 
+    // On ne pose par defaut qu'un design TERMINE : un brouillon n'est propose a aucun export.
     await modifier(scenario.serviceA.id, scenario.cookiesA, premier.id, {
+      isDraft: false,
       isDefault: true,
     })
     await modifier(scenario.serviceA.id, scenario.cookiesA, second.id, {
+      isDraft: false,
       isDefault: true,
     })
 
@@ -419,12 +542,14 @@ describe('routes des designs de PDF', () => {
       where: { serviceId: scenario.serviceB.id, archivedAt: null },
     })
     await modifier(scenario.serviceB.id, scenario.cookiesB, designB.id, {
+      isDraft: false,
       isDefault: true,
     })
     const designA = await testDb.pdfDesign.findFirstOrThrow({
       where: { serviceId: scenario.serviceA.id, archivedAt: null },
     })
     await modifier(scenario.serviceA.id, scenario.cookiesA, designA.id, {
+      isDraft: false,
       isDefault: true,
     })
 

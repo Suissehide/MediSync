@@ -11,6 +11,32 @@ import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { TenantContextInterface } from '../../../types/utils/tenant-context'
 import type { PostgresPrismaClient } from '../postgres-client'
 
+// Les colonnes qu'un PATCH touche, et elles seules : un champ absent du corps ne doit pas
+// arriver a `undefined` dans `data`, ou Prisma le remettrait a son defaut. Hors de la methode
+// pour que celle-ci ne porte que la transaction et son decrochage de defaut.
+const donneesDeMiseAJour = (params: PdfDesignUpdateEntityRepo) => ({
+  ...(params.name === undefined ? {} : { name: params.name }),
+  ...(params.content === undefined
+    ? {}
+    : { content: params.content as Prisma.InputJsonValue }),
+  ...(params.isDefault === undefined ? {} : { isDefault: params.isDefault }),
+  // Supprimer decroche le defaut : un design hors de la liste n'est le defaut de rien, et le
+  // laisser marque ferait DEUX defauts des qu'un autre est pose puis celui-la restaure.
+  ...(params.archived === undefined
+    ? {}
+    : params.archived
+      ? { archivedAt: new Date(), isDefault: false }
+      : { archivedAt: null }),
+  // Repasser en brouillon decroche le defaut pour la meme raison : un design qui n'est plus
+  // propose a l'export n'est le defaut de rien. La date est ecrasee a chaque fois qu'on
+  // termine — elle dit quand le design a ete termine, pas quand il l'a ete la premiere fois.
+  ...(params.published === undefined
+    ? {}
+    : params.published
+      ? { publishedAt: new Date() }
+      : { publishedAt: null, isDefault: false }),
+})
+
 class PdfDesignRepository implements PdfDesignRepositoryInterface {
   private readonly prisma: PostgresPrismaClient
   private readonly errorHandler: ErrorHandlerInterface
@@ -45,18 +71,21 @@ class PdfDesignRepository implements PdfDesignRepositoryInterface {
 
   // Modele GLOBAL : aucun filtre de tenant a porter. Permis sous contexte de service parce
   // qu'`assertTenantScope` sort par `assertGlobalScope` des que la famille est globale.
+  // `publishedAt` non nul : un modele en BROUILLON se compose cote super-admin et n'est
+  // propose a aucun service tant qu'il n'est pas termine.
   findAllPresets(): Promise<PdfDesignPresetEntityRepo[]> {
     return this.prisma.pdfDesignPreset.findMany({
-      where: { archivedAt: null },
+      where: { archivedAt: null, publishedAt: { not: null } },
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
     })
   }
 
-  // `archivedAt: null` : un preset retire n'est plus propose, il ne doit pas rester
-  // duplicable par qui connait son id. Une route ne se garde pas sur la foi de son ecran.
+  // Les memes deux conditions que la liste, et pour la meme raison : un preset retire ou pas
+  // encore termine ne doit pas rester duplicable par qui connait son id. Une route ne se
+  // garde pas sur la foi de son ecran.
   findPresetByID(presetID: string): Promise<PdfDesignPresetEntityRepo | null> {
     return this.prisma.pdfDesignPreset.findFirst({
-      where: { id: presetID, archivedAt: null },
+      where: { id: presetID, archivedAt: null, publishedAt: { not: null } },
     })
   }
 
@@ -106,23 +135,7 @@ class PdfDesignRepository implements PdfDesignRepositoryInterface {
         }
         return tx.pdfDesign.update({
           where: { id_serviceId: { id: designID, serviceId: scope.serviceId } },
-          data: {
-            ...(params.name === undefined ? {} : { name: params.name }),
-            ...(params.content === undefined
-              ? {}
-              : { content: params.content as Prisma.InputJsonValue }),
-            ...(params.isDefault === undefined
-              ? {}
-              : { isDefault: params.isDefault }),
-            // Supprimer decroche le defaut : un design hors de la liste n'est le defaut de
-            // rien, et le laisser marque ferait DEUX defauts des qu'un autre est pose puis
-            // celui-la restaure.
-            ...(params.archived === undefined
-              ? {}
-              : params.archived
-                ? { archivedAt: new Date(), isDefault: false }
-                : { archivedAt: null }),
-          },
+          data: donneesDeMiseAJour(params),
         })
       })
     } catch (err) {

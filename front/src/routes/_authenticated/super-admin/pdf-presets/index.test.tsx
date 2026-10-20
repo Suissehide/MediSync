@@ -84,7 +84,13 @@ const contenu = (): PdfDesignContent => ({
   ],
 })
 
-const preset = (id: string, name: string, sortOrder: number) => ({
+const preset = (
+  id: string,
+  name: string,
+  sortOrder: number,
+  isDraft = false,
+) => ({
+  isDraft,
   id,
   name,
   content: contenu(),
@@ -192,6 +198,25 @@ describe('liste des modeles livres', () => {
     await waitFor(() => {
       expect(ecritures).toContainEqual(
         expect.objectContaining({ method: 'POST', body: {} }),
+      )
+    })
+  })
+
+  // Un modele neuf est un brouillon : la carte le dit, et son menu propose de le terminer.
+  // Tant qu'il l'est, aucun service ne le voit — c'est le back qui le tient.
+  it('marque un brouillon et le termine depuis son menu', async () => {
+    const { ecritures } = monter([preset('p-a', 'Alpha', 0, true)])
+    await screen.findByText('Alpha')
+    expect(screen.getByText('Brouillon')).toBeInTheDocument()
+
+    await ouvrirMenu('Alpha')
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: 'Terminer' }),
+    )
+
+    await waitFor(() => {
+      expect(ecritures).toContainEqual(
+        expect.objectContaining({ method: 'PATCH', body: { isDraft: false } }),
       )
     })
   })

@@ -1,7 +1,9 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import {
+  Check,
   Copy,
   Ellipsis,
+  FilePen,
   Lock,
   Pencil,
   RotateCcw,
@@ -18,9 +20,12 @@ import { Button } from '../../ui/button.tsx'
 import Vignette from './vignette.tsx'
 
 type DesignCardProps = {
-  // `isDefault` optionnel : un MODELE LIVRE n'est le defaut d'aucun service, et l'ecran
-  // super-admin monte cette meme carte.
-  design: Omit<PdfDesignSummary, 'isDefault'> & { isDefault?: boolean }
+  // `isDefault` et `isDraft` optionnels : un MODELE LIVRE n'est le defaut d'aucun service et
+  // n'a pas d'etat de brouillon, et l'ecran super-admin monte cette meme carte.
+  design: Omit<PdfDesignSummary, 'isDefault' | 'isDraft'> & {
+    isDefault?: boolean
+    isDraft?: boolean
+  }
   // Un modele livre est en lecture seule : il se duplique, il ne se modifie pas.
   lectureSeule: boolean
   supprime?: boolean
@@ -30,6 +35,8 @@ type DesignCardProps = {
   onParDefaut?: () => void
   onSupprimer?: () => void
   onRestaurer?: () => void
+  // Termine le brouillon, ou y remet le design. Absent, la carte ne montre ni badge ni bascule.
+  onBrouillon?: (isDraft: boolean) => void
   sources?: SourcesImages
   // Fleches d'ordre, pour l'ecran qui en a un (les modeles livres). Absentes ailleurs : les
   // designs d'un service n'ont pas d'ordre a regler.
@@ -74,6 +81,86 @@ const Item = ({
   </DropdownMenu.Item>
 )
 
+// Les actions secondaires d'une carte. Son propre composant : une seule action principale est
+// visible, et tout le reste tient ici — l'etat du design decide de ce qui s'y trouve.
+const MenuCarte = ({
+  design,
+  onRenommer,
+  onParDefaut,
+  onDupliquer,
+  onBrouillon,
+  onSupprimer,
+}: Pick<
+  DesignCardProps,
+  | 'design'
+  | 'onRenommer'
+  | 'onParDefaut'
+  | 'onDupliquer'
+  | 'onBrouillon'
+  | 'onSupprimer'
+>) => (
+  <DropdownMenu.Root>
+    <DropdownMenu.Trigger asChild>
+      <Button
+        variant="outline"
+        size="icon"
+        aria-label={`Actions sur ${design.name}`}
+        className="h-[34px] w-[34px]"
+      >
+        <Ellipsis className="w-4 h-4" />
+      </Button>
+    </DropdownMenu.Trigger>
+    <DropdownMenu.Portal>
+      <DropdownMenu.Content
+        align="end"
+        sideOffset={6}
+        className="w-[210px] p-1 bg-popover border border-border rounded-[10px] shadow-[0_10px_30px_rgba(4,24,43,.14)] z-50"
+      >
+        {/* Gate sur le GESTE autant que sur l'etat : un bouton sans geste
+            derriere etait un bouton MORT, qui ne disait pas pourquoi il ne
+            faisait rien. Et un modele livre n'a pas de defaut a definir. */}
+        {onRenommer && (
+          <Item
+            libelle="Renommer"
+            Icone={TextCursorInput}
+            onSelect={onRenommer}
+          />
+        )}
+        {/* Un brouillon ne peut pas etre le defaut : il servirait a chaque
+            export alors qu'il n'est pas fini. Le back le refuse aussi. */}
+        {onParDefaut && !design.isDefault && !design.isDraft && (
+          <Item
+            libelle="Définir par défaut"
+            Icone={Star}
+            onSelect={onParDefaut}
+          />
+        )}
+        {onBrouillon && (
+          <Item
+            libelle={design.isDraft ? 'Terminer' : 'Repasser en brouillon'}
+            Icone={design.isDraft ? Check : FilePen}
+            onSelect={() => onBrouillon(!design.isDraft)}
+          />
+        )}
+        {onDupliquer && (
+          <Item libelle="Dupliquer" Icone={Copy} onSelect={onDupliquer} />
+        )}
+        {onSupprimer && (
+          <>
+            <DropdownMenu.Separator className="my-1 h-px bg-muted" />
+            <Item
+              libelle="Supprimer"
+              Icone={Trash2}
+              onSelect={onSupprimer}
+              danger
+            />
+          </>
+        )}
+      </DropdownMenu.Content>
+    </DropdownMenu.Portal>
+  </DropdownMenu.Root>
+)
+
 export default function DesignCard({
   design,
   lectureSeule,
@@ -84,6 +171,7 @@ export default function DesignCard({
   onParDefaut,
   onSupprimer,
   onRestaurer,
+  onBrouillon,
   sources,
   onMonter,
   onDescendre,
@@ -129,6 +217,12 @@ export default function DesignCard({
             />
           ))}
 
+        {design.isDraft && (
+          <span className="absolute top-2.5 left-2.5 h-6 px-2.5 rounded-full bg-a-saisir-fond text-a-saisir-texte text-xs font-semibold flex items-center gap-1.5">
+            <FilePen className="w-3 h-3" />
+            Brouillon
+          </span>
+        )}
         {design.isDefault && (
           <span className="absolute top-2.5 left-2.5 h-6 px-2.5 rounded-full bg-primary text-primary-foreground text-xs font-semibold flex items-center gap-1.5">
             <Star className="w-3 h-3" />
@@ -187,61 +281,14 @@ export default function DesignCard({
                 />
               )}
 
-              <DropdownMenu.Root>
-                <DropdownMenu.Trigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    aria-label={`Actions sur ${design.name}`}
-                    className="h-[34px] w-[34px]"
-                  >
-                    <Ellipsis className="w-4 h-4" />
-                  </Button>
-                </DropdownMenu.Trigger>
-                <DropdownMenu.Portal>
-                  <DropdownMenu.Content
-                    align="end"
-                    sideOffset={6}
-                    className="w-[210px] p-1 bg-popover border border-border rounded-[10px] shadow-[0_10px_30px_rgba(4,24,43,.14)] z-50"
-                  >
-                    {/* Gate sur le GESTE autant que sur l'etat : un bouton sans geste
-                        derriere etait un bouton MORT, qui ne disait pas pourquoi il ne
-                        faisait rien. Et un modele livre n'a pas de defaut a definir. */}
-                    {onRenommer && (
-                      <Item
-                        libelle="Renommer"
-                        Icone={TextCursorInput}
-                        onSelect={onRenommer}
-                      />
-                    )}
-                    {onParDefaut && !design.isDefault && (
-                      <Item
-                        libelle="Définir par défaut"
-                        Icone={Star}
-                        onSelect={onParDefaut}
-                      />
-                    )}
-                    {onDupliquer && (
-                      <Item
-                        libelle="Dupliquer"
-                        Icone={Copy}
-                        onSelect={onDupliquer}
-                      />
-                    )}
-                    {onSupprimer && (
-                      <>
-                        <DropdownMenu.Separator className="my-1 h-px bg-muted" />
-                        <Item
-                          libelle="Supprimer"
-                          Icone={Trash2}
-                          onSelect={onSupprimer}
-                          danger
-                        />
-                      </>
-                    )}
-                  </DropdownMenu.Content>
-                </DropdownMenu.Portal>
-              </DropdownMenu.Root>
+              <MenuCarte
+                design={design}
+                onRenommer={onRenommer}
+                onParDefaut={onParDefaut}
+                onDupliquer={onDupliquer}
+                onBrouillon={onBrouillon}
+                onSupprimer={onSupprimer}
+              />
             </>
           )}
         </div>

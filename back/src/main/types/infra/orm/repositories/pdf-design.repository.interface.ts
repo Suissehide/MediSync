@@ -18,6 +18,8 @@ export type PdfDesignUpdateEntityRepo = {
   isDefault?: boolean
   // `true` supprime (archive), `false` restaure.
   archived?: boolean
+  // `true` termine le brouillon (il devient proposable a l'export), `false` l'y remet.
+  published?: boolean
 }
 
 export interface PdfDesignRepositoryInterface {

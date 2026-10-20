@@ -1,9 +1,9 @@
 import { Calendar, Check, User } from 'lucide-react'
 
 import type { InboxTask } from '@/queries/useInbox.ts'
-import { useServiceMembers } from '@/queries/useInbox.ts'
+import { useServiceMembers, useServiceSoignants } from '@/queries/useInbox.ts'
 import { useAuthStore } from '@/store/useAuthStore.ts'
-import { memberName, whenLabel } from './inbox.utils.ts'
+import { memberName, soignantName, whenLabel } from './inbox.utils.ts'
 
 const pad2 = (n: number) => String(n).padStart(2, '0')
 const today = () => {
@@ -32,6 +32,7 @@ export function TaskRow({
 }) {
   const me = useAuthStore((state) => state.user?.id)
   const members = useServiceMembers(task.service)
+  const soignants = useServiceSoignants(task.service)
   const late = !done && task.dueDate !== null && task.dueDate < today()
   const author =
     task.authorId === null
@@ -71,6 +72,14 @@ export function TaskRow({
                 className={`px-2 rounded-full text-xs font-medium ${id === me ? 'bg-blue-50 text-primary' : 'bg-muted text-text-dark'}`}
               >
                 @{id === me ? 'vous' : memberName(members, id)}
+              </span>
+            ))}
+            {task.soignantIds.map((id) => (
+              <span
+                key={id}
+                className={`px-2 rounded-full border border-border text-xs font-medium ${id === task.service.soignantId ? 'bg-blue-50 text-primary' : 'text-text-dark'}`}
+              >
+                @{soignantName(soignants, id)}
               </span>
             ))}
             {task.patient && (
