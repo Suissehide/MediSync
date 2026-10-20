@@ -1,3 +1,4 @@
+import { useNavigate } from '@tanstack/react-router'
 import { Bell, ListTodo } from 'lucide-react'
 import { useCallback, useState } from 'react'
 
@@ -14,6 +15,7 @@ import {
 } from '@/queries/useInbox.ts'
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import { NotificationsPanel } from './notificationsPanel.tsx'
+import { notificationTarget } from './notificationTypes.tsx'
 import { PANEL_CLASS } from './panelChrome.tsx'
 import { TasksPanel } from './tasksPanel.tsx'
 
@@ -58,6 +60,7 @@ function IconButton({
 
 export function Inbox() {
   const me = useAuthStore((state) => state.user?.id)
+  const navigate = useNavigate()
   const services = useInboxServices()
   const { tasks } = useTasks(services)
   const { notifications } = useNotifications(services)
@@ -66,12 +69,33 @@ export function Inbox() {
   const [subPopupOpen, setSubPopupOpen] = useState(false)
   const toggle = (panel: Exclude<InboxPanel, null>) => (next: boolean) =>
     setOpen(next ? panel : null)
-  const openTasksFor = (n: InboxNotification) => {
-    if (!n.service.canTasks) {
+  const openNotification = (n: InboxNotification) => {
+    const target = notificationTarget(n)
+    if (target.kind === 'task') {
+      if (!n.service.canTasks) {
+        return
+      }
+      setFocus({ serviceId: n.service.serviceId, taskId: target.taskId })
+      setOpen('tasks')
       return
     }
-    setFocus({ serviceId: n.service.serviceId, taskId: n.payload.taskId })
-    setOpen('tasks')
+    const params = {
+      establishmentId: n.service.establishmentId,
+      serviceId: n.service.serviceId,
+    }
+    if (target.kind === 'agenda') {
+      navigate({
+        to: '/e/$establishmentId/s/$serviceId/agenda',
+        params,
+        search: { date: target.date },
+      })
+    } else {
+      navigate({
+        to: '/e/$establishmentId/s/$serviceId/patient/$patientID',
+        params: { ...params, patientID: target.patientId },
+      })
+    }
+    setOpen(null)
   }
   const onFocusDone = useCallback(() => setFocus(null), [])
   const myOpenTasks = tasks.filter(
@@ -129,7 +153,7 @@ export function Inbox() {
           <NotificationsPanel
             services={services}
             notifications={notifications}
-            onOpenTask={openTasksFor}
+            onOpenNotification={openNotification}
           />
         </PopoverContent>
       </PopoverRoot>

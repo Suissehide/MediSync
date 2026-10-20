@@ -34,6 +34,10 @@ import type { Soignant } from '@/types/soignant.ts'
 export const Route = createFileRoute(
   '/_authenticated/e/$establishmentId/s/$serviceId/agenda',
 )({
+  // `date` (YYYY-MM-DD) : lien « Voir l'agenda »/« Ouvrir le RDV » du panneau de notifications.
+  validateSearch: (search: Record<string, unknown>): { date?: string } => ({
+    date: typeof search.date === 'string' ? search.date : undefined,
+  }),
   component: Agenda,
 })
 
@@ -69,7 +73,12 @@ const getNewAppointmentProps = (row: DaySlotRow | null, slot?: Slot) => {
 }
 
 function Agenda() {
+  const { date } = Route.useSearch()
   const [selectedDay, setSelectedDay] = useState(() => {
+    const fromSearch = date ? dayjs.utc(date) : null
+    if (fromSearch?.isValid()) {
+      return fromSearch.startOf('day')
+    }
     const stored = localStorage.getItem(SELECTED_DAY_STORAGE_KEY)
     const parsed = stored ? dayjs.utc(stored) : null
 
