@@ -182,8 +182,14 @@ export function NotificationsPanel({
           ))
         )}
       </div>
-      <div className="px-[18px] py-2.5 border-t border-border text-xs text-text-light">
-        Conservées 30 jours
+      <div className="px-[18px] py-2.5 border-t border-border text-xs text-text-light flex items-center justify-between">
+        <span>Conservées 30 jours</span>
+        <a
+          href="/user/settings#notifications"
+          className="text-primary font-medium"
+        >
+          Préférences
+        </a>
       </div>
     </>
   )
