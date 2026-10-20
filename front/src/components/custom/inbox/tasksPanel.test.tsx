@@ -1,6 +1,10 @@
+import { LocalizationProvider } from '@mui/x-date-pickers'
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -10,6 +14,9 @@ import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { User } from '@/types/auth.ts'
 import type { Task } from '@/types/task.ts'
 import { TasksPanel } from './tasksPanel.tsx'
+
+// `main.tsx` enregistre ce greffon au demarrage ; le DatePicker d'echeance en depend (dayjs.utc).
+dayjs.extend(utc)
 
 vi.mock('@/api/inbox.api.ts', () => ({
   InboxApi: {
@@ -363,4 +370,20 @@ describe('TasksPanel', () => {
     expect(screen.getByText('Tache t1')).toBeInTheDocument()
   })
 
+  it('le bouton Échéance affiche le DatePicker', async () => {
+    const u = userEvent.setup()
+    render(
+      <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="fr">
+        <TasksPanel
+          services={[s1]}
+          tasks={[]}
+          focus={null}
+          onFocusDone={() => undefined}
+        />
+      </LocalizationProvider>,
+      { wrapper },
+    )
+    await u.click(screen.getByRole('button', { name: 'Échéance' }))
+    expect(screen.getByLabelText('Échéance')).toBeInTheDocument()
+  })
 })

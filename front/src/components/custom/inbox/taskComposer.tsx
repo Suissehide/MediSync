@@ -1,6 +1,8 @@
+import dayjs from 'dayjs'
 import { Calendar, User, Users, X } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 
+import { DatePicker } from '@/components/ui/datePicker.tsx'
 import {
   type InboxService,
   useInboxMutations,
@@ -38,12 +40,12 @@ export function TaskComposer({
   const [tags, setTags] = useState<string[]>([])
   const [soignantTags, setSoignantTags] = useState<string[]>([])
   const [dueDate, setDueDate] = useState('')
+  const [dateOpen, setDateOpen] = useState(false)
   const [patient, setPatient] = useState<{ id: string; label: string } | null>(
     null,
   )
   const [patientSearch, setPatientSearch] = useState<string | null>(null)
   const [active, setActive] = useState(0)
-  const dateRef = useRef<HTMLInputElement>(null)
   const patients = useServicePatients(service, patientSearch !== null)
 
   const query = mentionQuery(draft)
@@ -155,6 +157,14 @@ export function TaskComposer({
       fold(`${p.lastName} ${p.firstName}`).includes(fold(patientSearch ?? '')),
     )
     .slice(0, 6)
+  const toggleDate = () => {
+    setPatientSearch(null)
+    setDateOpen(!dateOpen)
+  }
+  const togglePatient = () => {
+    setDateOpen(false)
+    setPatientSearch(patientSearch === null ? '' : null)
+  }
 
   return (
     <div className="px-[18px] py-3 border-b border-border relative">
@@ -195,33 +205,16 @@ export function TaskComposer({
           type="button"
           aria-label="Échéance"
           title="Échéance"
-          onClick={() => {
-            const input = dateRef.current
-            if (input?.showPicker) {
-              input.showPicker()
-            } else {
-              input?.focus()
-              input?.click()
-            }
-          }}
+          onClick={toggleDate}
           className="cursor-pointer w-8 h-8 rounded-md flex items-center justify-center text-text-light hover:bg-muted"
         >
           <Calendar className="w-4 h-4" />
         </button>
-        <input
-          ref={dateRef}
-          type="date"
-          tabIndex={-1}
-          aria-hidden
-          value={dueDate}
-          onChange={(e) => setDueDate(e.target.value)}
-          className="sr-only"
-        />
         <button
           type="button"
           aria-label="Patient"
           title="Patient"
-          onClick={() => setPatientSearch(patientSearch === null ? '' : null)}
+          onClick={togglePatient}
           className="cursor-pointer w-8 h-8 rounded-md flex items-center justify-center text-text-light hover:bg-muted"
         >
           <User className="w-4 h-4" />
@@ -269,6 +262,22 @@ export function TaskComposer({
               </button>
             )
           })}
+        </div>
+      )}
+      {dateOpen && (
+        <div className="mt-2">
+          <DatePicker
+            aria-label="Échéance"
+            open
+            onClose={() => setDateOpen(false)}
+            value={dueDate ? dayjs.utc(dueDate) : null}
+            onChange={(date) => {
+              if (date?.isValid()) {
+                setDueDate(date.format('YYYY-MM-DD'))
+              }
+              setDateOpen(false)
+            }}
+          />
         </div>
       )}
       {patientSearch !== null && (
