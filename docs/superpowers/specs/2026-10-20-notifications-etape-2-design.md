@@ -53,23 +53,25 @@ Les données de santé restent dans l'app : rien de tout ceci ne part par e-mail
 
 ## Architecture
 
-### Événements de domaine
+### `NotificationDispatcher` (appelé par les domaines)
 
-Les domaines émettent sur `appEventBus` (déjà utilisé par le journal d'activité) des événements riches, **après** l'écriture (comme aujourd'hui) :
+Pas de nouvel événement sur `appEventBus` : `activity-log-emissions-declarees.test.ts` exige qu'un événement déclaré écrive une ligne du journal d'activité, et `access-log-vocabulaire.test.ts` lie le vocabulaire du journal aux libellés du front. Y ajouter des événements de notification forcerait à journaliser et libeller des actions qui n'en sont pas.
 
-- `AppointmentDomain.update` : lit le rendez-vous avant l'écriture (`findByID`), compare après : patients ajoutés (lignes sans `id`), patients passés à `no` sans raison, dates changées ; supprimé si la liste est vidée.
-- `AppointmentDomain.delete` : lit le rendez-vous et ses patients avant de supprimer.
-- `SlotDomain.update` : lit le créneau avant ; horaire, salle (`slotTemplate.locationID`) changés → « modifié » pour chaque rendez-vous ; `archivedAt` posé alors que des rendez-vous ont des patients → « annulé ».
-- `SlotDomain.delete` : rendez-vous avec patients → « annulé ».
-- `PatientDomain.enrollInSlot` / `processEnrollments` : collecte les rendez-vous rejoints par patient et émet un événement d'inscription en fin de traitement.
+Un service `NotificationDispatcher` (`services/notification.dispatcher.ts`) est appelé directement par les domaines. Chaque méthode publique rend la main tout de suite (`void`), travaille en tâche de fond dans le contexte de la requête, et **attrape toute erreur** (journalisée par sa classe, comme les purges) : une notification ratée n'échoue jamais l'action métier.
 
-Nouveaux événements typés dans `app-event-bus.ts`, par exemple `appointment.patientsAdded`, `appointment.moved`, `appointment.cancelled`, `appointment.absent`, `patient.enrolledInSessions`, chacun avec l'acteur (`userID`) et les données de rendu. Les événements existants (`appointment.updated`…) et leur journal d'activité ne changent pas.
+- `snapshot(appointmentIds)` : lit, **avant** une suppression, ce qu'il faut pour notifier ensuite (séance, soignants du créneau, patients) ;
+- `patientsAdded(actorId, appointmentId, patientIds)`, `absent(actorId, appointmentId, patientIds)`, `moved(actorId, appointmentId, before)`, `cancelled(actorId, snapshots)`, `enrolled(actorId, patientId, appointmentIds)`, `slotFilled(actorId, slotId)`.
 
-### `NotificationSubscriber`
+Branchements :
 
-Sur le modèle de `services/activity-log.subscriber.ts` : s'abonne au bus, calcule les destinataires (soignants de la séance, ou de la thématique), retire l'auteur, applique les préférences de chacun, écrit les notifications. S'exécute dans le contexte de la requête (le bus est synchrone, le contexte de tenant est actif). Une erreur de notification est journalisée et n'échoue jamais l'action métier.
+- `AppointmentDomain.update` : lit le rendez-vous avant l'écriture, compare après : patients ajoutés, patients passés à `no` sans raison, date changée ; si la liste est vidée, c'est une annulation (instantané pris avant) ;
+- `AppointmentDomain.delete` : instantané avant, annulation après ;
+- `SlotDomain.update` : horaire ou salle changés → « modifié » pour chaque rendez-vous du créneau ; `archivedAt` posé avec des patients → « annulé » ;
+- `SlotDomain.delete` : instantané avant, annulation après ;
+- `PatientDomain.processEnrollments` : les rendez-vous rejoints par chaque patient → `enrolled` en fin de traitement ;
+- après tout ajout de patient, `slotFilled` évalue « presque complet ».
 
-« Créneau presque complet » est évalué par l'abonné après chaque ajout (inscription ou fiche RDV).
+Le calcul des destinataires et le filtrage par préférences vivent dans le dispatcher ; l'écriture passe par `NotificationRepository`.
 
 ### Planificateur
 
