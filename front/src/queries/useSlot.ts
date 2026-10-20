@@ -15,6 +15,7 @@ import {
   snapshotForTenant,
 } from '../hooks/useTenantSwitch.ts'
 import { useToast } from '../hooks/useToast.ts'
+import { conflictWarning } from '../libs/planningConflicts.ts'
 import type {
   CreateSlotParams,
   PlanningConflict,
@@ -78,6 +79,8 @@ export const useSlotsInRangeQuery = (range: SlotQuery | null) => {
   return { slots, dataUpdatedAt, isPending, isFetching, isError, error }
 }
 
+const NO_CONFLICTS: PlanningConflict[] = []
+
 // Clé hors de SLOT.GET_ALL, que les mises à jour optimistes réécrivent ; `slotsUpdatedAt` la rafraîchit avec les créneaux.
 export const useSlotConflictsQuery = (
   range: SlotDateRange | null,
@@ -93,7 +96,7 @@ export const useSlotConflictsQuery = (
 
   useDataFetching({ isPending, isError, error })
 
-  return data ?? []
+  return data ?? NO_CONFLICTS
 }
 
 export const useSlotByIDQuery = (slotID: string, options = {}) => {
@@ -160,11 +163,15 @@ export const useSlotMutations = () => {
 
       return { previousSlots }
     },
-    onSuccess: () => {
-      toast({
-        title: 'Créneau créé avec succès',
-        severity: TOAST_SEVERITY.SUCCESS,
-      })
+    onSuccess: (slot) => {
+      toast(
+        slot.conflicts?.length
+          ? conflictWarning(slot.conflicts)
+          : {
+              title: 'Créneau créé avec succès',
+              severity: TOAST_SEVERITY.SUCCESS,
+            },
+      )
     },
     onError: (error, __, context) => {
       restoreForTenant(queryClient, context?.previousSlots)
@@ -261,11 +268,15 @@ export const useSlotMutations = () => {
 
       return { previousSlots, previousSlot }
     },
-    onSuccess: () => {
-      toast({
-        title: 'Créneau modifié avec succès',
-        severity: TOAST_SEVERITY.SUCCESS,
-      })
+    onSuccess: (slot) => {
+      toast(
+        slot.conflicts?.length
+          ? conflictWarning(slot.conflicts)
+          : {
+              title: 'Créneau modifié avec succès',
+              severity: TOAST_SEVERITY.SUCCESS,
+            },
+      )
     },
     onError: (error, __, context) => {
       restoreForTenant(queryClient, context?.previousSlots)
