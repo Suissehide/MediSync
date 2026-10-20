@@ -265,7 +265,7 @@ const monterAvecEchecPuisSucces = () => {
 }
 
 describe('liste des patients, lecture des champs en echec', () => {
-  it("ne touche pas la visibilite/le filtre sauves quand /service-fields echoue, et affiche la colonne apres Réessayer", async () => {
+  it('ne touche pas la visibilite/le filtre sauves quand /service-fields echoue, et affiche la colonne apres Réessayer', async () => {
     memoriserColonneOrientation()
     monterAvecEchecPuisSucces()
 
@@ -278,9 +278,9 @@ describe('liste des patients, lecture des champs en echec', () => {
     expect(
       JSON.parse(localStorage.getItem(`column-visibility/${TABLE}`) ?? '{}'),
     ).toMatchObject({ orientation: true })
-    expect(JSON.parse(localStorage.getItem(`filters/${TABLE}`) ?? '[]')).toEqual([
-      { id: 'orientation', value: ['A'] },
-    ])
+    expect(
+      JSON.parse(localStorage.getItem(`filters/${TABLE}`) ?? '[]'),
+    ).toEqual([{ id: 'orientation', value: ['A'] }])
 
     await userEvent.click(screen.getByRole('button', { name: 'Réessayer' }))
 
