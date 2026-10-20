@@ -1,4 +1,5 @@
 import type { Prisma } from '../../../generated/client'
+import type { PlanningConflict } from '../../utils/planning-conflicts'
 import type {
   SlotDateRangeRepo,
   SlotEntityRepo,
@@ -39,4 +40,9 @@ export interface SlotDomainInterface {
     slotUpdateParams: SlotUpdateEntityDomain,
   ) => Promise<SlotDTODomain>
   delete: (slotID: string) => Promise<SlotEntityDomain>
+  findConflicts: (dateRange: {
+    from: Date
+    to: Date
+  }) => Promise<PlanningConflict[]>
+  conflictsOf: (slotID: string) => Promise<PlanningConflict[]>
 }

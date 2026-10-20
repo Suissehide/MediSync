@@ -9,6 +9,10 @@ import type {
   SlotUpdateEntityDomain,
 } from '../types/domain/slot.domain.interface'
 import type { SlotRepositoryInterface } from '../types/infra/orm/repositories/slot.repository.interface'
+import {
+  detectConflicts,
+  type PlanningConflict,
+} from '../utils/planning-conflicts'
 
 class SlotDomain implements SlotDomainInterface {
   private readonly slotRepository: SlotRepositoryInterface
@@ -23,6 +27,23 @@ class SlotDomain implements SlotDomainInterface {
 
   findByID(slotID: string): Promise<SlotDTODomain> {
     return this.slotRepository.findByID(slotID)
+  }
+
+  async findConflicts(dateRange: {
+    from: Date
+    to: Date
+  }): Promise<PlanningConflict[]> {
+    return detectConflicts(await this.slotRepository.findAll(dateRange))
+  }
+
+  // Les créneaux qui chevauchent celui-ci suffisent : un conflit exige un recouvrement horaire.
+  async conflictsOf(slotID: string): Promise<PlanningConflict[]> {
+    const slot = await this.slotRepository.findByID(slotID)
+    const conflicts = await this.findConflicts({
+      from: slot.startDate,
+      to: slot.endDate,
+    })
+    return conflicts.filter((conflict) => conflict.slotIDs.includes(slotID))
   }
 
   create(slotCreateParams: SlotCreateEntityDomain): Promise<SlotDTODomain> {

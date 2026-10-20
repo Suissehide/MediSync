@@ -6,6 +6,7 @@ import {
   appointmentSchema,
   thematicIdInputSchema,
 } from './index'
+import { planningConflictsSchema } from './planningConflict.schema'
 
 export const appointmentResponseSchema = appointmentSchema.extend({
   id: z.cuid(),
@@ -13,6 +14,11 @@ export const appointmentResponseSchema = appointmentSchema.extend({
 })
 
 export const appointmentsResponseSchema = z.array(appointmentResponseSchema)
+
+export const appointmentWithConflictsResponseSchema =
+  appointmentResponseSchema.extend({
+    conflicts: planningConflictsSchema,
+  })
 
 export const getAppointmentByIdParamsSchema = z.object({
   appointmentID: z.cuid(),
