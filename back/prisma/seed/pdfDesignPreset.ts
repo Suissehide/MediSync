@@ -20,6 +20,9 @@ export default async function seedPdfDesignPresets(prisma: PrismaClient) {
       id: REFERENCE_PRESET_ID,
       name: REFERENCE_PRESET_NAME,
       content: REFERENCE_PRESET_CONTENT,
+      // TERMINE des sa creation : c'est le modele que tout service doit pouvoir dupliquer.
+      // Un modele livre naît brouillon quand un humain le cree, pas quand le seed le pose.
+      publishedAt: new Date(),
       sortOrder: 0,
     },
   })

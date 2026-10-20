@@ -21,6 +21,28 @@ import type { PostgresPrismaClient } from '../postgres-client'
 //
 // Le rappel est `async` avec un `await` DEDANS : une requete Prisma est paresseuse, et le
 // contexte doit etre lu avant le premier point de suspension (back/CLAUDE.md).
+// Les colonnes qu'un PATCH touche, et elles seules : un champ absent du corps ne doit pas
+// arriver a `undefined` dans `data`, ou Prisma le remettrait a son defaut.
+const donneesDeMiseAJour = (params: PdfDesignPresetUpdateEntityRepo) => ({
+  ...(params.name === undefined ? {} : { name: params.name }),
+  ...(params.content === undefined
+    ? {}
+    : { content: params.content as Prisma.InputJsonValue }),
+  ...(params.sortOrder === undefined ? {} : { sortOrder: params.sortOrder }),
+  ...(params.archived === undefined
+    ? {}
+    : params.archived
+      ? { archivedAt: new Date() }
+      : { archivedAt: null }),
+  // La date dit quand le modele a ete termine ; la remettre a null le retire de ce que les
+  // services peuvent dupliquer, sans toucher aux copies deja faites.
+  ...(params.published === undefined
+    ? {}
+    : params.published
+      ? { publishedAt: new Date() }
+      : { publishedAt: null }),
+})
+
 class PdfDesignPresetRepository implements PdfDesignPresetRepositoryInterface {
   private readonly prisma: PostgresPrismaClient
   private readonly errorHandler: ErrorHandlerInterface
@@ -80,20 +102,7 @@ class PdfDesignPresetRepository implements PdfDesignPresetRepositoryInterface {
       try {
         return await this.prisma.pdfDesignPreset.update({
           where: { id: presetID },
-          data: {
-            ...(params.name === undefined ? {} : { name: params.name }),
-            ...(params.content === undefined
-              ? {}
-              : { content: params.content as Prisma.InputJsonValue }),
-            ...(params.sortOrder === undefined
-              ? {}
-              : { sortOrder: params.sortOrder }),
-            ...(params.archived === undefined
-              ? {}
-              : params.archived
-                ? { archivedAt: new Date() }
-                : { archivedAt: null }),
-          },
+          data: donneesDeMiseAJour(params),
         })
       } catch (err) {
         throw this.errorHandler.boomErrorFromPrismaError({

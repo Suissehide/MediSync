@@ -30,6 +30,7 @@ function SuperAdminPdfPresets() {
     createBlankPreset,
     duplicatePreset,
     renamePreset,
+    setDraftPreset,
     archivePreset,
     restorePreset,
     reorderPresets,
@@ -107,6 +108,9 @@ function SuperAdminPdfPresets() {
               }
               onRenommer={() => setARenommer(preset)}
               onDupliquer={() => duplicatePreset.mutate(preset.id)}
+              onBrouillon={(isDraft) =>
+                setDraftPreset.mutate({ id: preset.id, isDraft })
+              }
               onSupprimer={() => setASupprimer(preset.id)}
               onRestaurer={() => restorePreset.mutate(preset.id)}
               onMonter={() => deplacer(rang, rang - 1)}
