@@ -87,10 +87,7 @@ const schedulePatientAccessLogCleanup = (instances: IocContainer): void => {
 
 const FIFTEEN_MIN_MS = 15 * 60 * 1000
 
-// Planification des notifications (rappels, diagnostic, fin de parcours, echeances, purge) :
-// meme mecanisme que les deux purges ci-dessus, hors de toute requete HTTP, et les rappels
-// doivent parcourir TOUS les services — TROISIEME appel de `runAsSystem` dans ce fichier (voir
-// l'entree `application/starter.ts` de `runAsSystem-unicite.test.ts`, `appels: 3`).
+// Planification des notifications (rappels, diagnostic, fin de parcours, echeances, purge) — troisieme appel de runAsSystem de ce fichier.
 const scheduleNotifications = (instances: IocContainer): void => {
   const { notificationScheduler, logger, tenantContext } = instances
   const run = (): void => {

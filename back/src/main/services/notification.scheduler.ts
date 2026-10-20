@@ -37,31 +37,29 @@ type Candidate = {
 }
 type ReminderTarget = { a: UpcomingAppointmentRow; userId: string }
 
-// 'eve' : la veille a 18h heure de Paris (DST geree par le plugin timezone, pas un decalage fixe).
-const reminderTime = (startDate: Date, delay: ReminderDelay): Date => {
+// 'eve' : la veille a 18h heure de Paris. Reconstruit depuis une chaine de date plutot que
+// d'enchainer .subtract(1,'day').hour(18) sur l'instant d'origine : ce dernier garde le DECALAGE
+// de l'instant de depart (ete ou hiver), pas celui du jour cible — autour du changement d'heure
+// (ex. 2026-10-25), le rappel partait a 19h/17h Paris au lieu de 18h.
+export const reminderTime = (startDate: Date, delay: ReminderDelay): Date => {
   if (delay === '2h') {
     return dayjs(startDate).subtract(2, 'hour').toDate()
   }
   if (delay === '1h') {
     return dayjs(startDate).subtract(1, 'hour').toDate()
   }
-  return dayjs(startDate)
+  const veille = dayjs(startDate)
     .tz(PARIS)
     .subtract(1, 'day')
-    .hour(18)
-    .minute(0)
-    .second(0)
-    .millisecond(0)
-    .toDate()
+    .format('YYYY-MM-DD')
+  return dayjs.tz(`${veille} 18:00`, PARIS).toDate()
 }
 
-// Jour calendaire de Paris de `now`, pose en minuit UTC — meme convention que
-// TaskDomain.create pour une colonne @db.Date.
+// Jour calendaire de Paris de `now`, minuit UTC (convention de TaskDomain.create).
 const parisDay = (now: Date): Date =>
   new Date(`${dayjs(now).tz(PARIS).format('YYYY-MM-DD')}T00:00:00Z`)
 
-// Comptes qui incarnent, dans ce service, un des soignants donnes — meme filtre que le
-// dispatcher (Task 3), sans exclusion d'auteur : ces notifications ne naissent pas d'une action.
+// Comptes qui incarnent un de ces soignants dans ce service, sans exclusion d'auteur (pas d'action).
 const usersOf = (
   members: MemberBySoignantRow[],
   serviceId: string,
@@ -94,7 +92,7 @@ const diagnosticCandidates = (
         payload: {
           patientId: d.patientId,
           patientName: d.patientName,
-          entryDate: d.entryDate,
+          entryDate: d.entryDate.toISOString().slice(0, 10),
         },
         dedupeKey: `diag:${d.patientServiceFileId}`,
       }),
@@ -138,7 +136,11 @@ const taskCandidates = (
       serviceId: t.serviceId,
       userId,
       type: 'TASK_DUE' as const,
-      payload: { taskId: t.taskId, text: t.text, dueDate: t.dueDate },
+      payload: {
+        taskId: t.taskId,
+        text: t.text,
+        dueDate: t.dueDate.toISOString().slice(0, 10),
+      },
       dedupeKey: `due:${t.taskId}:${t.dueDate.toISOString().slice(0, 10)}`,
     }))
   })
@@ -184,10 +186,7 @@ const reminderCandidatesOf = (
     ]
   })
 
-// Planificateur des notifications declenchees par le temps (rappels, diagnostic, fin de
-// parcours, echeances) plus la purge a 30 jours. Appele sous le mode systeme du contexte de
-// tenant (application/starter.ts) : chaque lecture du depot porte ses propres bornes, aucune
-// ne lit le tenant courant.
+// Planificateur (rappels, diagnostic, fin de parcours, echeances) et purge a 30 jours, sous le mode systeme.
 class NotificationScheduler implements NotificationSchedulerInterface {
   private readonly notificationScheduleRepository: NotificationScheduleRepositoryInterface
   private readonly userRepository: UserRepositoryInterface
@@ -205,7 +204,7 @@ class NotificationScheduler implements NotificationSchedulerInterface {
 
     const appointments = await repo.upcomingAppointments(
       now,
-      dayjs(now).add(25, 'hour').toDate(),
+      dayjs(now).add(30, 'hour').toDate(),
     )
     const diagnostics = await repo.entryDatesWithoutDiagnostic(
       dayjs(now).subtract(37, 'day').toDate(),

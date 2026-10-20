@@ -17,8 +17,7 @@ import type { PostgresPrismaClient } from '../postgres-client'
 const patientName = (p: { firstName: string; lastName: string }) =>
   `${p.lastName.toUpperCase()} ${p.firstName}`
 
-// Hors tenant (runAsSystem, Task 5) : aucune methode ici ne lit tenantContext.scope(), qui
-// leverait sous ce mode — chaque requete porte ses propres bornes, passees par l'appelant.
+// Hors tenant : aucune methode ne lit tenantContext.scope() (leverait sous runAsSystem).
 class NotificationScheduleRepository
   implements NotificationScheduleRepositoryInterface
 {
@@ -33,7 +32,11 @@ class NotificationScheduleRepository
     to: Date,
   ): Promise<UpcomingAppointmentRow[]> {
     const rows = await this.prisma.appointment.findMany({
-      where: { startDate: { gte: from, lte: to } },
+      where: {
+        startDate: { gte: from, lte: to },
+        slot: { archivedAt: null },
+        appointmentPatients: { some: {} },
+      },
       include: {
         thematic: true,
         slot: {
@@ -89,12 +92,34 @@ class NotificationScheduleRepository
       }))
   }
 
-  // Derniere seance (toutes dates confondues) par (pathway, patient), et presence d'une seance
-  // Bilan de fin (prevue OU honoree, meme requete, aucun filtre de date) : une seule lecture des
-  // rendez-vous d'un parcours sert les deux questions a la fois.
+  // Deux passes bornees plutot qu'une lecture de tous les rendez-vous de parcours du depot : la
+  // premiere ne cherche que les parcours ayant une seance (non annulee) finissant dans [from, to]
+  // (condition necessaire pour que leur derniere seance tombe dans cette fenetre) ; la seconde ne
+  // relit que CES parcours, en entier, pour calculer la vraie derniere date et detecter un Bilan
+  // de fin (prevu ou honore, sans filtre de date). Un creneau annule (archivedAt) est ignore dans
+  // les deux passes : il ne doit ni fixer la derniere date, ni comptabiliser comme un Bilan de fin.
   async pathwaysEnded(from: Date, to: Date): Promise<PathwayEndedRow[]> {
+    const candidats = await this.prisma.appointment.findMany({
+      where: {
+        endDate: { gte: from, lte: to },
+        slot: { pathwayID: { not: null }, archivedAt: null },
+        appointmentPatients: { some: {} },
+      },
+      select: { slot: { select: { pathwayID: true } } },
+    })
+    const pathwayIds = [
+      ...new Set(
+        candidats
+          .map((a) => a.slot.pathwayID)
+          .filter((id): id is string => id !== null),
+      ),
+    ]
+    if (pathwayIds.length === 0) {
+      return []
+    }
+
     const rows = await this.prisma.appointment.findMany({
-      where: { slot: { pathwayID: { not: null } } },
+      where: { slot: { pathwayID: { in: pathwayIds }, archivedAt: null } },
       select: {
         establishmentId: true,
         serviceId: true,

@@ -1,3 +1,4 @@
+import { reminderTime } from '../../main/services/notification.scheduler'
 import { buildTestApp, type TestApp } from './setup/app'
 import { testDb, truncateAll } from './setup/db'
 import {
@@ -6,9 +7,7 @@ import {
   createUser,
 } from './setup/fixtures'
 
-// Planificateur (Task 5) : runOnce est appele directement, sous runAsSystem, avec une date
-// fixe — contrairement au dispatcher (Task 3-4), l'ecriture est attendue (pas de tache de
-// fond), donc aucune boucle d'attente n'est necessaire ici.
+// runOnce est appele directement et attendu (pas de tache de fond), aucune boucle d'attente necessaire.
 describe('NotificationScheduler', () => {
   let t: TestApp
   let E: string
@@ -154,12 +153,20 @@ describe('NotificationScheduler', () => {
   describe('rappels', () => {
     let appointmentId: string
     let dejaCommenceId: string
+    let annuleId: string
+    let sansPatientId: string
+    let dstId: string
 
-    beforeAll(async () => {
+    // Un modele de creneau + creneau + rendez-vous lies a S, patient optionnel.
+    const creerCreneau = async (
+      start: string,
+      end: string,
+      options: { archive?: boolean; sansPatient?: boolean } = {},
+    ) => {
       const slotTemplate = await testDb.slotTemplate.create({
         data: {
-          startTime: new Date('2026-11-05T09:00:00Z'),
-          endTime: new Date('2026-11-05T09:30:00Z'),
+          startTime: new Date(start),
+          endTime: new Date(end),
           offsetDays: 0,
           isIndividual: true,
           color: '#fff',
@@ -177,65 +184,62 @@ describe('NotificationScheduler', () => {
       })
       const slot = await testDb.slot.create({
         data: {
-          startDate: new Date('2026-11-05T09:00:00Z'),
-          endDate: new Date('2026-11-05T09:30:00Z'),
+          startDate: new Date(start),
+          endDate: new Date(end),
+          archivedAt: options.archive ? new Date() : null,
           establishmentId: E,
           serviceId: A,
           slotTemplateID: slotTemplate.id,
         },
       })
-      appointmentId = (
-        await testDb.appointment.create({
+      const appointment = await testDb.appointment.create({
+        data: {
+          startDate: new Date(start),
+          endDate: new Date(end),
+          establishmentId: E,
+          serviceId: A,
+          slotID: slot.id,
+        },
+      })
+      if (!options.sansPatient) {
+        const p = await patient('Test', 'PATIENT')
+        await testDb.appointmentPatient.create({
           data: {
-            startDate: new Date('2026-11-05T09:00:00Z'),
-            endDate: new Date('2026-11-05T09:30:00Z'),
             establishmentId: E,
             serviceId: A,
-            slotID: slot.id,
+            appointmentId: appointment.id,
+            patientId: p.id,
           },
         })
-      ).id
+      }
+      return appointment.id
+    }
 
-      // Deja commence au moment du premier runOnce ci-dessous : jamais dans la fenetre [now, now+25h].
-      const slotTemplate2 = await testDb.slotTemplate.create({
-        data: {
-          startTime: new Date('2026-11-04T08:00:00Z'),
-          endTime: new Date('2026-11-04T08:30:00Z'),
-          offsetDays: 0,
-          isIndividual: true,
-          color: '#fff',
-          establishmentId: E,
-          serviceId: A,
-        },
-      })
-      await testDb.slotTemplateSoignant.create({
-        data: {
-          slotTemplateId: slotTemplate2.id,
-          soignantId: S,
-          serviceId: A,
-          establishmentId: E,
-        },
-      })
-      const slot2 = await testDb.slot.create({
-        data: {
-          startDate: new Date('2026-11-04T08:00:00Z'),
-          endDate: new Date('2026-11-04T08:30:00Z'),
-          establishmentId: E,
-          serviceId: A,
-          slotTemplateID: slotTemplate2.id,
-        },
-      })
-      dejaCommenceId = (
-        await testDb.appointment.create({
-          data: {
-            startDate: new Date('2026-11-04T08:00:00Z'),
-            endDate: new Date('2026-11-04T08:30:00Z'),
-            establishmentId: E,
-            serviceId: A,
-            slotID: slot2.id,
-          },
-        })
-      ).id
+    beforeAll(async () => {
+      appointmentId = await creerCreneau(
+        '2026-11-05T09:00:00Z',
+        '2026-11-05T09:30:00Z',
+      )
+      // Deja commence au moment du premier runOnce ci-dessous : jamais dans la fenetre [now, now+30h].
+      dejaCommenceId = await creerCreneau(
+        '2026-11-04T08:00:00Z',
+        '2026-11-04T08:30:00Z',
+      )
+      // Creneau annule (archive) : jamais de rappel, meme avec un patient.
+      annuleId = await creerCreneau(
+        '2026-11-06T09:00:00Z',
+        '2026-11-06T09:30:00Z',
+        { archive: true },
+      )
+      // Aucun patient : jamais de rappel.
+      sansPatientId = await creerCreneau(
+        '2026-11-07T09:00:00Z',
+        '2026-11-07T09:30:00Z',
+        { sansPatient: true },
+      )
+      // A travers le changement d'heure d'octobre (nuit du 24 au 25) : la veille 18h doit rester
+      // 18h Paris (16h UTC), pas 19h Paris (17h UTC) en gardant le decalage de l'instant d'arrivee.
+      dstId = await creerCreneau('2026-10-25T09:00:00Z', '2026-10-25T09:30:00Z')
     })
 
     it('rien avant 18h la veille (eve, delai par defaut)', async () => {
@@ -306,6 +310,34 @@ describe('NotificationScheduler', () => {
     it('cinq minutes plus tard : toujours un seul rappel par compte', async () => {
       await runOnceAt('2026-11-05T08:05:00.000Z')
       expect(await countFor(ide2, 'REMINDER')).toBe(1)
+    })
+
+    it('creneau annule : jamais de rappel, meme avec un patient', async () => {
+      // Au moment ou son rappel (eve) serait du si le creneau n'etait pas archive.
+      await runOnceAt('2026-11-05T17:00:00.000Z')
+      expect(
+        await countFor(ide1, 'REMINDER', {
+          payload: { path: ['appointmentId'], equals: annuleId },
+        }),
+      ).toBe(0)
+    })
+
+    it('aucun patient sur le rendez-vous : jamais de rappel', async () => {
+      await runOnceAt('2026-11-06T17:00:00.000Z')
+      expect(
+        await countFor(ide1, 'REMINDER', {
+          payload: { path: ['appointmentId'], equals: sansPatientId },
+        }),
+      ).toBe(0)
+    })
+
+    it('a travers le changement d heure d octobre : la veille reste 18h Paris', async () => {
+      await runOnceAt('2026-10-24T16:00:00.000Z')
+      expect(
+        await countFor(ide1, 'REMINDER', {
+          payload: { path: ['appointmentId'], equals: dstId },
+        }),
+      ).toBe(1)
     })
   })
 
@@ -478,8 +510,16 @@ describe('NotificationScheduler', () => {
 
     it('avec une seance de bilan de fin dans ce parcours : rien', async () => {
       const p = await patient('Sarah', 'ROUX')
-      const pathwayId = await creerParcours(p.id)
+      const pathway = await testDb.pathway.create({
+        data: {
+          startDate: new Date('2026-09-01'),
+          establishmentId: E,
+          serviceId: A,
+        },
+      })
 
+      // Bilan AVANT la derniere seance : s'il etait apres, il deviendrait lui-meme la derniere
+      // seance et sortirait de la fenetre par la date seule, sans jamais exercer le filtre bilan.
       const thBilanSession = await testDb.thematic.create({
         data: {
           name: 'Bilan session',
@@ -488,10 +528,10 @@ describe('NotificationScheduler', () => {
           serviceId: A,
         },
       })
-      const slotTemplate = await testDb.slotTemplate.create({
+      const slotTemplateBilan = await testDb.slotTemplate.create({
         data: {
-          startTime: new Date('2026-10-15T08:00:00Z'),
-          endTime: new Date('2026-10-15T09:00:00Z'),
+          startTime: new Date('2026-10-05T08:00:00Z'),
+          endTime: new Date('2026-10-05T09:00:00Z'),
           offsetDays: 0,
           isIndividual: false,
           color: '#fff',
@@ -500,11 +540,51 @@ describe('NotificationScheduler', () => {
           serviceId: A,
         },
       })
+      const slotBilan = await testDb.slot.create({
+        data: {
+          startDate: new Date('2026-10-05T08:00:00Z'),
+          endDate: new Date('2026-10-05T09:00:00Z'),
+          pathwayID: pathway.id,
+          establishmentId: E,
+          serviceId: A,
+          slotTemplateID: slotTemplateBilan.id,
+        },
+      })
+      const appointmentBilan = await testDb.appointment.create({
+        data: {
+          startDate: new Date('2026-10-05T08:00:00Z'),
+          endDate: new Date('2026-10-05T09:00:00Z'),
+          establishmentId: E,
+          serviceId: A,
+          slotID: slotBilan.id,
+        },
+      })
+      await testDb.appointmentPatient.create({
+        data: {
+          establishmentId: E,
+          serviceId: A,
+          appointmentId: appointmentBilan.id,
+          patientId: p.id,
+        },
+      })
+
+      // Derniere seance, meme forme et meme date que le cas positif.
+      const slotTemplate = await testDb.slotTemplate.create({
+        data: {
+          startTime: new Date('2026-10-10T08:00:00Z'),
+          endTime: new Date('2026-10-10T09:00:00Z'),
+          offsetDays: 0,
+          isIndividual: false,
+          color: '#fff',
+          establishmentId: E,
+          serviceId: A,
+        },
+      })
       const slot = await testDb.slot.create({
         data: {
-          startDate: new Date('2026-10-15T08:00:00Z'),
-          endDate: new Date('2026-10-15T09:00:00Z'),
-          pathwayID: pathwayId,
+          startDate: new Date('2026-10-10T08:00:00Z'),
+          endDate: new Date('2026-10-10T09:00:00Z'),
+          pathwayID: pathway.id,
           establishmentId: E,
           serviceId: A,
           slotTemplateID: slotTemplate.id,
@@ -512,8 +592,8 @@ describe('NotificationScheduler', () => {
       })
       const appointment = await testDb.appointment.create({
         data: {
-          startDate: new Date('2026-10-15T08:00:00Z'),
-          endDate: new Date('2026-10-15T09:00:00Z'),
+          startDate: new Date('2026-10-10T08:00:00Z'),
+          endDate: new Date('2026-10-10T09:00:00Z'),
           establishmentId: E,
           serviceId: A,
           slotID: slot.id,
@@ -533,10 +613,100 @@ describe('NotificationScheduler', () => {
         await testDb.notification.count({
           where: {
             type: 'PATHWAY_END',
-            payload: { path: ['pathwayId'], equals: pathwayId },
+            payload: { path: ['patientId'], equals: p.id },
           },
         }),
       ).toBe(0)
+    })
+
+    it('seance annulee : jamais la derniere date, un bilan de fin annule ne compte pas', async () => {
+      const p = await patient('Tom', 'ROBIN')
+      const pathway = await testDb.pathway.create({
+        data: {
+          startDate: new Date('2026-09-01'),
+          establishmentId: E,
+          serviceId: A,
+        },
+      })
+
+      const creerSeance = async (
+        start: string,
+        end: string,
+        extra: { archive?: boolean; thematicId?: string } = {},
+      ) => {
+        const slotTemplate = await testDb.slotTemplate.create({
+          data: {
+            startTime: new Date(start),
+            endTime: new Date(end),
+            offsetDays: 0,
+            isIndividual: false,
+            color: '#fff',
+            thematicId: extra.thematicId,
+            establishmentId: E,
+            serviceId: A,
+          },
+        })
+        const slot = await testDb.slot.create({
+          data: {
+            startDate: new Date(start),
+            endDate: new Date(end),
+            pathwayID: pathway.id,
+            archivedAt: extra.archive ? new Date() : null,
+            establishmentId: E,
+            serviceId: A,
+            slotTemplateID: slotTemplate.id,
+          },
+        })
+        const appointment = await testDb.appointment.create({
+          data: {
+            startDate: new Date(start),
+            endDate: new Date(end),
+            establishmentId: E,
+            serviceId: A,
+            slotID: slot.id,
+          },
+        })
+        await testDb.appointmentPatient.create({
+          data: {
+            establishmentId: E,
+            serviceId: A,
+            appointmentId: appointment.id,
+            patientId: p.id,
+          },
+        })
+      }
+
+      // Bilan de fin annule : ne doit pas compter comme un Bilan de fin honore.
+      const thBilan = await testDb.thematic.create({
+        data: {
+          name: 'Bilan annule',
+          role: 'BILAN_DE_FIN',
+          establishmentId: E,
+          serviceId: A,
+        },
+      })
+      await creerSeance('2026-10-08T08:00:00Z', '2026-10-08T09:00:00Z', {
+        archive: true,
+        thematicId: thBilan.id,
+      })
+      // Vraie derniere seance (non annulee).
+      await creerSeance('2026-10-10T08:00:00Z', '2026-10-10T09:00:00Z', {})
+      // Seance plus tardive mais ANNULEE : ne doit jamais devenir la derniere date.
+      await creerSeance('2026-10-12T08:00:00Z', '2026-10-12T09:00:00Z', {
+        archive: true,
+      })
+
+      await runOnceAt('2026-10-11T06:00:00.000Z')
+      const rows = await testDb.notification.findMany({
+        where: {
+          type: 'PATHWAY_END',
+          payload: { path: ['patientId'], equals: p.id },
+        },
+      })
+      expect(rows).toHaveLength(1)
+      expect(rows[0]?.payload).toMatchObject({
+        lastDate: '2026-10-10T09:00:00.000Z',
+      })
     })
   })
 
@@ -618,10 +788,15 @@ describe('NotificationScheduler', () => {
 
   describe('preferences', () => {
     it('ide1 avec app.reminder = false : aucun rappel', async () => {
+      // Date relative a l'execution reelle (pas un 2026-xx-xx fige) : la purge de runOnce tourne
+      // sur `now - 30 j`, et un `now` fige a 30 j pile d'aujourd'hui l'approcherait trop pres de
+      // l'horloge reelle au moment ou ce test tourne.
+      const startDate = new Date(Date.now() + 3 * 86_400_000)
+      const endDate = new Date(startDate.getTime() + 30 * 60_000)
       const slotTemplate = await testDb.slotTemplate.create({
         data: {
-          startTime: new Date('2026-11-20T09:00:00Z'),
-          endTime: new Date('2026-11-20T09:30:00Z'),
+          startTime: startDate,
+          endTime: endDate,
           offsetDays: 0,
           isIndividual: true,
           color: '#fff',
@@ -639,8 +814,8 @@ describe('NotificationScheduler', () => {
       })
       const slot = await testDb.slot.create({
         data: {
-          startDate: new Date('2026-11-20T09:00:00Z'),
-          endDate: new Date('2026-11-20T09:30:00Z'),
+          startDate,
+          endDate,
           establishmentId: E,
           serviceId: A,
           slotTemplateID: slotTemplate.id,
@@ -648,8 +823,8 @@ describe('NotificationScheduler', () => {
       })
       const appointment = await testDb.appointment.create({
         data: {
-          startDate: new Date('2026-11-20T09:00:00Z'),
-          endDate: new Date('2026-11-20T09:30:00Z'),
+          startDate,
+          endDate,
           establishmentId: E,
           serviceId: A,
           slotID: slot.id,
@@ -661,8 +836,7 @@ describe('NotificationScheduler', () => {
         data: { notificationPrefs: { app: { reminder: false } } },
       })
 
-      // La veille a 18h (delai par defaut 'eve').
-      await runOnceAt('2026-11-19T17:00:00.000Z')
+      await runOnceAt(reminderTime(startDate, 'eve').toISOString())
       expect(
         await testDb.notification.count({
           where: {
