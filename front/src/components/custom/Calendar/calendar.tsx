@@ -117,6 +117,7 @@ export interface CalendarEvent {
     states?: string[]
     appointments?: Appointment[]
     locked?: boolean
+    conflicts?: string[]
     slotWeeks?: string[]
     thematic?: string
     secondaryTags?: string[]

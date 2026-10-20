@@ -23,10 +23,14 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover.tsx'
 import { styleSoignant } from '@/libs/color.ts'
+import { labelConflicts } from '@/libs/planningConflicts.ts'
 import { getFreeIntervals } from '@/libs/slotAvailability.ts'
 import { buildDaySlotRows, type DaySlotRow } from '@/libs/utils.ts'
 import { useAppointmentMutations } from '@/queries/useAppointment.ts'
-import { useSlotsInRangeQuery } from '@/queries/useSlot.ts'
+import {
+  useSlotConflictsQuery,
+  useSlotsInRangeQuery,
+} from '@/queries/useSlot.ts'
 import { useSoignantStore } from '@/store/useSoignantStore.ts'
 import type { Slot } from '@/types/slot.ts'
 import type { Soignant } from '@/types/soignant.ts'
@@ -98,7 +102,12 @@ function Agenda() {
     }),
     [selectedDay],
   )
-  const { slots, isPending } = useSlotsInRangeQuery(dayRange)
+  const { slots, isPending, dataUpdatedAt } = useSlotsInRangeQuery(dayRange)
+  const conflicts = useSlotConflictsQuery(dayRange, dataUpdatedAt)
+  const conflictLabels = useMemo(
+    () => labelConflicts(conflicts, slots ?? []),
+    [conflicts, slots],
+  )
   const { createAppointment, deleteAppointment, updateAppointment } =
     useAppointmentMutations()
   const selectedSoignantIDs = useSoignantStore(
@@ -152,8 +161,9 @@ function Agenda() {
         onDelete: (row) => setDeleteTarget(row),
         onAddPatient: (row) => setAddPatientTargetId(row.id),
         soignantIDs,
+        conflictLabels,
       }),
-    [soignantIDs],
+    [soignantIDs, conflictLabels],
   )
 
   return (
