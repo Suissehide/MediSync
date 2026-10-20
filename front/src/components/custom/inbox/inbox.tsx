@@ -63,6 +63,7 @@ export function Inbox() {
   const { notifications } = useNotifications(services)
   const [open, setOpen] = useState<InboxPanel>(null)
   const [focus, setFocus] = useState<Focus>(null)
+  const [mentionOpen, setMentionOpen] = useState(false)
   const toggle = (panel: Exclude<InboxPanel, null>) => (next: boolean) =>
     setOpen(next ? panel : null)
   const openTasksFor = (n: InboxNotification) => {
@@ -89,12 +90,24 @@ export function Inbox() {
             color="#2563eb"
             open={open === 'tasks'}
           />
-          <PopoverContent align="end" sideOffset={9} className={PANEL_CLASS}>
+          <PopoverContent
+            align="end"
+            sideOffset={9}
+            className={PANEL_CLASS}
+            onEscapeKeyDown={(e) => {
+              // Radix ecoute Echap au niveau du document, avant l'input : sans ce garde, Echap
+              // fermerait tout le panneau (brouillon perdu) au lieu de ne fermer que la liste.
+              if (mentionOpen) {
+                e.preventDefault()
+              }
+            }}
+          >
             <TasksPanel
               services={services.filter((s) => s.canTasks)}
               tasks={tasks}
               focus={focus}
               onFocusDone={onFocusDone}
+              onMentionOpenChange={setMentionOpen}
             />
           </PopoverContent>
         </PopoverRoot>

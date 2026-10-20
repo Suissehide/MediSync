@@ -23,8 +23,7 @@ vi.mock('@/api/inbox.api.ts', () => ({
   },
 }))
 
-// Le panneau Taches lit l'echelle courante ; hors RouterProvider ici, et aucun test ne depend
-// du repli qu'elle influence (un seul service par compte dans ces scenarios).
+// Le panneau Taches lit l'echelle courante, inutile hors RouterProvider dans ces scenarios.
 vi.mock('@/navigation/navigation.ts', () => ({ useCurrentScale: () => null }))
 
 const notif = (
@@ -222,5 +221,19 @@ describe('Inbox', () => {
     expect(
       screen.getByRole('heading', { name: /Notifications/ }),
     ).toBeInTheDocument()
+  })
+
+  it('Echap ferme la liste de mention sans fermer le panneau Taches', async () => {
+    const u = userEvent.setup()
+    render(<Inbox />, { wrapper })
+    await u.click(await screen.findByRole('button', { name: 'Tâches' }))
+    const input = await screen.findByPlaceholderText(
+      'Nouvelle tâche… tapez @ pour mentionner',
+    )
+    await u.type(input, 'x @')
+    await screen.findByRole('option', { name: /Léo/ })
+    await u.keyboard('{Escape}')
+    expect(screen.queryByRole('listbox')).toBeNull()
+    expect(screen.getByRole('heading', { name: /Tâches/ })).toBeInTheDocument()
   })
 })

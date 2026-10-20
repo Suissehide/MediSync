@@ -23,11 +23,13 @@ export function TasksPanel({
   tasks,
   focus,
   onFocusDone,
+  onMentionOpenChange,
 }: {
   services: InboxService[]
   tasks: InboxTask[]
   focus: Focus
   onFocusDone: () => void
+  onMentionOpenChange?: (open: boolean) => void
 }) {
   const me = useAuthStore((state) => state.user?.id)
   const courant = useCurrentScale()
@@ -88,7 +90,7 @@ export function TasksPanel({
     services[0]
   const toggle = (t: InboxTask) => {
     const next = !isDone(t)
-    setPending({ ...pending, [t.id]: next })
+    setPending((p) => ({ ...p, [t.id]: next }))
     setTaskDone.mutate(
       { task: t, done: next },
       { onSettled: () => setPending(({ [t.id]: _, ...rest }) => rest) },
@@ -124,7 +126,14 @@ export function TasksPanel({
           onChange={setScope}
         />
       </FilterBar>
-      {target && <TaskComposer service={target} onCreated={setHighlight} />}
+      {target && (
+        <TaskComposer
+          key={target.serviceId}
+          service={target}
+          onCreated={setHighlight}
+          onMentionOpenChange={onMentionOpenChange}
+        />
+      )}
       <div className="flex-1 overflow-y-auto">
         {open.length === 0 ? (
           <p className="px-[18px] py-8 text-center text-sm text-text-light">

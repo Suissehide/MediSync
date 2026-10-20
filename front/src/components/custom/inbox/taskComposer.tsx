@@ -1,5 +1,5 @@
 import { Calendar, User, X } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import {
   type InboxService,
@@ -19,9 +19,11 @@ const fold = (s: string) =>
 export function TaskComposer({
   service,
   onCreated,
+  onMentionOpenChange,
 }: {
   service: InboxService
   onCreated: (taskId: string) => void
+  onMentionOpenChange?: (open: boolean) => void
 }) {
   const members = useServiceMembers(service)
   const { createTask } = useInboxMutations()
@@ -39,12 +41,20 @@ export function TaskComposer({
   const query = mentionQuery(draft)
   const candidates =
     query === null ? [] : mentionCandidates(members, query, tags)
+  const mentionOpen = candidates.length > 0
+  // Remonte l'ouverture de la liste au Popover des Taches, pour qu'Echap ne ferme QUE la liste.
+  useEffect(() => {
+    onMentionOpenChange?.(mentionOpen)
+  }, [mentionOpen, onMentionOpenChange])
+  useEffect(() => () => onMentionOpenChange?.(false), [onMentionOpenChange])
   const pick = (userId: string) => {
     setTags([...tags, userId])
     setDraft(stripMention(draft))
     setActive(0)
   }
-  const text = draft.replace(/@[^\s@]*$/, '').trim()
+  // Le texte envoye est le brouillon tel quel : un `@...` non resolu (une adresse e-mail,
+  // une mention sans correspondance) n'est jamais tronque.
+  const text = draft.trim()
   const submit = () => {
     if (!text) {
       return
@@ -70,8 +80,7 @@ export function TaskComposer({
       },
     )
   }
-  // Isole des touches de la liste de mention : scinder reduit la complexite cognitive de
-  // chaque fonction, pas seulement celle qui l'appelle.
+  // Isole des touches de la liste de mention pour alleger la complexite cognitive des deux.
   const onCandidateKey = (
     e: React.KeyboardEvent<HTMLInputElement>,
     list: ReturnType<typeof mentionCandidates>,
@@ -102,7 +111,7 @@ export function TaskComposer({
     return false
   }
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (candidates.length > 0 && onCandidateKey(e, candidates)) {
+    if (mentionOpen && onCandidateKey(e, candidates)) {
       return
     }
     if (e.key === 'Enter') {
@@ -161,7 +170,15 @@ export function TaskComposer({
           type="button"
           aria-label="Échéance"
           title="Échéance"
-          onClick={() => dateRef.current?.showPicker()}
+          onClick={() => {
+            const input = dateRef.current
+            if (input?.showPicker) {
+              input.showPicker()
+            } else {
+              input?.focus()
+              input?.click()
+            }
+          }}
           className="w-8 h-8 rounded-md flex items-center justify-center text-text-light hover:bg-muted"
         >
           <Calendar className="w-4 h-4" />
@@ -193,7 +210,7 @@ export function TaskComposer({
           Ajouter
         </button>
       </div>
-      {candidates.length > 0 && (
+      {mentionOpen && (
         <div
           role="listbox"
           aria-label={`Mentionner un soignant · ${service.name}`}

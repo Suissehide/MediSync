@@ -24,8 +24,7 @@ vi.mock('@/api/inbox.api.ts', () => ({
   },
 }))
 
-// useMatchRoute leve hors d'un RouterProvider ; aucun de ces tests ne depend de l'echelle
-// courante (un seul service, donc le repli sur services[0] suffit).
+// useMatchRoute leve hors d'un RouterProvider ; un seul service ici, le repli services[0] suffit.
 vi.mock('@/navigation/navigation.ts', () => ({ useCurrentScale: () => null }))
 
 const s1: InboxService = {
@@ -240,5 +239,29 @@ describe('TasksPanel', () => {
       'data-highlighted',
       'true',
     )
+  })
+
+  it('un @... non resolu (ex. une adresse e-mail) reste intact dans le texte envoye', async () => {
+    const u = userEvent.setup()
+    vi.mocked(InboxApi.createTask).mockResolvedValue(task('new', []))
+    render(
+      <TasksPanel
+        services={[s1]}
+        tasks={[]}
+        focus={null}
+        onFocusDone={() => undefined}
+      />,
+      { wrapper },
+    )
+    const input = screen.getByPlaceholderText(
+      'Nouvelle tâche… tapez @ pour mentionner',
+    )
+    await u.type(input, 'Écrire à dr.martin@chu.fr')
+    expect(screen.queryByRole('listbox')).toBeNull()
+    await u.keyboard('{Enter}')
+    expect(InboxApi.createTask).toHaveBeenCalledWith(s1, {
+      text: 'Écrire à dr.martin@chu.fr',
+      assigneeIds: [],
+    })
   })
 })
