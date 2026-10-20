@@ -57,7 +57,11 @@ describe('permissions', () => {
   })
 
   it('donne les taches a tous les roles sauf la lecture', () => {
-    for (const role of ['COORDINATEUR', 'INTERVENANT', 'SECRETARIAT'] as const) {
+    for (const role of [
+      'COORDINATEUR',
+      'INTERVENANT',
+      'SECRETARIAT',
+    ] as const) {
       expect(SERVICE_PERMISSIONS[role]).toContain('tasks:read')
       expect(SERVICE_PERMISSIONS[role]).toContain('tasks:write')
     }

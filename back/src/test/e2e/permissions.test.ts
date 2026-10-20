@@ -31,7 +31,7 @@ const FAKE_ID = 'clzzzzzzzzzzzzzzzzzzzzzzz'
 // n'existe donc rien à sonder pour elles.
 //
 // `heldStatus` : quatre permissions (`planning:read`, `referentials:read`,
-// `patient:read`, `todo:own`) figurent dans `READ_ALL` et sont donc détenues
+// `patient:read`, `notifications:own`) figurent dans `READ_ALL` et sont donc détenues
 // par les quatre rôles — la branche « détenue » de la boucle ci-dessous s'y
 // exécute toujours, jamais la branche « refusée ». Un simple `not.toBe(403)`
 // y passerait sur un 200, un 404, un 500 ou une route mal orthographiée :
@@ -123,7 +123,19 @@ const probes: {
     method: 'DELETE',
     path: `/patient/${FAKE_ID}/enrollment-issue/${FAKE_ID}`,
   },
-  { permission: 'todo:own', method: 'GET', path: '/todo', heldStatus: 200 },
+  { permission: 'tasks:read', method: 'GET', path: '/taches', heldStatus: 200 },
+  {
+    permission: 'tasks:write',
+    method: 'PATCH',
+    path: `/taches/${FAKE_ID}`,
+    payload: { done: true },
+  },
+  {
+    permission: 'notifications:own',
+    method: 'GET',
+    path: '/notifications',
+    heldStatus: 200,
+  },
   // Jeu inexistant : le détenteur reçoit 404, jamais 403. L'export a sa propre sonde : une erreur
   // de littéral de permission sur cette route-là boote sans broncher.
   {

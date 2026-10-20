@@ -16,6 +16,7 @@ import { ForbiddenWeekDomain } from '../../../domain/forbiddenWeek.domain'
 import { IndicatorSetDomain } from '../../../domain/indicatorSet.domain'
 import { LocationDomain } from '../../../domain/location.domain'
 import { MembershipDomain } from '../../../domain/membership.domain'
+import { NotificationDomain } from '../../../domain/notification.domain'
 import { PathwayDomain } from '../../../domain/pathway.domain'
 import { PathwayTemplateDomain } from '../../../domain/pathwayTemplate.domain'
 import { PatientDomain } from '../../../domain/patient.domain'
@@ -32,6 +33,7 @@ import { SlotDomain } from '../../../domain/slot.domain'
 import { SlotTemplateDomain } from '../../../domain/slotTemplate.domain'
 import { SoignantDomain } from '../../../domain/soignant.domain'
 import { SuperAdminGrantDomain } from '../../../domain/superAdminGrant.domain'
+import { TaskDomain } from '../../../domain/task.domain'
 import { ThematicDomain } from '../../../domain/thematic.domain'
 import { UserDomain } from '../../../domain/user.domain'
 import { HttpClient } from '../../../infra/http/http-client'
@@ -51,6 +53,7 @@ import { IndicatorCohortRepository } from '../../../infra/orm/repositories/indic
 import { IndicatorSetRepository } from '../../../infra/orm/repositories/indicatorSet.repository'
 import { LocationRepository } from '../../../infra/orm/repositories/location.repository'
 import { MembershipRepository } from '../../../infra/orm/repositories/membership.repository'
+import { NotificationRepository } from '../../../infra/orm/repositories/notification.repository'
 import { PathwayRepository } from '../../../infra/orm/repositories/pathway.repository'
 import { PathwayTemplateRepository } from '../../../infra/orm/repositories/pathwayTemplate.repository'
 import { PatientRepository } from '../../../infra/orm/repositories/patient.repository'
@@ -66,6 +69,7 @@ import { ServiceFieldCategoryRepository } from '../../../infra/orm/repositories/
 import { SlotRepository } from '../../../infra/orm/repositories/slot.repository'
 import { SlotTemplateRepository } from '../../../infra/orm/repositories/slotTemplate.repository'
 import { SoignantRepository } from '../../../infra/orm/repositories/soignant.repository'
+import { TaskRepository } from '../../../infra/orm/repositories/task.repository'
 import { ThematicRepository } from '../../../infra/orm/repositories/thematic.repository'
 import { UserRepository } from '../../../infra/orm/repositories/user.repository'
 import { FastifyHttpServer } from '../../../interfaces/http/fastify/fastify-http-server'
@@ -191,6 +195,10 @@ class AwilixIocContainer {
     // IndicatorSet
     this.#registerIndicatorSetDomain()
     this.#registerIndicatorSetRepository()
+    // Task
+    this.#registerTask()
+    // Notification
+    this.#registerNotification()
 
     // Server
     this.#registerHttpServer()
@@ -572,6 +580,21 @@ class AwilixIocContainer {
     this.register(
       'accessLinkRepository',
       asClass(AccessLinkRepository).singleton(),
+    )
+  }
+
+  // Task
+  #registerTask(): void {
+    this.register('taskDomain', asClass(TaskDomain).singleton())
+    this.register('taskRepository', asClass(TaskRepository).singleton())
+  }
+
+  // Notification
+  #registerNotification(): void {
+    this.register('notificationDomain', asClass(NotificationDomain).singleton())
+    this.register(
+      'notificationRepository',
+      asClass(NotificationRepository).singleton(),
     )
   }
 
