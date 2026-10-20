@@ -517,18 +517,31 @@ describe('NotificationDispatcher et rendez-vous', () => {
   it('une erreur d ecriture du dispatcher n echoue pas la mise a jour, le changement persiste', async () => {
     const repo = t.instances.notificationRepository
     const original = repo.createMany.bind(repo)
-    repo.createMany = () => Promise.reject(new Error('panne'))
+    let appele = 0
+    repo.createMany = () => {
+      appele += 1
+      return Promise.reject(new Error('panne'))
+    }
 
-    const res = await patchAppointment(appointmentId, {
-      appointmentPatients: [{ id: ap1, patientID: P1 }, { patientID: P4 }],
-    })
+    try {
+      const res = await patchAppointment(appointmentId, {
+        appointmentPatients: [{ id: ap1, patientID: P1 }, { patientID: P4 }],
+      })
+      expect(res.statusCode).toBe(200)
 
-    repo.createMany = original
-    expect(res.statusCode).toBe(200)
-    const persiste = await testDb.appointmentPatient.findFirst({
-      where: { appointmentId, patientId: P4 },
-    })
-    expect(persiste).not.toBeNull()
+      // Attend que la tache de fond atteigne reellement createMany, mock encore en place.
+      for (let i = 0; i < 40 && appele === 0; i += 1) {
+        await new Promise((r) => setTimeout(r, 50))
+      }
+      expect(appele).toBeGreaterThan(0)
+
+      const persiste = await testDb.appointmentPatient.findFirst({
+        where: { appointmentId, patientId: P4 },
+      })
+      expect(persiste).not.toBeNull()
+    } finally {
+      repo.createMany = original
+    }
   })
 
   it('une erreur de lecture du contexte n echoue pas la suppression, le rendez-vous disparait', async () => {

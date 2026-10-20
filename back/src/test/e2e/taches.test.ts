@@ -240,8 +240,7 @@ describe('taches partagees et mentions', () => {
       data: { notificationPrefs: { app: { mention: false } } },
     })
 
-    // Ecrite dans la meme transaction que la tache (taskRepository.createWithMentions) : pas de
-    // tache de fond ici, contrairement au dispatcher, donc aucune attente n'est necessaire.
+    // Ecrite dans la meme transaction que la tache : contrairement au dispatcher, aucune attente n'est necessaire.
     const res = await call(leoC, 'POST', tenantUrl(E, A, '/taches'), {
       text: 'Pour Claire et Paul',
       assigneeIds: [claire, paul],
