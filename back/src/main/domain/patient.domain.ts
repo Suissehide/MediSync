@@ -10,6 +10,7 @@ import {
 } from '../interfaces/http/fastify/schemas/patient.schema'
 import type { IocContainer } from '../types/application/ioc'
 import type { AppointmentPatientWithAppointmentDomain } from '../types/domain/appointmentPatient.domain.interface'
+import type { NotificationDispatcherInterface } from '../types/domain/notification-dispatcher.interface'
 import type {
   EnrollExistingPatientInPathwaysInput,
   EnrollmentAppointment,
@@ -185,6 +186,7 @@ class PatientDomain implements PatientDomainInterface {
   private readonly serviceFieldRepository: ServiceFieldRepositoryInterface
   private readonly tenantContext: TenantContextInterface
   private readonly appEventBus: AppEventBus
+  private readonly notificationDispatcher: NotificationDispatcherInterface
 
   constructor({
     patientRepository,
@@ -197,6 +199,7 @@ class PatientDomain implements PatientDomainInterface {
     serviceFieldRepository,
     tenantContext,
     appEventBus,
+    notificationDispatcher,
     logger,
   }: IocContainer) {
     this.patientRepository = patientRepository
@@ -209,6 +212,7 @@ class PatientDomain implements PatientDomainInterface {
     this.serviceFieldRepository = serviceFieldRepository
     this.tenantContext = tenantContext
     this.appEventBus = appEventBus
+    this.notificationDispatcher = notificationDispatcher
     this.logger = logger
   }
 
@@ -841,6 +845,7 @@ class PatientDomain implements PatientDomainInterface {
     await this.patientServiceFileDomain.ensureExists(patient.id)
 
     const enrollments: EnrollmentResult['enrollments'] = []
+    const appointmentIds: string[] = []
     const failures: {
       failure: EnrollmentResult['failedEnrollments'][number]
       startDate: Date
@@ -859,6 +864,11 @@ class PatientDomain implements PatientDomainInterface {
         )
         if (outcome.enrollment) {
           enrollments.push(outcome.enrollment)
+          appointmentIds.push(
+            ...outcome.enrollment.appointments.flatMap((a) =>
+              a.success && a.id ? [a.id] : [],
+            ),
+          )
           // Recharger les rendez-vous du patient pour que les parcours
           // suivants de la même requête voient ceux qui viennent d'être créés.
           currentPatient = await this.patientRepository.findByID(patient.id)
@@ -898,6 +908,10 @@ class PatientDomain implements PatientDomainInterface {
         ? `parcours ${enrollments.map((e) => e.slotTemplate.name ?? e.slotTemplate.id).join(', ')}`
         : undefined,
     })
+
+    if (appointmentIds.length > 0) {
+      this.notificationDispatcher.enrolled(userID, patient.id, appointmentIds)
+    }
 
     return {
       patient: await this.patientRepository.findByID(patient.id),

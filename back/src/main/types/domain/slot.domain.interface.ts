@@ -1,4 +1,4 @@
-import type { Prisma } from '../../../generated/client'
+import type { Location, Prisma } from '../../../generated/client'
 import type {
   SlotDateRangeRepo,
   SlotEntityRepo,
@@ -9,9 +9,12 @@ import type { SlotTemplateWithSoignantsDomain } from './slotTemplate.domain.inte
 
 export type SlotEntityDomain = SlotEntityRepo
 export type SlotDateRangeDomain = SlotDateRangeRepo
+// `location` : voir le commentaire de SlotDTORepo, dont ce type est le miroir.
 export type SlotDTODomain = SlotEntityDomain & {
   pathway: PathwayEntityDomain | null
-  slotTemplate: SlotTemplateWithSoignantsDomain
+  slotTemplate: SlotTemplateWithSoignantsDomain & {
+    location?: Location | null
+  }
   appointments: AppointmentWithPatients[]
 }
 // Le repository pose serviceId/establishmentId (tenant) lui-même : l'appelant
@@ -37,6 +40,7 @@ export interface SlotDomainInterface {
   update: (
     slotID: string,
     slotUpdateParams: SlotUpdateEntityDomain,
+    userID: string,
   ) => Promise<SlotDTODomain>
-  delete: (slotID: string) => Promise<SlotEntityDomain>
+  delete: (slotID: string, userID: string) => Promise<SlotEntityDomain>
 }

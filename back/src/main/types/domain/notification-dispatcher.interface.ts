@@ -15,6 +15,7 @@ export interface NotificationDispatcherInterface {
     actorId: string,
     appointmentId: string,
     before: { startDate: Date; locationName: string | null },
+    after?: { startDate: Date },
   ) => void
   cancelled: (actorId: string, snapshots: SessionSnapshot[]) => void
   enrolled: (

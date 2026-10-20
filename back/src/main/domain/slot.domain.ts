@@ -1,5 +1,6 @@
 import type { IocContainer } from '../types/application/ioc'
 import type {} from '../types/domain/appointment.domain.interface'
+import type { NotificationDispatcherInterface } from '../types/domain/notification-dispatcher.interface'
 import type {
   SlotCreateEntityDomain,
   SlotDateRangeDomain,
@@ -12,9 +13,11 @@ import type { SlotRepositoryInterface } from '../types/infra/orm/repositories/sl
 
 class SlotDomain implements SlotDomainInterface {
   private readonly slotRepository: SlotRepositoryInterface
+  private readonly notificationDispatcher: NotificationDispatcherInterface
 
-  constructor({ slotRepository }: IocContainer) {
+  constructor({ slotRepository, notificationDispatcher }: IocContainer) {
     this.slotRepository = slotRepository
+    this.notificationDispatcher = notificationDispatcher
   }
 
   findAll(dateRange?: SlotDateRangeDomain): Promise<SlotDTODomain[]> {
@@ -32,15 +35,53 @@ class SlotDomain implements SlotDomainInterface {
     return this.slotRepository.create(slotInputParams)
   }
 
-  update(
+  async update(
     slotID: string,
     slotUpdateParams: SlotUpdateEntityDomain,
+    userID: string,
   ): Promise<SlotDTODomain> {
-    return this.slotRepository.update(slotID, slotUpdateParams)
+    const before = await this.slotRepository.findByID(slotID)
+    const archiving = Boolean(slotUpdateParams.archivedAt) && !before.archivedAt
+    const snapshots = archiving
+      ? await this.notificationDispatcher.snapshot(
+          before.appointments.map((a) => a.id),
+        )
+      : []
+    const after = await this.slotRepository.update(slotID, slotUpdateParams)
+    if (archiving) {
+      this.notificationDispatcher.cancelled(userID, snapshots)
+      return after
+    }
+    const timeChanged = before.startDate.getTime() !== after.startDate.getTime()
+    const roomChanged =
+      (before.slotTemplate.location?.name ?? null) !==
+      (after.slotTemplate.location?.name ?? null)
+    if (timeChanged || roomChanged) {
+      for (const a of after.appointments.filter(
+        (x) => x.appointmentPatients.length > 0,
+      )) {
+        this.notificationDispatcher.moved(
+          userID,
+          a.id,
+          {
+            startDate: before.startDate,
+            locationName: before.slotTemplate.location?.name ?? null,
+          },
+          { startDate: after.startDate },
+        )
+      }
+    }
+    return after
   }
 
-  delete(slotID: string): Promise<SlotEntityDomain> {
-    return this.slotRepository.delete(slotID)
+  async delete(slotID: string, userID: string): Promise<SlotEntityDomain> {
+    const before = await this.slotRepository.findByID(slotID)
+    const snapshots = await this.notificationDispatcher.snapshot(
+      before.appointments.map((a) => a.id),
+    )
+    const deleted = await this.slotRepository.delete(slotID)
+    this.notificationDispatcher.cancelled(userID, snapshots)
+    return deleted
   }
 }
 

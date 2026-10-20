@@ -105,21 +105,32 @@ class NotificationDispatcher implements NotificationDispatcherInterface {
     })
   }
 
+  // `after` : surcharge optionnelle de la date, pour un deplacement au niveau du creneau — le
+  // rendez-vous ne bouge pas avec lui, l'instantane rendrait donc sa date perimee.
   moved(
     actorId: string,
     appointmentId: string,
     before: { startDate: Date; locationName: string | null },
+    after?: { startDate: Date },
   ): void {
     this.#safe(async () => {
       const [s] = await this.snapshot([appointmentId])
       if (!s) {
         return
       }
-      const after = { startDate: s.startDate, locationName: s.locationName }
+      const resolvedAfter = {
+        startDate: after?.startDate ?? s.startDate,
+        locationName: s.locationName,
+      }
       await this.#toSession(actorId, s.soignantIds, [
         {
           type: 'APPOINTMENT_MOVED',
-          payload: { ...this.#session(s), actorId, before, after },
+          payload: {
+            ...this.#session(s),
+            actorId,
+            before,
+            after: resolvedAfter,
+          },
         },
       ])
     })
