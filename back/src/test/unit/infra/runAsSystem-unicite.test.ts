@@ -26,7 +26,8 @@ import ts from 'typescript'
 // LE COMPTE, DIT UNE SEULE FOIS ET DANS UNE SEULE UNITE :
 //   - SIX emplois DECLARES, c'est-a-dire six entrees d'`AUTORISES` ci-dessous, une par FICHIER,
 //     chacune avec sa raison ;
-//   - NEUF APPELS au total, `application/starter.ts`, `patientServiceFile.repository.ts` et
+//   - DIX APPELS au total, `application/starter.ts` en portant trois (Task 5 de l'etape 2 y a
+//     ajoute la planification des notifications), `patientServiceFile.repository.ts` et
 //     `membership.repository.ts` en portant deux chacun.
 //
 // La liste ci-dessous enumere les SITES D'APPEL, groupes par question posee — c'est l'unite qui
@@ -42,6 +43,11 @@ import ts from 'typescript'
 //      toucher TOUTE sa table, pas un seul etablissement. Retention parametrable
 //      (`config.logRetentionMonths`) pour les deux, calculee independamment dans chaque domaine
 //      (`ActivityLogDomain.cleanup`, `PatientAccessLogDomain.cleanup`) plutot que factorisee.
+//      TROISIEME appel, meme fichier (Task 5 de l'etape 2) : la planification des notifications
+//      (`scheduleNotifications`) — aucune requete HTTP non plus, et les rappels, le diagnostic,
+//      la fin de parcours et les echeances doivent parcourir TOUS les services, pas seulement
+//      celui d'une requete en cours ; chaque lecture du depot de planification porte ses propres
+//      bornes (dates, statut) plutot que de lire un tenant qui n'existe pas sous ce mode.
 //   2. Le signal de suivi ailleurs (`infra/orm/repositories/patientServiceFile.repository.ts`,
 //      `estSuiviAilleurs`, design §5.3) : une lecture qui traverse volontairement la frontiere
 //      entre services, pour rendre un booleen et rien d'autre. Ses bornes (etablissement et
@@ -158,8 +164,10 @@ const AUTORISES = [
       'purge planifiee des DEUX journaux, hors de toute requete : le journal d activite ' +
       '(scheduleActivityLogCleanup) et le journal des ' +
       'consultations (schedulePatientAccessLogCleanup) — retention parametrable ' +
-      '(config.logRetentionMonths) pour les deux',
-    appels: 2,
+      '(config.logRetentionMonths) pour les deux. TROISIEME appel : la planification des ' +
+      'notifications (scheduleNotifications, Task 5 de l etape 2) — aucune requete HTTP, et les ' +
+      'rappels doivent parcourir tous les services',
+    appels: 3,
   },
   {
     fichier: 'infra/orm/repositories/patientServiceFile.repository.ts',

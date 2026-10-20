@@ -44,8 +44,9 @@ const scheduleActivityLogCleanup = (instances: IocContainer): void => {
 //
 // SECOND APPEL du PREMIER emploi déclaré de `runAsSystem` — l'entrée
 // `application/starter.ts` de `runAsSystem-unicite.test.ts` porte
-// `appels: 2`. La convention du fichier cité compte SIX emplois déclarés —
-// un par fichier, avec sa raison — pour HUIT appels au total ; ce site-ci
+// `appels: 3` depuis que `scheduleNotifications` (ci-dessous) y a ajouté un
+// troisième appel. La convention du fichier cité compte SIX emplois déclarés —
+// un par fichier, avec sa raison — pour DIX appels au total ; ce site-ci
 // n'en ouvre aucun septième, il s'ajoute au premier.
 //
 // RAPPEL `async` AVEC UN `await` INTERNE, et non le rappel synchrone nu de la
@@ -84,6 +85,33 @@ const schedulePatientAccessLogCleanup = (instances: IocContainer): void => {
   run()
 }
 
+const FIFTEEN_MIN_MS = 15 * 60 * 1000
+
+// Planification des notifications (rappels, diagnostic, fin de parcours, echeances, purge) :
+// meme mecanisme que les deux purges ci-dessus, hors de toute requete HTTP, et les rappels
+// doivent parcourir TOUS les services — TROISIEME appel de `runAsSystem` dans ce fichier (voir
+// l'entree `application/starter.ts` de `runAsSystem-unicite.test.ts`, `appels: 3`).
+const scheduleNotifications = (instances: IocContainer): void => {
+  const { notificationScheduler, logger, tenantContext } = instances
+  const run = (): void => {
+    tenantContext
+      .runAsSystem(async () => {
+        return await notificationScheduler.runOnce(new Date())
+      })
+      .then(({ created, purged }) =>
+        logger.info(`Notifications: ${created} créées, ${purged} purgées`),
+      )
+      .catch((err) => {
+        const errorClass =
+          err instanceof Error ? err.constructor.name : typeof err
+        logger.error(`Notifications schedule failed [${errorClass}]`)
+      })
+  }
+  const timer = setInterval(run, FIFTEEN_MIN_MS)
+  timer.unref?.()
+  run()
+}
+
 const startApp = async (): Promise<IocContainer> => {
   const config = loadConfig()
   const iocContainer = startIocContainer(config)
@@ -94,6 +122,7 @@ const startApp = async (): Promise<IocContainer> => {
 
   scheduleActivityLogCleanup(iocContainer.instances)
   schedulePatientAccessLogCleanup(iocContainer.instances)
+  scheduleNotifications(iocContainer.instances)
 
   return iocContainer.instances
 }
@@ -103,4 +132,5 @@ export {
   startIocContainer,
   scheduleActivityLogCleanup,
   schedulePatientAccessLogCleanup,
+  scheduleNotifications,
 }
