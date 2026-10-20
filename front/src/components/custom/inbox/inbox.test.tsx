@@ -1,6 +1,10 @@
+import { LocalizationProvider } from '@mui/x-date-pickers'
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -9,6 +13,9 @@ import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { User } from '@/types/auth.ts'
 import type { Notification, Task } from '@/types/task.ts'
 import { Inbox } from './inbox.tsx'
+
+// `main.tsx` enregistre ce greffon au demarrage ; le DatePicker d'echeance en depend (dayjs.utc).
+dayjs.extend(utc)
 
 vi.mock('@/api/inbox.api.ts', () => ({
   InboxApi: {
@@ -268,5 +275,21 @@ describe('Inbox', () => {
     )
     render(<Inbox />, { wrapper })
     expect(await screen.findByTestId('badge-tasks')).toHaveTextContent('1')
+  })
+
+  it('Echap ferme la ligne Échéance sans fermer le panneau Taches', async () => {
+    const u = userEvent.setup()
+    render(
+      <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="fr">
+        <Inbox />
+      </LocalizationProvider>,
+      { wrapper },
+    )
+    await u.click(await screen.findByRole('button', { name: 'Tâches' }))
+    await u.click(await screen.findByRole('button', { name: 'Échéance' }))
+    expect(await screen.findByRole('grid')).toBeInTheDocument()
+    await u.keyboard('{Escape}')
+    expect(screen.queryByRole('grid')).toBeNull()
+    expect(screen.getByRole('heading', { name: /Tâches/ })).toBeInTheDocument()
   })
 })

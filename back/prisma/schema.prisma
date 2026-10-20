@@ -964,11 +964,7 @@ model TaskAssignee {
   @@index([userId])
 }
 
-// Mention par metier (« @Psychologue ») : la tache est taguee a un Soignant (un metier du
-// service), pas a un compte. Relation composite vers Soignant, comme SlotTemplateSoignant et
-// SoignantThematic (son unicite porte [id, serviceId]), plutot que la reference simple de
-// ServiceMembership.soignantId : ici la ligne ne vit que dans CE service, il n'y a pas de raison
-// de s'en passer.
+// Mention par metier (« @Psychologue ») : relation composite vers Soignant, comme SlotTemplateSoignant/SoignantThematic.
 model TaskSoignant {
   establishmentId String
   serviceId       String

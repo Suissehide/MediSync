@@ -23,13 +23,13 @@ export function TasksPanel({
   tasks,
   focus,
   onFocusDone,
-  onMentionOpenChange,
+  onSubPopupOpenChange,
 }: {
   services: InboxService[]
   tasks: InboxTask[]
   focus: Focus
   onFocusDone: () => void
-  onMentionOpenChange?: (open: boolean) => void
+  onSubPopupOpenChange?: (open: boolean) => void
 }) {
   const me = useAuthStore((state) => state.user?.id)
   const courant = useCurrentScale()
@@ -134,7 +134,7 @@ export function TasksPanel({
           key={target.serviceId}
           service={target}
           onCreated={setHighlight}
-          onMentionOpenChange={onMentionOpenChange}
+          onSubPopupOpenChange={onSubPopupOpenChange}
         />
       )}
       <div className="flex-1 overflow-y-auto">

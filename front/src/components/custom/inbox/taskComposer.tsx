@@ -27,11 +27,13 @@ const fold = (s: string) =>
 export function TaskComposer({
   service,
   onCreated,
-  onMentionOpenChange,
+  onSubPopupOpenChange,
 }: {
   service: InboxService
   onCreated: (taskId: string) => void
-  onMentionOpenChange?: (open: boolean) => void
+  // Mention ouverte OU ligne Échéance ouverte : dans les deux cas Echap ne doit fermer que ce
+  // sous-popup, pas tout le panneau Taches (voir inbox.tsx).
+  onSubPopupOpenChange?: (open: boolean) => void
 }) {
   const members = useServiceMembers(service)
   const soignants = useServiceSoignants(service)
@@ -54,11 +56,12 @@ export function TaskComposer({
       ? []
       : mentionCandidates(members, soignants, query, tags, soignantTags)
   const mentionOpen = candidates.length > 0
-  // Remonte l'ouverture de la liste au Popover des Taches, pour qu'Echap ne ferme QUE la liste.
+  const subPopupOpen = mentionOpen || dateOpen
+  // Remonte l'ouverture au Popover des Taches, pour qu'Echap ne ferme QUE la liste/la ligne Échéance.
   useEffect(() => {
-    onMentionOpenChange?.(mentionOpen)
-  }, [mentionOpen, onMentionOpenChange])
-  useEffect(() => () => onMentionOpenChange?.(false), [onMentionOpenChange])
+    onSubPopupOpenChange?.(subPopupOpen)
+  }, [subPopupOpen, onSubPopupOpenChange])
+  useEffect(() => () => onSubPopupOpenChange?.(false), [onSubPopupOpenChange])
   const pick = (candidate: MentionCandidate) => {
     if (candidate.kind === 'soignant') {
       setSoignantTags([...soignantTags, candidate.soignant.id])
@@ -267,15 +270,16 @@ export function TaskComposer({
       {dateOpen && (
         <div className="mt-2">
           <DatePicker
-            aria-label="Échéance"
+            label="Date d'échéance"
             open
             onClose={() => setDateOpen(false)}
+            onAccept={() => setDateOpen(false)}
             value={dueDate ? dayjs.utc(dueDate) : null}
             onChange={(date) => {
+              // Une frappe clavier incomplete/invalide ne doit ni poser dueDate ni fermer la ligne.
               if (date?.isValid()) {
                 setDueDate(date.format('YYYY-MM-DD'))
               }
-              setDateOpen(false)
             }}
           />
         </div>

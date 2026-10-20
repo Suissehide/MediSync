@@ -9,8 +9,7 @@ export type TaskCreateEntityRepo = {
   authorId: string
   assigneeIds: string[]
   soignantIds: string[]
-  // Destinataires MENTION : deja dedupliques et prives de l'auteur par le domaine, qui seul
-  // connait les membres du service — le repository se contente d'ecrire.
+  // Destinataires MENTION, deja dedupliques et prives de l'auteur par le domaine.
   notifyUserIds: string[]
   patientId: string | null
   dueDate: Date | null

@@ -370,7 +370,7 @@ describe('TasksPanel', () => {
     expect(screen.getByText('Tache t1')).toBeInTheDocument()
   })
 
-  it('le bouton Échéance affiche le DatePicker', async () => {
+  it('le bouton Échéance affiche le DatePicker (calendrier absent avant, present apres)', async () => {
     const u = userEvent.setup()
     render(
       <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="fr">
@@ -383,7 +383,12 @@ describe('TasksPanel', () => {
       </LocalizationProvider>,
       { wrapper },
     )
+    expect(screen.queryByRole('grid')).toBeNull()
+    expect(screen.queryAllByLabelText("Date d'échéance")).toHaveLength(0)
     await u.click(screen.getByRole('button', { name: 'Échéance' }))
-    expect(screen.getByLabelText('Échéance')).toBeInTheDocument()
+    expect(await screen.findByRole('grid')).toBeInTheDocument()
+    expect(
+      screen.queryAllByLabelText("Date d'échéance").length,
+    ).toBeGreaterThan(0)
   })
 })
