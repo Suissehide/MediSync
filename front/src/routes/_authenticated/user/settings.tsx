@@ -36,9 +36,7 @@ function UserSettings() {
   const updateUser = useAuthStore((state) => state.update)
   const { toast } = useToast()
   const affectations = affectationsDe(user)
-  // Aucune `<ScrollRestoration />` n'est montee dans l'app (voir main.tsx) : le defilement
-  // jusqu'a l'ancre n'est pas automatique, cet effet le fait a l'arrivee depuis le lien
-  // « Préférences » du panneau de notifications (`/user/settings#notifications`).
+  // Sans `<ScrollRestoration />` dans l'app, le defilement jusqu'a `#notifications` est fait ici.
   const hash = useLocation({ select: (location) => location.hash })
   useEffect(() => {
     if (hash === 'notifications') {

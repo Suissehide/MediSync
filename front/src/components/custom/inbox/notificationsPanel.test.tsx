@@ -46,9 +46,7 @@ const notif = (
   service,
 })
 
-// Le pied du panneau rend un `Link` (lien « Préférences ») : il lui faut toujours un
-// `RouterProvider`, même quand le scénario ne clique pas ce lien. Arbre minimal avec une page de
-// reglages distincte pour prouver une vraie navigation (et son ancre) depuis le lien.
+// Le lien « Préférences » exige un `RouterProvider` ; la page de reglages prouve la navigation et son ancre.
 const renderPanel = (ui: ReactNode) => {
   const rootRoute = createRootRoute({ component: Outlet })
   const indexRoute = createRoute({

@@ -97,8 +97,7 @@ function Agenda() {
     localStorage.setItem(SELECTED_DAY_STORAGE_KEY, day.format('YYYY-MM-DD'))
   }, [])
 
-  // Un clic sur une notification navigue vers cette meme route avec un `date` different : sans
-  // cet effet, un agenda deja monte sur ce service ignorerait le nouveau parametre.
+  // Une notification peut changer `date` sur un agenda deja monte : on suit le nouveau parametre.
   useEffect(() => {
     if (!date) {
       return

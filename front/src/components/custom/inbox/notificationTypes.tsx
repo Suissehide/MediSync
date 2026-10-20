@@ -103,8 +103,7 @@ export const NOTIFICATION_TYPES: Record<
   },
 }
 
-// Type inconnu (donnee serveur en avance sur ce front, ou corrompue) : une pastille neutre sans
-// lien plutot qu'un plantage du panneau entier.
+// Type inconnu (serveur en avance ou donnee corrompue) : pastille neutre sans lien, pas de plantage.
 const FALLBACK_TYPE: {
   icon: LucideIcon
   color: string
@@ -136,9 +135,7 @@ const obj = (
     ? (p[key] as Record<string, unknown>)
     : {}
 
-// Les dates des seances/echeances sont des horaires de Paris stockes en UTC naif (meme
-// convention que le reste du front, ex. `dayjs.utc(...)`) : lire les champs en UTC les rend tels
-// quels, independamment du fuseau de la machine qui execute le test ou le navigateur.
+// Horaires de Paris stockes en UTC naif (comme `dayjs.utc` ailleurs) : lus en UTC, ils restent tels quels.
 const sessionDate = (iso: string): string => {
   const d = new Date(iso)
   const opts = { timeZone: 'UTC' } as const
@@ -172,6 +169,10 @@ const bold = (text: string): ReactNode => (
   <b className="font-semibold">{text}</b>
 )
 
+// Seance sans thematique : un libelle generique plutot qu'un gras vide.
+const theme = (p: Record<string, unknown>, fallback = 'séance'): string =>
+  str(p, 'thematicName') || fallback
+
 export const notificationText = (
   n: Notification,
   members: ServiceMember[],
@@ -190,10 +191,11 @@ export const notificationText = (
           </>
         )
       }
+      const thematic = str(p, 'thematicName')
       return (
         <>
           {bold(patient)} a été ajouté à votre séance{' '}
-          {bold(str(p, 'thematicName'))} du {date}
+          {thematic ? <>{bold(thematic)} </> : null}du {date}
         </>
       )
     }
@@ -202,7 +204,7 @@ export const notificationText = (
       const location = str(p, 'locationName')
       return (
         <>
-          {date} : {bold(str(p, 'thematicName'))}
+          {date} : {bold(theme(p))}
           {location ? `, ${location}` : ''}
         </>
       )
@@ -212,37 +214,45 @@ export const notificationText = (
       const after = obj(p, 'after')
       const beforeDate = str(before, 'startDate')
       const afterDate = str(after, 'startDate')
+      const room = str(after, 'locationName')
+      const roomChanged = str(before, 'locationName') !== room
+      const roomLabel = bold(room || 'salle non précisée')
       if (beforeDate === afterDate) {
-        return <>change de salle : {bold(str(after, 'locationName'))}</>
+        return (
+          <>
+            {bold(theme(p, 'Séance'))} du {sessionDate(afterDate)} change de
+            salle : {roomLabel}
+          </>
+        )
       }
       return (
         <>
-          {bold(str(p, 'thematicName'))} du {sessionDate(beforeDate)} est
-          déplacée au {bold(sessionDate(afterDate))}
+          {bold(theme(p, 'Séance'))} du {sessionDate(beforeDate)} est déplacée
+          au {bold(sessionDate(afterDate))}
+          {roomChanged ? <>, salle {roomLabel}</> : null}
         </>
       )
     }
     case 'APPOINTMENT_CANCELLED': {
       return (
         <>
-          {bold(str(p, 'thematicName'))} du {sessionDate(str(p, 'startDate'))}{' '}
-          est annulée
+          {bold(theme(p, 'Séance'))} du {sessionDate(str(p, 'startDate'))} est
+          annulée
         </>
       )
     }
     case 'ABSENT': {
       return (
         <>
-          {bold(str(p, 'patientName'))} était absent à{' '}
-          {bold(str(p, 'thematicName'))} du {sessionDate(str(p, 'startDate'))},
-          sans justification
+          {bold(str(p, 'patientName'))} était absent à {bold(theme(p))} du{' '}
+          {sessionDate(str(p, 'startDate'))}, sans justification
         </>
       )
     }
     case 'SLOT_ALMOST_FULL': {
       return (
         <>
-          Plus qu'une place à {bold(str(p, 'thematicName'))} du{' '}
+          Plus qu'une place à {bold(theme(p))} du{' '}
           {sessionDate(str(p, 'startDate'))}
         </>
       )

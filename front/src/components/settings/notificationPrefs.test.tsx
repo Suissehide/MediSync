@@ -143,8 +143,7 @@ describe('NotificationPrefs', () => {
       resolveSecond()
       await tick()
     })
-    // Le premier PUT, en retard, echoue ensuite : son retour arriere ne doit pas effacer le
-    // changement du second, deja confirme par le serveur.
+    // Le premier PUT, en retard, echoue ensuite : son retour arriere n'efface pas le second.
     await act(async () => {
       rejectFirst(new Error('reseau'))
       await tick()
@@ -158,6 +157,44 @@ describe('NotificationPrefs', () => {
         name: /Diagnostic éducatif à réaliser/,
       }),
     ).toHaveAttribute('aria-checked', 'false')
+  })
+
+  it('service quitte depuis l enregistrement : ni affiche, ni compte, ni renvoye', async () => {
+    get.mockReset().mockResolvedValue({
+      ...essentialSaufAbsent,
+      services: ['s1', 'parti'],
+    })
+    const u = userEvent.setup()
+    render(<NotificationPrefs />, { wrapper })
+    const cardio = await screen.findByRole('checkbox', { name: /Cardio/ })
+    expect(screen.getAllByRole('checkbox')).toHaveLength(2)
+    expect(cardio).toHaveAttribute('aria-checked', 'true')
+    expect(cardio).toBeDisabled()
+
+    await u.click(screen.getByRole('button', { name: '1 h avant' }))
+    expect(put).toHaveBeenLastCalledWith(
+      expect.objectContaining({ services: ['s1'] }),
+    )
+    await u.click(screen.getByRole('checkbox', { name: /Diabeto/ }))
+    expect(put).toHaveBeenLastCalledWith(
+      expect.objectContaining({ services: ['s1', 's2'] }),
+    )
+  })
+
+  it('seuls des services quittes : tous les services affiches sont coches, rien de bloque', async () => {
+    get.mockReset().mockResolvedValue({
+      ...essentialSaufAbsent,
+      services: ['parti'],
+    })
+    const u = userEvent.setup()
+    render(<NotificationPrefs />, { wrapper })
+    const cardio = await screen.findByRole('checkbox', { name: /Cardio/ })
+    expect(cardio).toHaveAttribute('aria-checked', 'true')
+    expect(cardio).not.toBeDisabled()
+    await u.click(screen.getByRole('button', { name: '2 h avant' }))
+    expect(put).toHaveBeenLastCalledWith(
+      expect.objectContaining({ services: null }),
+    )
   })
 
   it('services null = tous coches', async () => {

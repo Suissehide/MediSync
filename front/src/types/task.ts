@@ -22,8 +22,7 @@ export type NotificationType =
   | 'SLOT_ALMOST_FULL'
   | 'TASK_DUE'
 
-// Forme figee du payload MENTION (inchange depuis l'etape 1) : les huit autres types se lisent
-// via les petites fonctions de lecture de `notificationTypes.tsx`, le payload restant generique.
+// Payload MENTION fige depuis l'etape 1 ; les autres types se lisent via `notificationTypes.tsx`.
 export type MentionPayload = {
   taskId: string
   authorId: string | null

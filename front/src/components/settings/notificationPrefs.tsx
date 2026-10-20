@@ -124,9 +124,7 @@ export function NotificationPrefs() {
   const services = useAccountServices()
   const update = useUpdateNotificationPrefs()
   const queryClient = useQueryClient()
-  // Dernière valeur confirmée par le serveur, pas la valeur au clic : deux changements
-  // rapprochés envoient deux PUT, et s'ils résolvent dans le désordre, un retour arrière sur
-  // l'ancienne valeur écraserait un changement suivant déjà réussi. Mise à jour à chaque succès.
+  // Dernière valeur confirmée par le serveur : un retour arrière n'écrase pas un PUT suivant déjà réussi.
   const lastConfirmed = useRef<Prefs | null>(null)
   if (data && lastConfirmed.current === null) {
     lastConfirmed.current = data
@@ -136,8 +134,16 @@ export function NotificationPrefs() {
     return <p className="text-sm text-text-light">Chargement…</p>
   }
 
+  // Un service quitte depuis l'enregistrement n'est ni affiche, ni compte, ni renvoye (sinon 400).
+  const shown = services.map((s) => s.id)
+  const live = (ids: string[] | null): string[] | null => {
+    const kept = ids?.filter((id) => shown.includes(id)) ?? []
+    return kept.length > 0 ? kept : null
+  }
+
   // Mise à jour optimiste ; `getQueryData` est interdit, le retour arrière relit `lastConfirmed`.
-  const save = (next: Prefs) => {
+  const save = (raw: Prefs) => {
+    const next = { ...raw, services: live(raw.services) }
     queryClient.setQueryData(NOTIFICATION_PREFS_KEY, next)
     update.mutate(next, {
       onSuccess: (confirmed) => {
@@ -165,7 +171,7 @@ export function NotificationPrefs() {
   const setDelay = (delay: ReminderDelay) =>
     save({ ...data, reminderDelay: delay })
 
-  const checkedServices = data.services ?? services.map((s) => s.id)
+  const checkedServices = live(data.services) ?? shown
   const toggleService = (id: string) => {
     const checked = checkedServices.includes(id)
     if (checked && checkedServices.length <= 1) {

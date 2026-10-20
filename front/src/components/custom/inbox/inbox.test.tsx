@@ -40,8 +40,7 @@ vi.mock('@/api/inbox.api.ts', () => ({
 // Le panneau Taches lit l'echelle courante, inutile hors RouterProvider dans ces scenarios.
 vi.mock('@/navigation/navigation.ts', () => ({ useCurrentScale: () => null }))
 
-// `Inbox` navigue reellement (cibles agenda/fiche patient) : on observe l'appel plutot que de
-// laisser le routeur de test resoudre une vraie destination, absente de son arbre minimal.
+// On observe l'appel de navigation : la vraie destination est absente de l'arbre de test.
 const { navigateMock } = vi.hoisted(() => ({ navigateMock: vi.fn() }))
 vi.mock('@tanstack/react-router', async () => {
   const actual = await vi.importActual<typeof import('@tanstack/react-router')>(
@@ -103,9 +102,7 @@ const user: User = {
   ],
 }
 
-// `Inbox` navigue (lien agenda/fiche patient) : il lui faut un `RouterProvider`, meme si aucun
-// scenario de ce fichier ne clique un type qui navigue reellement (seule la mention, cible
-// tache, y est exercee).
+// `Inbox` navigue : il lui faut un `RouterProvider`, meme sans clic sur un type qui navigue.
 const renderInbox = (ui: ReactNode = <Inbox />) =>
   render(
     <QueryClientProvider
@@ -144,7 +141,7 @@ describe('Inbox', () => {
             firstName: 'Léo',
             lastName: 'C',
             deactivatedAt: null,
-            invitationStatus: 'ACCEPTED',
+            invitationStatus: null,
             invitationResendableAt: null,
           },
         },
@@ -158,7 +155,7 @@ describe('Inbox', () => {
             firstName: 'Claire',
             lastName: 'Leroy',
             deactivatedAt: null,
-            invitationStatus: 'ACCEPTED',
+            invitationStatus: null,
             invitationResendableAt: null,
           },
         },

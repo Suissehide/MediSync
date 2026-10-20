@@ -31,7 +31,7 @@ const claire: ServiceMember = {
     firstName: 'Claire',
     lastName: 'Leroy',
     deactivatedAt: null,
-    invitationStatus: 'ACCEPTED',
+    invitationStatus: null,
     invitationResendableAt: null,
   },
 }
@@ -161,8 +161,110 @@ describe('notificationText', () => {
         [],
       ),
     )
-    expect(document.body.textContent).toContain('change de salle')
+    expect(document.body.textContent).toBe(
+      'Alimentation du jeu. 22/10 à 07:00 change de salle : Salle 2',
+    )
+    expect(screen.getByText('Alimentation').tagName).toBe('B')
     expect(screen.getByText('Salle 2').tagName).toBe('B')
+  })
+
+  it('rendez-vous change de salle vers aucune salle', () => {
+    render(
+      notificationText(
+        n('APPOINTMENT_MOVED', {
+          thematicName: 'Alimentation',
+          before: {
+            startDate: '2026-10-22T07:00:00.000Z',
+            locationName: 'Salle 1',
+          },
+          after: { startDate: '2026-10-22T07:00:00.000Z', locationName: null },
+        }),
+        [],
+      ),
+    )
+    expect(document.body.textContent).toContain(
+      'change de salle : salle non précisée',
+    )
+  })
+
+  it('rendez-vous deplace et change de salle : les deux sont dits', () => {
+    render(
+      notificationText(
+        n('APPOINTMENT_MOVED', {
+          thematicName: 'Alimentation',
+          before: {
+            startDate: '2026-10-20T07:00:00.000Z',
+            locationName: 'Salle 1',
+          },
+          after: {
+            startDate: '2026-10-22T07:00:00.000Z',
+            locationName: 'Salle 2',
+          },
+        }),
+        [],
+      ),
+    )
+    expect(document.body.textContent).toBe(
+      'Alimentation du mar. 20/10 à 07:00 est déplacée au jeu. 22/10 à 07:00, salle Salle 2',
+    )
+  })
+
+  it('rendez-vous deplace sans changement de salle : la salle n est pas citee', () => {
+    render(
+      notificationText(
+        n('APPOINTMENT_MOVED', {
+          thematicName: 'Alimentation',
+          before: {
+            startDate: '2026-10-20T07:00:00.000Z',
+            locationName: 'Salle 1',
+          },
+          after: {
+            startDate: '2026-10-22T07:00:00.000Z',
+            locationName: 'Salle 1',
+          },
+        }),
+        [],
+      ),
+    )
+    expect(document.body.textContent).not.toContain('salle')
+  })
+
+  it('sans thematique : « séance » plutot qu un gras vide', () => {
+    const sansTheme = (type: NotificationType) => {
+      const { container, unmount } = render(
+        notificationText(
+          n(type, {
+            patientName: 'BERNARD Jean',
+            thematicName: null,
+            count: 1,
+            startDate: '2026-10-22T07:00:00.000Z',
+            before: { startDate: '2026-10-22T07:00:00.000Z' },
+            after: { startDate: '2026-10-22T07:00:00.000Z' },
+          }),
+          [],
+        ),
+      )
+      const bolds = [...container.querySelectorAll('b')].map(
+        (b) => b.textContent,
+      )
+      const text = container.textContent
+      unmount()
+      return { bolds, text }
+    }
+    for (const type of [
+      'REMINDER',
+      'APPOINTMENT_MOVED',
+      'APPOINTMENT_CANCELLED',
+      'ABSENT',
+      'SLOT_ALMOST_FULL',
+    ] as NotificationType[]) {
+      const { bolds } = sansTheme(type)
+      expect(bolds).not.toContain('')
+      expect(bolds.some((b) => b?.toLowerCase() === 'séance')).toBe(true)
+    }
+    const added = sansTheme('PATIENT_ADDED')
+    expect(added.bolds).toEqual(['BERNARD Jean'])
+    expect(added.text).toContain('à votre séance du')
   })
 
   it('rendez-vous annule', () => {

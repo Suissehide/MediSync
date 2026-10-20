@@ -22,8 +22,7 @@ export const useUpdateNotificationPrefs = () => {
   })
 }
 
-// Un bouton-case par vraie affectation du compte (ni coordinateur implicite, ni octroi), tous
-// établissements confondus — le choix des services traverse les établissements (spec Préférences).
+// Une case par vraie affectation du compte (ni coordinateur implicite, ni octroi), tous établissements confondus.
 export const useAccountServices = (): {
   id: string
   establishment: string
