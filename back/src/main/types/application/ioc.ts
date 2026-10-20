@@ -14,6 +14,7 @@ import type { ForbiddenWeekDomainInterface } from '../domain/forbiddenWeek.domai
 import type { IndicatorSetDomainInterface } from '../domain/indicatorSet.domain.interface'
 import type { LocationDomainInterface } from '../domain/location.domain.interface'
 import type { MembershipDomainInterface } from '../domain/membership.domain.interface'
+import type { NotificationDomainInterface } from '../domain/notification.domain.interface'
 import type { PathwayDomainInterface } from '../domain/pathway.domain.interface'
 import type { PathwayTemplateDomainInterface } from '../domain/pathwayTemplate.domain.interface'
 import type { PatientDomainInterface } from '../domain/patient.domain.interface'
@@ -30,8 +31,8 @@ import type { SlotDomainInterface } from '../domain/slot.domain.interface'
 import type { SlotTemplateDomainInterface } from '../domain/slotTemplate.domain.interface'
 import type { SoignantDomainInterface } from '../domain/soignant.domain.interface'
 import type { SuperAdminGrantDomainInterface } from '../domain/superAdminGrant.domain.interface'
+import type { TaskDomainInterface } from '../domain/task.domain.interface'
 import type { ThematicDomainInterface } from '../domain/thematic.domain.interface'
-import type { TodoDomainInterface } from '../domain/todo.domain.interface'
 import type { UserDomainInterface } from '../domain/user.domain.interface'
 import type { HttpClientInterface } from '../infra/http/http-client'
 import type {
@@ -51,6 +52,7 @@ import type { IndicatorCohortRepositoryInterface } from '../infra/orm/repositori
 import type { IndicatorSetRepositoryInterface } from '../infra/orm/repositories/indicatorSet.repository.interface'
 import type { LocationRepositoryInterface } from '../infra/orm/repositories/location.repository.interface'
 import type { MembershipRepositoryInterface } from '../infra/orm/repositories/membership.repository.interface'
+import type { NotificationRepositoryInterface } from '../infra/orm/repositories/notification.repository.interface'
 import type { PathwayRepositoryInterface } from '../infra/orm/repositories/pathway.repository.interface'
 import type { PathwayTemplateRepositoryInterface } from '../infra/orm/repositories/pathwayTemplate.repository.interface'
 import type { PatientRepositoryInterface } from '../infra/orm/repositories/patient.repository.interface'
@@ -66,8 +68,8 @@ import type { ServiceFieldCategoryRepositoryInterface } from '../infra/orm/repos
 import type { SlotRepositoryInterface } from '../infra/orm/repositories/slot.repository.interface'
 import type { SlotTemplateRepositoryInterface } from '../infra/orm/repositories/slotTemplate.repository.interface'
 import type { SoignantRepositoryInterface } from '../infra/orm/repositories/soignant.repository.interface'
+import type { TaskRepositoryInterface } from '../infra/orm/repositories/task.repository.interface'
 import type { ThematicRepositoryInterface } from '../infra/orm/repositories/thematic.repository.interface'
-import type { TodoRepositoryInterface } from '../infra/orm/repositories/todo.repository.interface'
 import type { UserRepositoryInterface } from '../infra/orm/repositories/user.repository.interface'
 import type { HttpServer } from '../interfaces/http/server'
 import type { ErrorHandlerInterface } from '../utils/error-handler'
@@ -138,9 +140,6 @@ export interface IocContainer {
   readonly pdfDesignRepository: PdfDesignRepositoryInterface
   readonly pdfAssetRepository: PdfAssetRepositoryInterface
   readonly pdfDesignPresetRepository: PdfDesignPresetRepositoryInterface
-  // Todo
-  readonly todoDomain: TodoDomainInterface
-  readonly todoRepository: TodoRepositoryInterface
   // DiagnosticEducatif
   readonly diagnosticEducatifDomain: DiagnosticEducatifDomainInterface
   readonly diagnosticEducatifRepository: DiagnosticEducatifRepositoryInterface
@@ -186,4 +185,10 @@ export interface IocContainer {
   // IndicatorSet (jeux d'indicateurs configurables)
   readonly indicatorSetDomain: IndicatorSetDomainInterface
   readonly indicatorSetRepository: IndicatorSetRepositoryInterface
+  // Task (taches partagees et mentions)
+  readonly taskDomain: TaskDomainInterface
+  readonly taskRepository: TaskRepositoryInterface
+  // Notification
+  readonly notificationDomain: NotificationDomainInterface
+  readonly notificationRepository: NotificationRepositoryInterface
 }

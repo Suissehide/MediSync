@@ -253,7 +253,6 @@ const lecture = (
   route('GET', '/indicator-catalog', () => ok(catalog)),
   route('GET', '/service-fields', () => ok(fields)),
   route('GET', '/activity-settings', () => ok(settings)),
-  route('GET', '/todo', () => ok([])),
 ]
 
 const monter = (routes: Route[]) => {

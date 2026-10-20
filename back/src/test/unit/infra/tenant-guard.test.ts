@@ -267,9 +267,9 @@ describe('assertTenantScope', () => {
     expect(() =>
       assertTenantScope(
         {
-          model: 'Todo',
+          model: 'Task',
           operation: 'createMany',
-          args: { data: [{ title: 't', serviceId: 's1' }] },
+          args: { data: [{ text: 't', serviceId: 's1' }] },
         },
         store,
       ),
@@ -365,9 +365,9 @@ describe('assertTenantScope', () => {
     expect(() =>
       assertTenantScope(
         {
-          model: 'Todo',
+          model: 'Task',
           operation: 'createManyAndReturn',
-          args: { data: [{ title: 't' }] },
+          args: { data: [{ text: 't' }] },
         },
         store,
       ),
@@ -375,10 +375,10 @@ describe('assertTenantScope', () => {
     expect(() =>
       assertTenantScope(
         {
-          model: 'Todo',
+          model: 'Task',
           operation: 'createManyAndReturn',
           args: {
-            data: [{ title: 't', serviceId: 's1', establishmentId: 'e1' }],
+            data: [{ text: 't', serviceId: 's1', establishmentId: 'e1' }],
           },
         },
         store,
@@ -1426,60 +1426,6 @@ describe('assertTenantScope', () => {
           store,
         )
       expect(() => chain(false)).toThrow(TenantScopeMissingError)
-      expect(() => chain(true)).not.toThrow()
-    })
-
-    it('laisse passer soignant > todos atteint par todo > soignant, toute la chaine etant de service depuis le 2026-09-29', () => {
-      const chain = (filtered: boolean) =>
-        assertTenantScope(
-          {
-            model: 'Todo',
-            operation: 'findMany',
-            args: {
-              where: { serviceId: 's1' },
-              include: {
-                soignant: {
-                  include: {
-                    todos: filtered ? { where: { serviceId: 's1' } } : true,
-                  },
-                },
-              },
-            },
-          },
-          store,
-        )
-      // `Soignant` et `Location` sont des modeles de service : plus aucune transition
-      // etablissement -> service dans cette chaine, donc plus de filtre exige.
-      expect(() => chain(false)).not.toThrow()
-      expect(() => chain(true)).not.toThrow()
-    })
-
-    it('laisse passer soignant > todos atteint par thematic > soignantLinks > soignant, toute la chaine etant de service depuis le 2026-09-29', () => {
-      const chain = (filtered: boolean) =>
-        assertTenantScope(
-          {
-            model: 'Thematic',
-            operation: 'findMany',
-            args: {
-              where: { serviceId: 's1' },
-              include: {
-                soignantLinks: {
-                  include: {
-                    soignant: {
-                      include: {
-                        todos: filtered ? { where: { serviceId: 's1' } } : true,
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-          store,
-        )
-      // `Soignant` et `Location` sont des modeles de service : plus aucune transition
-      // etablissement -> service dans cette chaine, donc plus de filtre exige.
-      expect(() => chain(false)).not.toThrow()
       expect(() => chain(true)).not.toThrow()
     })
 

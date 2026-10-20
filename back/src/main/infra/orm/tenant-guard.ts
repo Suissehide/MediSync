@@ -20,7 +20,10 @@ export const SERVICE_MODELS: readonly string[] = [
   'PatientPathwayPriority',
   'ForbiddenWeek',
   'PlanningCycle',
-  'Todo',
+  'Task',
+  'TaskAssignee',
+  'TaskSoignant',
+  'Notification',
   'SlotTemplateSoignant',
   'SoignantThematic',
   'PatientServiceFile',
@@ -125,6 +128,7 @@ export const SUPERADMIN_OPERATIONS: Readonly<
 // tenant-guard-schema.test.ts. Ce test y vérifie seulement l'autre sens : aucune entrée ne doit
 // désigner une relation qui n'existe plus (ou plus sous ce nom) dans le schéma.
 export const NESTED_RELATIONS: Record<string, Record<string, string>> = {
+  Task: { assignees: 'TaskAssignee', soignants: 'TaskSoignant' },
   Appointment: { appointmentPatients: 'AppointmentPatient' },
   Slot: { appointments: 'Appointment' },
   Pathway: { slots: 'Slot' },
@@ -385,14 +389,19 @@ export const MODEL_RELATIONS: Record<string, Record<string, ModelRelation>> = {
   // `ForbiddenWeek` et `PlanningCycle` ne déclarent aucune relation dans le schéma.
   ForbiddenWeek: {},
   PlanningCycle: {},
-  Todo: {
-    soignant: one('Soignant'),
+  Task: {
+    assignees: many('TaskAssignee'),
+    soignants: many('TaskSoignant'),
   },
+  TaskAssignee: { task: one('Task') },
+  TaskSoignant: { task: one('Task'), soignant: one('Soignant') },
+  // `Notification` ne déclare aucune relation dans le schéma.
+  Notification: {},
   Soignant: {
     slotTemplateLinks: many('SlotTemplateSoignant'),
     thematicLinks: many('SoignantThematic'),
-    todos: many('Todo'),
     serviceMemberships: many('ServiceMembership'),
+    taskTags: many('TaskSoignant'),
   },
   PdfDesign: {
     service: one('Service'),
@@ -1181,7 +1190,7 @@ const assertServiceRelationFilter = (
 // Ce contrôle n'inspectait auparavant que le PREMIER niveau des arguments, et seulement
 // depuis un modèle d'établissement — voir git history pour le commentaire qui documentait cette
 // limite et nommait les chaînes qui l'auraient rouverte (slot/pathway/appointment >
-// appointmentPatients > patient, todo > soignant, thematic|slotTemplate|pathwayTemplate >
+// appointmentPatients > patient, thematic|slotTemplate|pathwayTemplate >
 // soignantLinks > soignant, slotTemplate > location). Fermer ce cas suppose de suivre la famille
 // du modèle courant le long de TOUTE la descente, pas seulement au premier niveau — d'où
 // MODEL_RELATIONS plus haut, qui couvre désormais tous les modèles et pas seulement ceux

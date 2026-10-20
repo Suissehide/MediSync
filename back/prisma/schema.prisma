@@ -340,8 +340,8 @@ model Soignant {
 
   slotTemplateLinks  SlotTemplateSoignant[]
   thematicLinks      SoignantThematic[]
-  todos              Todo[]
   serviceMemberships ServiceMembership[]
+  taskTags           TaskSoignant[]
 
   @@unique([id, serviceId])
   @@index([serviceId])
@@ -744,24 +744,6 @@ model DiagnosticEducatif {
   @@index([serviceId])
 }
 
-model Todo {
-  id              String   @id @default(cuid())
-  establishmentId String
-  serviceId       String
-  createDate      DateTime
-  title           String
-  description     String?
-  completed       Boolean
-
-  soignantID String?
-
-  soignant Soignant? @relation(fields: [soignantID], references: [id], onDelete: Restrict)
-
-  @@unique([id, serviceId])
-  @@index([soignantID])
-  @@index([serviceId])
-}
-
 model ActivityLog {
   id              String   @id @default(cuid())
   establishmentId String?
@@ -952,4 +934,68 @@ model SuperAdminAccessGrant {
 
   @@index([establishmentId, expiresAt])
   @@index([userId])
+}
+
+// Tâches partagées d'un service. authorId et les userId des tagués visent User sans relation (pont global).
+model Task {
+  id              String         @id @default(cuid())
+  establishmentId String
+  serviceId       String
+  text            String
+  authorId        String?
+  // Patient.id sans relation : une clé composite ne pourrait pas passer à nul.
+  patientId       String?
+  dueDate         DateTime?      @db.Date
+  doneAt          DateTime?
+  createdAt       DateTime       @default(now())
+  assignees       TaskAssignee[]
+  soignants       TaskSoignant[]
+
+  @@unique([id, serviceId])
+  @@index([serviceId])
+}
+
+model TaskAssignee {
+  establishmentId String
+  serviceId       String
+  taskId          String
+  userId          String
+  task            Task   @relation(fields: [taskId, serviceId], references: [id, serviceId], onDelete: Cascade)
+
+  @@id([taskId, userId])
+  @@index([serviceId])
+  @@index([userId])
+}
+
+// Mention par metier (« @Psychologue ») : relation composite vers Soignant, comme SlotTemplateSoignant/SoignantThematic.
+model TaskSoignant {
+  establishmentId String
+  serviceId       String
+  taskId          String
+  soignantId      String
+  task            Task     @relation(fields: [taskId, serviceId], references: [id, serviceId], onDelete: Cascade)
+  soignant        Soignant @relation(fields: [soignantId, serviceId], references: [id, serviceId], onDelete: Cascade)
+
+  @@id([taskId, soignantId])
+  @@index([serviceId])
+  @@index([soignantId])
+}
+
+enum NotificationType {
+  MENTION
+}
+
+model Notification {
+  id              String           @id @default(cuid())
+  establishmentId String
+  serviceId       String
+  userId          String
+  type            NotificationType
+  payload         Json
+  readAt          DateTime?
+  createdAt       DateTime         @default(now())
+
+  @@unique([id, serviceId])
+  @@index([serviceId])
+  @@index([userId, createdAt])
 }

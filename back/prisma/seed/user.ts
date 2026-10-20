@@ -5,6 +5,7 @@ import type {
   Service,
   ServiceRole,
   Soignant,
+  User,
 } from '../../src/generated/client'
 
 export function hashPassword(password: string) {
@@ -45,6 +46,9 @@ export default async function seedUsers(
   console.log('→ Seeding users...')
 
   const { serviceA, serviceB } = services
+
+  // Rendus à l'appelant : seed.ts y lit les id des comptes (mention, tâches).
+  const createdUsers: User[] = []
 
   const users: UserSpec[] = [
     {
@@ -92,6 +96,7 @@ export default async function seedUsers(
         lastName: u.lastName,
       },
     })
+    createdUsers.push(user)
     const soignantDans = (serviceId: string) =>
       u.soignantIndex !== null
         ? (soignantsParService.get(serviceId)?.[u.soignantIndex]?.id ?? null)
@@ -118,4 +123,6 @@ export default async function seedUsers(
   }
 
   console.log(`✓ Created ${users.length} users`)
+
+  return createdUsers
 }

@@ -3,6 +3,7 @@ import { ChevronDown, Globe, Menu, PanelLeft, Settings2 } from 'lucide-react'
 import { Fragment } from 'react'
 
 import { can } from '../hooks/useCan.ts'
+import { tenantKey } from '../hooks/useTenantSwitch.ts'
 import {
   MENU_GROUPS,
   NAVIGATION,
@@ -14,7 +15,7 @@ import { useIndicatorSetsQuery } from '../queries/useIndicatorSet.ts'
 import { useAuthStore } from '../store/useAuthStore.ts'
 import { serviceDeRetour } from '../utils/tenant-context.ts'
 import { FilAriane } from './custom/filAriane.tsx'
-import TodoSheet from './custom/todo/todoSheet.tsx'
+import { Inbox } from './custom/inbox/inbox.tsx'
 import { Button } from './ui/button.tsx'
 import {
   PopoverClose,
@@ -181,7 +182,7 @@ export function useOnglets() {
       ? user?.isSuperAdmin === true
       : item.permission === undefined || can(context, item.permission)
 
-  // Meme garde de ROUTE que le panneau des taches (voir `sousLayoutDeService`) : hors service, aucune requete.
+  // Garde de ROUTE : hors service, aucune requete.
   const { sets } = useIndicatorSetsQuery(
     courant?.scale === 'service' && can(context, 'stats:read'),
   )
@@ -219,18 +220,6 @@ export function useOnglets() {
       fuzzy: item.matchPrefix ?? false,
     }) || (item.activeAlso ?? []).some((to) => to === feuille)
 
-  // INVARIANT MULTI-TENANT — cette condition porte sur la ROUTE, jamais sur
-  // le store. Cette barre est rendue par `DashboardLayout`, donc aussi par
-  // `/user/settings`, qui vit HORS des deux layouts de tenant : le contexte
-  // du store y porte encore le dernier service visite, et s'y fier ferait
-  // apparaitre le panneau des taches sur un ecran qu'aucun changement de
-  // contexte ne demonte (seuls `e/$establishmentId/s/$serviceId` et
-  // `e/$establishmentId/admin` declarent `remountDeps`). L'observateur de
-  // `useTodoQueries` resterait alors lie a l'ANCIEN client de requetes —
-  // React Query lie l'observateur au client a la construction et ne le relie
-  // jamais — et afficherait les taches d'un autre service.
-  // Verrouille par `navbar.test.tsx`.
-  const sousLayoutDeService = courant?.scale === 'service'
   const nomDuService =
     courant?.scale === 'service'
       ? user?.establishments
@@ -241,11 +230,11 @@ export function useOnglets() {
   return {
     courant,
     user,
+    context,
     params,
     groupes,
     administration,
     estActif,
-    sousLayoutDeService,
     nomDuService,
   }
 }
@@ -254,11 +243,11 @@ function Navbar({ toggleSidebar }: NavbarProps) {
   const {
     courant,
     user,
+    context,
     params,
     groupes,
     administration,
     estActif,
-    sousLayoutDeService,
     nomDuService,
   } = useOnglets()
 
@@ -374,15 +363,10 @@ function Navbar({ toggleSidebar }: NavbarProps) {
             Plateforme
           </Link>
         )}
-        {/* Les todos sont un objet de service (`todo:own` est une
-        permission de service, pas d'etablissement) : hors du layout de
-        service, `useTodoQueries` appellerait `tenantApiUrl`, qui leve
-        volontairement. La condition est celle de la ROUTE et non celle du
-        store : voir le commentaire de `sousLayoutDeService` ci-dessus, qui
-        dit pourquoi les deux ne coincident pas. */}
-        {sousLayoutDeService && (
+        {user && (
           <div className="flex items-center md:pl-4 md:ml-1.5 md:border-l border-border-sidebar">
-            <TodoSheet />
+            {/* Remonté à chaque changement de contexte : le client de requêtes est remplacé (useTenantSwitch). */}
+            <Inbox key={tenantKey(context)} />
           </div>
         )}
       </div>

@@ -20,6 +20,7 @@ import { enrollmentIssueRouter } from './enrollmentIssue'
 import { forbiddenWeekRouter } from './forbiddenWeek'
 import { indicatorCatalogRouter, indicatorSetRouter } from './indicatorSet'
 import { locationReadRouter, locationWriteRouter } from './location'
+import { notificationRouter } from './notification'
 import { pathwayRouter } from './pathway'
 import { pathwayTemplateRouter } from './pathwayTemplate'
 import { patientRouter } from './patient'
@@ -34,8 +35,8 @@ import { serviceMembersRouter } from './serviceMembers'
 import { slotRouter } from './slot'
 import { slotTemplateRouter } from './slotTemplate'
 import { soignantReadRouter, soignantWriteRouter } from './soignant'
+import { taskRouter } from './task'
 import { thematicRouter } from './thematic'
-import { todoRouter } from './todo'
 
 // Partagee avec le garde-fou racine ci-dessous et l'enregistrement du greffon (routes/index.ts),
 // pour qu'un futur renommage du prefixe ne puisse pas faire diverger les deux en silence. Meme
@@ -169,7 +170,6 @@ const tenantRoutes: FastifyPluginAsyncZod = async (fastify) => {
   // tenant.plugin.ts.
   fastify.addHook('onResponse', fastify.recordPatientAccess)
 
-  await fastify.register(todoRouter, { prefix: '/todo' })
   await fastify.register(appointmentRouter, { prefix: '/appointment' })
   await fastify.register(slotRouter, { prefix: '/slot' })
   await fastify.register(slotTemplateRouter, { prefix: '/slot-template' })
@@ -216,6 +216,8 @@ const tenantRoutes: FastifyPluginAsyncZod = async (fastify) => {
   await fastify.register(activitySettingsRouter, {
     prefix: '/activity-settings',
   })
+  await fastify.register(taskRouter, { prefix: '/taches' })
+  await fastify.register(notificationRouter, { prefix: '/notifications' })
 }
 
 export { tenantRoutes }

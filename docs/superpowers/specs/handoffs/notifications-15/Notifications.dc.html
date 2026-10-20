@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<style>body{margin:0;background:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',system-ui,sans-serif;color:#04182b}a{color:#2563eb}a:hover{color:#1147bb}button{font-family:inherit}</style>
+</helmet>
+<section style="padding:48px;display:flex;flex-direction:column;gap:40px;border-bottom:2px solid #cbd5e1">
+  <div style="display:flex;flex-direction:column;gap:6px;max-width:1000px">
+    <div style="font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#64748b">Tour 15 · fusion</div>
+    <div style="font-size:28px;font-weight:700">Notifications triées par service, tâches partagées, réglages fusionnés</div>
+    <div style="font-size:15px;line-height:1.55;color:#334155;text-wrap:pretty"><a href="#15a">15a</a> reprend le panneau de <a href="#14a">14a</a> et ajoute une seconde icône « Tâches » dans la topbar, avec son propre panneau. Les notifications sont regroupées par service, et des pastilles filtrent sur un service. Les tâches se créent dans le panneau ; « @ » mentionne un soignant du service, qui reçoit une notification. <a href="#15b">15b</a> reprend la grille de <a href="#14c">14c</a> avec les niveaux et le choix des services de <a href="#14d">14d</a>. Tout est cliquable ; tapez du texte et « @ » dans le champ de tâche.</div>
+  </div>
+
+  <div id="15a" style="display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;align-items:center;gap:10px"><span style="background:#04182b;color:#ffffff;font-size:13px;font-weight:700;padding:4px 10px;border-radius:6px">15a</span><span style="font-size:18px;font-weight:600">Deux icônes dans la topbar · Tâches et Notifications</span><span style="font-size:14px;color:#64748b">Chacune ouvre son panneau ; être tagué dans une tâche crée une notification</span></div>
+    <div style="display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start">
+      <sc-for list="{{ framesF }}" as="fr" hint-placeholder-count="2">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <span style="font-size:14px;font-weight:600;color:#334155">{{ fr.cap }}</span>
+          <div style="width:1000px;height:820px;border-radius:12px;overflow:hidden;background:#04182b;display:flex;flex-direction:column;position:relative;box-shadow:0 1px 3px rgba(4,24,43,.08)">
+            <div style="height:64px;flex-shrink:0;display:flex;align-items:center;gap:16px;padding:0 20px;border-bottom:1px solid #ffffff1a">
+              <span style="font-size:18px;font-weight:700;color:#ffffff;width:216px">MediSync</span>
+              <span style="display:flex;align-items:center;gap:6px;font-size:14px;color:#94a3b8">Hôpital Haut-Lévêque<span style="width:14px;height:14px;background-color:#64748b;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/chevron-right.svg) center/contain no-repeat"></span><span style="color:#ffffff;font-weight:600">Cardiologie</span></span>
+              <span style="flex:1"></span>
+              <div style="display:flex;gap:8px"><sc-for list="{{ fr.icons }}" as="b" hint-placeholder-count="2"><span title="{{ b.l }}" style="position:relative;width:40px;height:40px;border-radius:10px;background:{{ b.bg }};display:flex;align-items:center;justify-content:center"><span style="width:20px;height:20px;background-color:#ffffff;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/{{ b.icon }}.svg) center/contain no-repeat"></span><sc-if value="{{ b.n }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:4px;right:3px;min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;border-radius:9px;background:{{ b.nbg }};border:2px solid #04182b;color:#ffffff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ b.n }}</span></sc-if></span></sc-for></div>
+            </div>
+            <div style="flex:1;display:flex;min-height:0">
+              <div style="width:256px;flex-shrink:0;display:flex;flex-direction:column;padding:12px 10px;gap:2px">
+                <sc-for list="{{ nav }}" as="n" hint-placeholder-count="5"><span style="height:40px;display:flex;align-items:center;gap:12px;padding:0 12px;border-radius:8px;font-size:14px;color:{{ n.fg }};background:{{ n.bg }};font-weight:{{ n.w }}"><span style="width:17px;height:17px;background-color:currentColor;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/{{ n.icon }}.svg) center/contain no-repeat"></span>{{ n.l }}</span></sc-for>
+              </div>
+              <div style="flex:1;background:#f1f5f9;border-radius:14px 0 0 0;padding:28px 32px;display:flex;flex-direction:column;gap:16px"><span style="font-size:24px;font-weight:700">Agenda</span><div style="flex:1;background:#ffffff;border-radius:12px;border:1px solid #e2e8f0"></div></div>
+            </div>
+            <div style="position:absolute;top:58px;right:{{ fr.pr }};width:490px;height:740px;background:#ffffff;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 16px 40px rgba(4,24,43,.22);display:flex;flex-direction:column;overflow:hidden">
+              <div style="padding:14px 18px 0;display:flex;align-items:flex-end;gap:20px;border-bottom:1px solid #e2e8f0">
+                <span style="padding:0 0 13px;font-size:17px;font-weight:700;color:#04182b;display:flex;align-items:center;gap:8px"><span style="width:17px;height:17px;background-color:currentColor;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/{{ fr.titleIcon }}.svg) center/contain no-repeat"></span>{{ fr.title }}<sc-if value="{{ fr.titleN }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;font-weight:600;padding:1px 7px;border-radius:9px;background:#eff6ff;color:#2563eb">{{ fr.titleN }}</span></sc-if></span>
+                <span style="flex:1"></span>
+                <sc-if value="{{ fr.isNotif }}" hint-placeholder-val="{{ true }}"><button onClick="{{ readAllF }}" style="cursor:pointer;border:none;background:transparent;font-size:13px;font-weight:600;color:{{ readAllFgF }};display:flex;align-items:center;gap:6px;padding:0 0 13px"><span style="width:14px;height:14px;background-color:currentColor;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/check-check.svg) center/contain no-repeat"></span>Tout lu</button></sc-if>
+              </div>
+              <div style="padding:10px 18px;display:flex;align-items:center;gap:5px;border-bottom:1px solid #f1f5f9">
+                <sc-for list="{{ fr.svcs }}" as="c" hint-placeholder-count="3"><button onClick="{{ c.set }}" style="cursor:pointer;flex-shrink:0;white-space:nowrap;height:30px;padding:0 10px;border-radius:15px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px">{{ c.l }}<sc-if value="{{ c.n }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;padding:0 6px;border-radius:8px;background:{{ c.nbg }}">{{ c.n }}</span></sc-if></button></sc-for>
+                <span style="flex:1"></span>
+                <div style="display:flex;flex-shrink:0;border:1px solid #e2e8f0;border-radius:8px;padding:2px;gap:2px">
+                  <sc-for list="{{ fr.scopes }}" as="s" hint-placeholder-count="2"><button onClick="{{ s.set }}" style="cursor:pointer;height:26px;padding:0 9px;border:none;border-radius:6px;background:{{ s.bg }};font-size:12px;font-weight:{{ s.w }};color:#04182b">{{ s.l }}</button></sc-for>
+                </div>
+              </div>
+
+              <sc-if value="{{ fr.isNotif }}" hint-placeholder-val="{{ true }}">
+                <div style="flex:1;overflow:auto;min-height:0">
+                  <sc-for list="{{ groupsF }}" as="g" hint-placeholder-count="2">
+                    <div style="padding:12px 18px 4px;display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:#64748b"><span style="width:13px;height:13px;background-color:#94a3b8;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/{{ g.icon }}.svg) center/contain no-repeat"></span>{{ g.title }}</div>
+                    <sc-for list="{{ g.items }}" as="i" hint-placeholder-count="3">
+                      <button onClick="{{ i.read }}" style="cursor:pointer;width:100%;border:none;text-align:left;display:flex;gap:12px;padding:12px 18px;background:{{ i.bg }}" style-hover="background:#f8fafc">
+                        <span style="width:34px;height:34px;border-radius:17px;flex-shrink:0;background:{{ i.tint }};display:flex;align-items:center;justify-content:center"><span style="width:16px;height:16px;background-color:{{ i.color }};mask:url(https://unpkg.com/lucide-static@0.460.0/icons/{{ i.icon }}.svg) center/contain no-repeat"></span></span>
+                        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><span style="font-size:14px;line-height:1.4;color:#04182b;text-wrap:pretty"><sc-for list="{{ i.parts }}" as="p" hint-placeholder-count="2"><span style="font-weight:{{ p.w }}">{{ p.t }}</span></sc-for></span><span style="font-size:12px;color:#64748b">{{ i.meta }}</span></span>
+                        <span style="width:8px;height:8px;border-radius:4px;flex-shrink:0;margin-top:6px;background:{{ i.dot }}"></span>
+                      </button>
+                    </sc-for>
+                  </sc-for>
+                  <sc-if value="{{ emptyF }}" hint-placeholder-val="{{ false }}"><div style="padding:56px 24px;display:flex;flex-direction:column;align-items:center;gap:8px;color:#64748b"><span style="width:28px;height:28px;background-color:#94a3b8;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/bell-off.svg) center/contain no-repeat"></span><span style="font-size:14px;font-weight:600;color:#334155">Vous êtes à jour</span><span style="font-size:13px">Aucune notification pour ce filtre.</span></div></sc-if>
+                </div>
+                <div style="padding:12px 18px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px;color:#64748b">Conservées 30 jours</span><span style="font-size:13px;font-weight:600;color:#2563eb;display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;background-color:currentColor;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/settings.svg) center/contain no-repeat"></span>Préférences</span></div>
+              </sc-if>
+
+              <sc-if value="{{ fr.isTasks }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:12px 18px;border-bottom:1px solid #f1f5f9;position:relative">
+                  <div style="border:1.5px solid {{ composeBd }};border-radius:10px;padding:8px 8px 8px 12px;display:flex;flex-direction:column;gap:8px;background:#ffffff">
+                    <sc-if value="{{ hasDraftTags }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-wrap:wrap;gap:4px"><sc-for list="{{ draftTags }}" as="d" hint-placeholder-count="1"><span style="height:24px;padding:0 4px 0 9px;border-radius:12px;background:{{ d.bg }};color:{{ d.fg }};font-size:12px;font-weight:600;display:flex;align-items:center;gap:3px">@{{ d.l }}<button onClick="{{ d.remove }}" style="cursor:pointer;width:18px;height:18px;border:none;background:transparent;padding:0;display:flex;align-items:center;justify-content:center"><span style="width:11px;height:11px;background-color:currentColor;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/x.svg) center/contain no-repeat"></span></button></span></sc-for></div></sc-if>
+                    <div style="display:flex;gap:8px;align-items:center">
+                      <input value="{{ draft }}" onChange="{{ onDraft }}" onKeyDown="{{ onKey }}" placeholder="Nouvelle tâche… tapez @ pour mentionner" style="flex:1;width:0;min-width:0;border:none;outline:none;font-size:14px;color:#04182b;background:transparent;height:30px"></input>
+                      <button onClick="{{ addTask }}" style="cursor:pointer;height:32px;padding:0 12px;border:none;border-radius:8px;background:{{ addBg }};color:#ffffff;font-size:13px;font-weight:600;display:flex;align-items:center;gap:5px"><span style="width:14px;height:14px;background-color:currentColor;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/plus.svg) center/contain no-repeat"></span>Ajouter</button>
+                    </div>
+                  </div>
+                  <sc-if value="{{ showSugg }}" hint-placeholder-val="{{ false }}">
+                    <div style="position:absolute;left:18px;right:18px;top:calc(100% - 8px);z-index:3;background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 10px 28px rgba(4,24,43,.16);padding:4px;display:flex;flex-direction:column">
+                      <span style="padding:6px 10px 4px;font-size:12px;font-weight:600;color:#64748b">Mentionner un soignant · {{ suggSvc }}</span>
+                      <sc-for list="{{ sugg }}" as="s" hint-placeholder-count="3"><button onClick="{{ s.pick }}" style="cursor:pointer;border:none;background:{{ s.bg }};border-radius:7px;height:42px;padding:0 10px;display:flex;align-items:center;gap:10px;text-align:left"><span style="width:28px;height:28px;border-radius:14px;background:#04182b;color:#ffffff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">{{ s.ini }}</span><span style="flex:1;font-size:14px;font-weight:600;color:#04182b">{{ s.l }}</span><span style="font-size:12px;color:#64748b">{{ s.r }}</span></button></sc-for>
+                      <sc-if value="{{ noSugg }}" hint-placeholder-val="{{ false }}"><span style="padding:10px;font-size:13px;color:#64748b">Aucun soignant ne correspond.</span></sc-if>
+                    </div>
+                  </sc-if>
+                </div>
+                <div style="flex:1;overflow:auto;min-height:0">
+                  <sc-for list="{{ tasksOpen }}" as="t" hint-placeholder-count="4">
+                    <div style="display:flex;gap:12px;padding:12px 18px;border-bottom:1px solid #f1f5f9;background:{{ t.rowBg }}">
+                      <button onClick="{{ t.toggle }}" style="cursor:pointer;width:20px;height:20px;margin-top:1px;flex-shrink:0;border-radius:6px;border:1.5px solid {{ t.cbBd }};background:{{ t.cbBg }};padding:0;display:flex;align-items:center;justify-content:center"><span style="width:13px;height:13px;background-color:#ffffff;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/check.svg) center/contain no-repeat"></span></button>
+                      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
+                        <span style="font-size:14px;line-height:1.4;color:{{ t.fg }};text-decoration:{{ t.td }};text-wrap:pretty">{{ t.text }}</span>
+                        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px">
+                          <sc-for list="{{ t.tagsV }}" as="g" hint-placeholder-count="1"><span style="height:22px;padding:0 8px;border-radius:11px;background:{{ g.bg }};color:{{ g.fg }};font-size:12px;font-weight:600;display:flex;align-items:center">@{{ g.l }}</span></sc-for>
+                          <sc-if value="{{ t.patient }}" hint-placeholder-val="{{ false }}"><span style="height:22px;padding:0 8px;border-radius:6px;border:1px solid #e2e8f0;color:#334155;font-size:12px;font-weight:500;display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;background-color:#64748b;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/user.svg) center/contain no-repeat"></span>{{ t.patient }}</span></sc-if>
+                          <sc-if value="{{ t.due }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;font-weight:600;color:{{ t.dueFg }};display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;background-color:currentColor;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/calendar.svg) center/contain no-repeat"></span>{{ t.due }}</span></sc-if>
+                        </div>
+                        <span style="font-size:12px;color:#64748b">{{ t.meta }}</span>
+                      </div>
+                    </div>
+                  </sc-for>
+                  <sc-if value="{{ emptyTasks }}" hint-placeholder-val="{{ false }}"><div style="padding:40px 24px;display:flex;flex-direction:column;align-items:center;gap:8px;color:#64748b"><span style="width:28px;height:28px;background-color:#94a3b8;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/list-checks.svg) center/contain no-repeat"></span><span style="font-size:14px;font-weight:600;color:#334155">Aucune tâche en cours</span></div></sc-if>
+                  <sc-if value="{{ hasDone }}" hint-placeholder-val="{{ true }}">
+                    <button onClick="{{ toggleDone }}" style="cursor:pointer;width:100%;border:none;background:transparent;height:40px;padding:0 18px;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#64748b"><span style="width:14px;height:14px;background-color:currentColor;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/{{ doneChev }}.svg) center/contain no-repeat"></span>Terminées · {{ doneCount }}</button>
+                    <sc-for list="{{ tasksDone }}" as="t" hint-placeholder-count="0">
+                      <div style="display:flex;gap:12px;padding:10px 18px;border-top:1px solid #f1f5f9">
+                        <button onClick="{{ t.toggle }}" style="cursor:pointer;width:20px;height:20px;flex-shrink:0;border-radius:6px;border:1.5px solid {{ t.cbBd }};background:{{ t.cbBg }};padding:0;display:flex;align-items:center;justify-content:center"><span style="width:13px;height:13px;background-color:#ffffff;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/check.svg) center/contain no-repeat"></span></button>
+                        <span style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;color:{{ t.fg }};text-decoration:{{ t.td }}">{{ t.text }}</span><span style="font-size:12px;color:#94a3b8">{{ t.meta }}</span></span>
+                      </div>
+                    </sc-for>
+                  </sc-if>
+                </div>
+                <div style="padding:12px 18px;border-top:1px solid #e2e8f0;font-size:13px;color:#64748b;display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;background-color:#94a3b8;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/at-sign.svg) center/contain no-repeat"></span>Les soignants mentionnés reçoivent une notification.</div>
+              </sc-if>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div id="15b" style="display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;align-items:center;gap:10px"><span style="background:#04182b;color:#ffffff;font-size:13px;font-weight:700;padding:4px 10px;border-radius:6px">15b</span><span style="font-size:18px;font-weight:600">Réglages · niveaux, services et grille</span></div>
+    <div style="width:960px;background:#ffffff;border-radius:16px;padding:36px;box-sizing:border-box;display:flex;flex-direction:column;gap:24px;box-shadow:0 1px 3px rgba(4,24,43,.08)">
+      <div style="display:flex;align-items:center;gap:14px"><span style="width:40px;height:40px;border-radius:8px;border:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center"><span style="width:18px;height:18px;background-color:#04182b;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/arrow-left.svg) center/contain no-repeat"></span></span><span style="font-size:24px;font-weight:600">Paramètres</span></div>
+      <div style="display:flex;flex-direction:column;gap:6px;color:#94a3b8;font-size:14px">
+        <span style="display:flex;align-items:center;gap:10px"><span style="width:16px;height:16px;background-color:currentColor;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/user-pen.svg) center/contain no-repeat"></span>Informations personnelles<span style="flex:1;height:1px;background:#f1f5f9"></span></span>
+        <span style="display:flex;align-items:center;gap:10px"><span style="width:16px;height:16px;background-color:currentColor;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/hospital.svg) center/contain no-repeat"></span>Mes services<span style="flex:1;height:1px;background:#f1f5f9"></span></span>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px"><span style="width:20px;height:20px;background-color:#04182b;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/bell.svg) center/contain no-repeat"></span><span style="font-size:20px;font-weight:600;color:#334155">Notifications</span><span style="flex:1;height:1px;background:#e2e8f0"></span></div>
+      <div style="background:#f8fafc;border-radius:12px;padding:24px 28px;display:flex;flex-direction:column;gap:22px">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <span style="font-size:14px;font-weight:600;color:#334155">Niveau</span>
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px">
+            <sc-for list="{{ presetsE }}" as="p" hint-placeholder-count="3"><button onClick="{{ p.set }}" style="cursor:pointer;text-align:left;padding:14px;border-radius:10px;border:1.5px solid {{ p.bd }};background:{{ p.bg }};display:flex;flex-direction:column;gap:4px"><span style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600;color:#04182b"><span style="width:16px;height:16px;background-color:{{ p.ic }};mask:url(https://unpkg.com/lucide-static@0.460.0/icons/{{ p.icon }}.svg) center/contain no-repeat"></span>{{ p.l }}</span><span style="font-size:13px;color:#64748b;line-height:1.4;text-wrap:pretty">{{ p.d }}</span></button></sc-for>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <span style="font-size:14px;font-weight:600;color:#334155">Pour quels services</span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <sc-for list="{{ svcE }}" as="s" hint-placeholder-count="2"><button onClick="{{ s.toggle }}" style="cursor:pointer;height:38px;padding:0 14px;border-radius:8px;border:1px solid {{ s.bd }};background:#ffffff;display:flex;align-items:center;gap:8px;font-size:14px;color:#04182b"><span style="width:16px;height:16px;border-radius:4px;box-sizing:border-box;border:1.5px solid {{ s.cb }};background:{{ s.cbg }};display:flex;align-items:center;justify-content:center"><span style="width:12px;height:12px;background-color:#ffffff;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/check.svg) center/contain no-repeat"></span></span><span style="color:#64748b">{{ s.e }} ›</span><span style="font-weight:600">{{ s.l }}</span></button></sc-for>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px;padding-top:18px;border-top:1px solid #e2e8f0">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) 110px 110px;align-items:end;gap:0 8px;padding:0 0 10px;border-bottom:1px solid #e2e8f0">
+            <span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:600;color:#334155">Détail par événement</span><span style="font-size:13px;color:#64748b">{{ presetNoteE }}</span></span>
+            <span style="font-size:13px;font-weight:600;color:#334155;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="width:16px;height:16px;background-color:#334155;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/bell.svg) center/contain no-repeat"></span>Dans l'app</span>
+            <span style="font-size:13px;font-weight:600;color:#334155;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="width:16px;height:16px;background-color:#334155;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/mail.svg) center/contain no-repeat"></span>E-mail</span>
+          </div>
+          <sc-for list="{{ gridE }}" as="g" hint-placeholder-count="4">
+            <div style="display:flex;flex-direction:column">
+              <span style="font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#64748b;padding-bottom:4px">{{ g.title }}</span>
+              <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="3">
+                <div style="display:grid;grid-template-columns:minmax(0,1fr) 110px 110px;align-items:center;gap:0 8px;padding:12px 0;border-top:1px solid {{ r.bt }}">
+                  <span style="display:flex;flex-direction:column;gap:3px"><span style="font-size:15px;font-weight:500;color:#04182b">{{ r.l }}</span><span style="font-size:13px;color:#64748b;text-wrap:pretty">{{ r.d }}</span>
+                    <sc-if value="{{ r.hasDelay }}" hint-placeholder-val="{{ false }}"><span style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap"><sc-for list="{{ delaysE }}" as="d" hint-placeholder-count="3"><button onClick="{{ d.set }}" style="cursor:pointer;height:30px;padding:0 10px;border-radius:7px;border:1px solid {{ d.bd }};background:{{ d.bg }};color:{{ d.fg }};font-size:13px;font-weight:600">{{ d.l }}</button></sc-for></span></sc-if>
+                  </span>
+                  <span style="display:flex;justify-content:center"><button onClick="{{ r.tApp }}" style="cursor:pointer;width:40px;height:24px;border-radius:12px;border:none;padding:0;background:{{ r.appBg }};position:relative"><span style="position:absolute;top:3px;left:{{ r.appX }};width:18px;height:18px;border-radius:9px;background:#ffffff;box-shadow:0 1px 2px rgba(0,0,0,.2)"></span></button></span>
+                  <span style="display:flex;justify-content:center"><button onClick="{{ r.tMail }}" style="cursor:pointer;width:40px;height:24px;border-radius:12px;border:none;padding:0;background:{{ r.mailBg }};position:relative"><span style="position:absolute;top:3px;left:{{ r.mailX }};width:18px;height:18px;border-radius:9px;background:#ffffff;box-shadow:0 1px 2px rgba(0,0,0,.2)"></span></button></span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;padding-top:16px;border-top:1px solid #e2e8f0">
+          <span style="display:flex;flex-direction:column;gap:3px"><span style="font-size:15px;font-weight:500">Envoi des e-mails</span><span style="font-size:13px;color:#64748b">À leo.couffinhal@chu-bordeaux.fr, sans données de santé : un lien ouvre MediSync.</span></span>
+          <div style="display:flex;gap:8px">
+            <sc-for list="{{ digestE }}" as="d" hint-placeholder-count="2"><button onClick="{{ d.set }}" style="cursor:pointer;flex:1;text-align:left;padding:12px 14px;border-radius:10px;border:1.5px solid {{ d.bd }};background:#ffffff;display:flex;gap:10px;align-items:flex-start"><span style="width:16px;height:16px;border-radius:8px;border:{{ d.ring }};box-sizing:border-box;flex-shrink:0;margin-top:2px"></span><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:600;color:#04182b">{{ d.l }}</span><span style="font-size:13px;color:#64748b">{{ d.d }}</span></span></button></sc-for>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end"><span style="height:40px;padding:0 20px;border-radius:8px;background:#2563eb;color:#ffffff;font-size:15px;font-weight:600;display:flex;align-items:center">Enregistrer</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="padding:48px;display:flex;flex-direction:column;gap:40px">
+  <div style="display:flex;flex-direction:column;gap:6px;max-width:1000px">
+    <div style="font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#64748b">Tour 14 · notifications des soignants</div>
+    <div style="font-size:28px;font-weight:700">Centre de notifications et préférences</div>
+    <div style="font-size:15px;line-height:1.55;color:#334155;text-wrap:pretty">Une cloche dans la barre du haut, avec le nombre de non lues. Deux pistes pour le centre : un panneau déroulant compact (<a href="#14a">14a</a>) ou un tiroir latéral avec filtres et actions (<a href="#14b">14b</a>). Deux pistes pour la section « Notifications » des Paramètres, placée après « Mes services » : une grille événement × canal (<a href="#14c">14c</a>) ou des préréglages avec choix des services (<a href="#14d">14d</a>). Les quatre écrans sont cliquables.</div>
+  </div>
+
+  <div style="display:flex;gap:48px;flex-wrap:wrap;align-items:flex-start">
+    <div id="14a" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;gap:10px"><span style="background:#04182b;color:#ffffff;font-size:13px;font-weight:700;padding:4px 10px;border-radius:6px">14a</span><span style="font-size:18px;font-weight:600">Panneau déroulant</span><span style="font-size:14px;color:#64748b">Coup d'œil rapide, sans quitter la page</span></div>
+      <div style="width:1280px;height:800px;border-radius:12px;overflow:hidden;background:#04182b;display:flex;flex-direction:column;position:relative;box-shadow:0 1px 3px rgba(4,24,43,.08)">
+        <div style="height:64px;flex-shrink:0;display:flex;align-items:center;gap:16px;padding:0 20px;border-bottom:1px solid #ffffff1a">
+          <span style="font-size:18px;font-weight:700;color:#ffffff;width:216px">MediSync</span>
+          <span style="display:flex;align-items:center;gap:6px;font-size:14px;color:#94a3b8">Hôpital Haut-Lévêque<span style="width:14px;height:14px;background-color:#64748b;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/chevron-right.svg) center/contain no-repeat"></span><span style="color:#ffffff;font-weight:600">Cardiologie</span></span>
+          <span style="flex:1"></span>
+          <button onClick="{{ toggleA }}" style="cursor:pointer;position:relative;width:40px;height:40px;border-radius:10px;border:none;background:{{ bellBgA }};display:flex;align-items:center;justify-content:center"><span style="width:20px;height:20px;background-color:#ffffff;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/bell.svg) center/contain no-repeat"></span><sc-if value="{{ hasUnreadA }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:4px;right:3px;min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;border-radius:9px;background:#dc2626;border:2px solid #04182b;color:#ffffff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ unreadA }}</span></sc-if></button>
+        </div>
+        <div style="flex:1;display:flex;min-height:0">
+          <div style="width:256px;flex-shrink:0;display:flex;flex-direction:column;padding:12px 10px;gap:2px">
+            <sc-for list="{{ nav }}" as="n" hint-placeholder-count="5"><span style="height:40px;display:flex;align-items:center;gap:12px;padding:0 12px;border-radius:8px;font-size:14px;color:{{ n.fg }};background:{{ n.bg }};font-weight:{{ n.w }}"><span style="width:17px;height:17px;background-color:currentColor;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/{{ n.icon }}.svg) center/contain no-repeat"></span>{{ n.l }}</span></sc-for>
+          </div>
+          <div style="flex:1;background:#f1f5f9;border-radius:14px 0 0 0;padding:28px 32px;display:flex;flex-direction:column;gap:16px">
+            <span style="font-size:24px;font-weight:700">Agenda</span>
+            <div style="flex:1;background:#ffffff;border-radius:12px;border:1px solid #e2e8f0"></div>
+          </div>
+        </div>
+        <sc-if value="{{ openA }}" hint-placeholder-val="{{ true }}">
+          <div style="position:absolute;top:58px;right:14px;width:420px;max-height:640px;background:#ffffff;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 16px 40px rgba(4,24,43,.22);display:flex;flex-direction:column;overflow:hidden">
+            <div style="padding:16px 18px 0;display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #e2e8f0">
+              <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:17px;font-weight:700">Notifications</span><button onClick="{{ readAllA }}" style="cursor:pointer;border:none;background:transparent;font-size:13px;font-weight:600;color:{{ readAllFgA }};display:flex;align-items:center;gap:6px;padding:0"><span style="width:14px;height:14px;background-color:currentColor;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/check-check.svg) center/contain no-repeat"></span>Tout marquer comme lu</button></div>
+              <div style="display:flex;gap:18px">
+                <sc-for list="{{ tabsA }}" as="t" hint-placeholder-count="2"><button onClick="{{ t.set }}" style="cursor:pointer;border:none;background:transparent;padding:0 0 10px;border-bottom:2px solid {{ t.bd }};font-size:14px;font-weight:{{ t.w }};color:{{ t.fg }};display:flex;align-items:center;gap:6px">{{ t.l }}<sc-if value="{{ t.n }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;font-weight:600;padding:1px 7px;border-radius:9px;background:#eff6ff;color:#2563eb">{{ t.n }}</span></sc-if></button></sc-for>
+              </div>
+            </div>
+            <div style="flex:1;overflow:auto;min-height:0">
+              <sc-for list="{{ groupsA }}" as="g" hint-placeholder-count="2">
+                <div style="padding:10px 18px 4px;font-size:12px;font-weight:600;color:#64748b">{{ g.title }}</div>
+                <sc-for list="{{ g.items }}" as="i" hint-placeholder-count="3">
+                  <button onClick="{{ i.read }}" style="cursor:pointer;width:100%;border:none;text-align:left;display:flex;gap:12px;padding:12px 18px;background:{{ i.bg }}" style-hover="background:#f8fafc">
+                    <span style="width:34px;height:34px;border-radius:17px;flex-shrink:0;background:{{ i.tint }};display:flex;align-items:center;justify-content:center"><span style="width:16px;height:16px;background-color:{{ i.color }};mask:url(https://unpkg.com/lucide-static@0.460.0/icons/{{ i.icon }}.svg) center/contain no-repeat"></span></span>
+                    <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+                      <span style="font-size:14px;line-height:1.4;color:#04182b;text-wrap:pretty"><sc-for list="{{ i.parts }}" as="p" hint-placeholder-count="2"><span style="font-weight:{{ p.w }}">{{ p.t }}</span></sc-for></span>
+                      <span style="font-size:12px;color:#64748b">{{ i.when }} · {{ i.svc }}</span>
+                    </span>
+                    <span style="width:8px;height:8px;border-radius:4px;flex-shrink:0;margin-top:6px;background:{{ i.dot }}"></span>
+                  </button>
+                </sc-for>
+              </sc-for>
+              <sc-if value="{{ emptyA }}" hint-placeholder-val="{{ false }}"><div style="padding:48px 24px;display:flex;flex-direction:column;align-items:center;gap:8px;color:#64748b"><span style="width:28px;height:28px;background-color:#94a3b8;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/bell-off.svg) center/contain no-repeat"></span><span style="font-size:14px;font-weight:600;color:#334155">Vous êtes à jour</span><span style="font-size:13px">Aucune notification non lue.</span></div></sc-if>
+            </div>
+            <div style="padding:12px 18px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px;color:#64748b">Conservées 30 jours</span><span style="font-size:13px;font-weight:600;color:#2563eb;display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;background-color:currentColor;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/settings.svg) center/contain no-repeat"></span>Préférences</span></div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <div id="14b" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;gap:10px"><span style="background:#04182b;color:#ffffff;font-size:13px;font-weight:700;padding:4px 10px;border-radius:6px">14b</span><span style="font-size:18px;font-weight:600">Tiroir latéral</span><span style="font-size:14px;color:#64748b">Filtres par type et par service, actions directes</span></div>
+      <div style="width:1280px;height:800px;border-radius:12px;overflow:hidden;background:#04182b;display:flex;flex-direction:column;position:relative;box-shadow:0 1px 3px rgba(4,24,43,.08)">
+        <div style="height:64px;flex-shrink:0;display:flex;align-items:center;gap:16px;padding:0 20px;border-bottom:1px solid #ffffff1a">
+          <span style="font-size:18px;font-weight:700;color:#ffffff;width:216px">MediSync</span>
+          <span style="display:flex;align-items:center;gap:6px;font-size:14px;color:#94a3b8">Hôpital Haut-Lévêque<span style="width:14px;height:14px;background-color:#64748b;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/chevron-right.svg) center/contain no-repeat"></span><span style="color:#ffffff;font-weight:600">Cardiologie</span></span>
+          <span style="flex:1"></span>
+          <span style="position:relative;width:40px;height:40px;border-radius:10px;background:#ffffff1f;display:flex;align-items:center;justify-content:center"><span style="width:20px;height:20px;background-color:#ffffff;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/bell.svg) center/contain no-repeat"></span><sc-if value="{{ hasUnreadB }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;top:4px;right:3px;min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;border-radius:9px;background:#dc2626;border:2px solid #04182b;color:#ffffff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ unreadB }}</span></sc-if></span>
+        </div>
+        <div style="flex:1;display:flex;min-height:0">
+          <div style="width:256px;flex-shrink:0;display:flex;flex-direction:column;padding:12px 10px;gap:2px">
+            <sc-for list="{{ nav }}" as="n" hint-placeholder-count="5"><span style="height:40px;display:flex;align-items:center;gap:12px;padding:0 12px;border-radius:8px;font-size:14px;color:{{ n.fg }};background:{{ n.bg }};font-weight:{{ n.w }}"><span style="width:17px;height:17px;background-color:currentColor;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/{{ n.icon }}.svg) center/contain no-repeat"></span>{{ n.l }}</span></sc-for>
+          </div>
+          <div style="flex:1;background:#f1f5f9;border-radius:14px 0 0 0;padding:28px 32px;display:flex;flex-direction:column;gap:16px">
+            <span style="font-size:24px;font-weight:700">Agenda</span>
+            <div style="flex:1;background:#ffffff;border-radius:12px;border:1px solid #e2e8f0"></div>
+          </div>
+        </div>
+        <div style="position:absolute;inset:64px 0 0 0;background:rgba(4,24,43,.35)"></div>
+        <div style="position:absolute;top:64px;right:0;bottom:0;width:460px;background:#ffffff;display:flex;flex-direction:column;box-shadow:-12px 0 32px rgba(4,24,43,.18)">
+          <div style="padding:18px 20px 14px;display:flex;flex-direction:column;gap:14px;border-bottom:1px solid #e2e8f0">
+            <div style="display:flex;align-items:center;gap:10px"><span style="flex:1;font-size:18px;font-weight:700">Notifications</span>
+              <button onClick="{{ readAllB }}" style="cursor:pointer;height:32px;padding:0 10px;border-radius:8px;border:1px solid #e2e8f0;background:#ffffff;font-size:13px;font-weight:600;color:#334155;display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;background-color:currentColor;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/check-check.svg) center/contain no-repeat"></span>Tout lu</button>
+              <span style="width:32px;height:32px;border-radius:8px;border:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center"><span style="width:15px;height:15px;background-color:#334155;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/settings.svg) center/contain no-repeat"></span></span>
+              <span style="width:32px;height:32px;display:flex;align-items:center;justify-content:center"><span style="width:18px;height:18px;background-color:#64748b;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/x.svg) center/contain no-repeat"></span></span>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <sc-for list="{{ catsB }}" as="c" hint-placeholder-count="4"><button onClick="{{ c.set }}" style="cursor:pointer;height:32px;padding:0 12px;border-radius:16px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px">{{ c.l }}<sc-if value="{{ c.n }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;padding:0 6px;border-radius:8px;background:{{ c.nbg }}">{{ c.n }}</span></sc-if></button></sc-for>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+              <span style="height:32px;padding:0 10px;border-radius:8px;border:1px solid #e2e8f0;font-size:13px;color:#334155;display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;background-color:#64748b;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/hospital.svg) center/contain no-repeat"></span>Tous mes services<span style="width:14px;height:14px;background-color:#64748b;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/chevron-down.svg) center/contain no-repeat"></span></span>
+              <button onClick="{{ toggleOnlyB }}" style="cursor:pointer;border:none;background:transparent;display:flex;align-items:center;gap:8px;font-size:13px;color:#334155;padding:0"><span style="width:30px;height:18px;border-radius:9px;background:{{ swB }};position:relative;display:block"><span style="position:absolute;top:2px;left:{{ swLeftB }};width:14px;height:14px;border-radius:7px;background:#ffffff"></span></span>Non lues seulement</button>
+            </div>
+          </div>
+          <div style="flex:1;overflow:auto;min-height:0;padding:6px 12px 16px;display:flex;flex-direction:column;gap:2px">
+            <sc-for list="{{ groupsB }}" as="g" hint-placeholder-count="2">
+              <div style="padding:12px 8px 6px;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#64748b">{{ g.title }}</div>
+              <sc-for list="{{ g.items }}" as="i" hint-placeholder-count="3">
+                <div onClick="{{ i.read }}" style="cursor:pointer;display:flex;gap:12px;padding:12px;border-radius:10px;background:{{ i.bg }};border:1px solid {{ i.bd }}">
+                  <span style="width:4px;align-self:stretch;border-radius:2px;flex-shrink:0;background:{{ i.bar }}"></span>
+                  <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
+                    <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:{{ i.color }}"><span style="width:13px;height:13px;background-color:currentColor;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/{{ i.icon }}.svg) center/contain no-repeat"></span>{{ i.kind }}<span style="font-weight:400;color:#94a3b8">· {{ i.when }}</span></span>
+                    <span style="font-size:14px;line-height:1.4;color:#04182b;text-wrap:pretty"><sc-for list="{{ i.parts }}" as="p" hint-placeholder-count="2"><span style="font-weight:{{ p.w }}">{{ p.t }}</span></sc-for></span>
+                    <span style="display:flex;align-items:center;gap:8px;justify-content:space-between">
+                      <span style="font-size:12px;color:#64748b;display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;background-color:#94a3b8;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/hospital.svg) center/contain no-repeat"></span>{{ i.svc }}</span>
+                      <span style="height:28px;padding:0 10px;border-radius:7px;border:1px solid #e2e8f0;background:#ffffff;font-size:12px;font-weight:600;color:#2563eb;display:flex;align-items:center;gap:5px">{{ i.cta }}<span style="width:12px;height:12px;background-color:currentColor;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/arrow-right.svg) center/contain no-repeat"></span></span>
+                    </span>
+                  </span>
+                </div>
+              </sc-for>
+            </sc-for>
+            <sc-if value="{{ emptyB }}" hint-placeholder-val="{{ false }}"><div style="padding:56px 24px;display:flex;flex-direction:column;align-items:center;gap:8px;color:#64748b"><span style="width:28px;height:28px;background-color:#94a3b8;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/bell-off.svg) center/contain no-repeat"></span><span style="font-size:14px;font-weight:600;color:#334155">Rien à afficher</span><span style="font-size:13px">Aucune notification pour ce filtre.</span></div></sc-if>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:48px;flex-wrap:wrap;align-items:flex-start">
+    <div id="14c" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;gap:10px"><span style="background:#04182b;color:#ffffff;font-size:13px;font-weight:700;padding:4px 10px;border-radius:6px">14c</span><span style="font-size:18px;font-weight:600">Réglages · grille événement × canal</span></div>
+      <div style="width:960px;background:#ffffff;border-radius:16px;padding:36px;box-sizing:border-box;display:flex;flex-direction:column;gap:24px;box-shadow:0 1px 3px rgba(4,24,43,.08)">
+        <div style="display:flex;align-items:center;gap:14px"><span style="width:40px;height:40px;border-radius:8px;border:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center"><span style="width:18px;height:18px;background-color:#04182b;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/arrow-left.svg) center/contain no-repeat"></span></span><span style="font-size:24px;font-weight:600">Paramètres</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;color:#94a3b8;font-size:14px">
+          <span style="display:flex;align-items:center;gap:10px"><span style="width:16px;height:16px;background-color:currentColor;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/user-pen.svg) center/contain no-repeat"></span>Informations personnelles<span style="flex:1;height:1px;background:#f1f5f9"></span></span>
+          <span style="display:flex;align-items:center;gap:10px"><span style="width:16px;height:16px;background-color:currentColor;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/hospital.svg) center/contain no-repeat"></span>Mes services<span style="flex:1;height:1px;background:#f1f5f9"></span></span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px"><span style="width:20px;height:20px;background-color:#04182b;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/bell.svg) center/contain no-repeat"></span><span style="font-size:20px;font-weight:600;color:#334155">Notifications</span><span style="flex:1;height:1px;background:#e2e8f0"></span></div>
+        <div style="background:#f8fafc;border-radius:12px;padding:24px 28px;display:flex;flex-direction:column;gap:20px">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) 110px 110px;align-items:end;gap:0 8px;padding:0 0 10px;border-bottom:1px solid #e2e8f0">
+            <span style="font-size:13px;color:#64748b">Choisissez ce que vous recevez, et où.</span>
+            <span style="font-size:13px;font-weight:600;color:#334155;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="width:16px;height:16px;background-color:#334155;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/bell.svg) center/contain no-repeat"></span>Dans l'app</span>
+            <span style="font-size:13px;font-weight:600;color:#334155;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="width:16px;height:16px;background-color:#334155;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/mail.svg) center/contain no-repeat"></span>E-mail</span>
+          </div>
+          <sc-for list="{{ gridC }}" as="g" hint-placeholder-count="3">
+            <div style="display:flex;flex-direction:column">
+              <span style="font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#64748b;padding-bottom:4px">{{ g.title }}</span>
+              <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="3">
+                <div style="display:grid;grid-template-columns:minmax(0,1fr) 110px 110px;align-items:center;gap:0 8px;padding:12px 0;border-top:1px solid {{ r.bt }}">
+                  <span style="display:flex;flex-direction:column;gap:3px"><span style="font-size:15px;font-weight:500;color:#04182b">{{ r.l }}</span><span style="font-size:13px;color:#64748b;text-wrap:pretty">{{ r.d }}</span>
+                    <sc-if value="{{ r.hasDelay }}" hint-placeholder-val="{{ false }}"><span style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap"><sc-for list="{{ delays }}" as="d" hint-placeholder-count="3"><button onClick="{{ d.set }}" style="cursor:pointer;height:30px;padding:0 10px;border-radius:7px;border:1px solid {{ d.bd }};background:{{ d.bg }};color:{{ d.fg }};font-size:13px;font-weight:600">{{ d.l }}</button></sc-for></span></sc-if>
+                  </span>
+                  <span style="display:flex;justify-content:center"><button onClick="{{ r.tApp }}" style="cursor:pointer;width:40px;height:24px;border-radius:12px;border:none;padding:0;background:{{ r.appBg }};position:relative"><span style="position:absolute;top:3px;left:{{ r.appX }};width:18px;height:18px;border-radius:9px;background:#ffffff;box-shadow:0 1px 2px rgba(0,0,0,.2)"></span></button></span>
+                  <span style="display:flex;justify-content:center"><button onClick="{{ r.tMail }}" style="cursor:pointer;width:40px;height:24px;border-radius:12px;border:none;padding:0;background:{{ r.mailBg }};position:relative"><span style="position:absolute;top:3px;left:{{ r.mailX }};width:18px;height:18px;border-radius:9px;background:#ffffff;box-shadow:0 1px 2px rgba(0,0,0,.2)"></span></button></span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+          <div style="display:flex;flex-direction:column;gap:10px;padding-top:16px;border-top:1px solid #e2e8f0">
+            <span style="display:flex;flex-direction:column;gap:3px"><span style="font-size:15px;font-weight:500">Envoi des e-mails</span><span style="font-size:13px;color:#64748b">À léo.couffinhal@chu-bordeaux.fr</span></span>
+            <div style="display:flex;gap:8px">
+              <sc-for list="{{ digestC }}" as="d" hint-placeholder-count="2"><button onClick="{{ d.set }}" style="cursor:pointer;flex:1;text-align:left;padding:12px 14px;border-radius:10px;border:1.5px solid {{ d.bd }};background:#ffffff;display:flex;gap:10px;align-items:flex-start"><span style="width:16px;height:16px;border-radius:8px;border:{{ d.ring }};box-sizing:border-box;flex-shrink:0;margin-top:2px"></span><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:600;color:#04182b">{{ d.l }}</span><span style="font-size:13px;color:#64748b">{{ d.d }}</span></span></button></sc-for>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:flex-end"><span style="height:40px;padding:0 20px;border-radius:8px;background:#2563eb;color:#ffffff;font-size:15px;font-weight:600;display:flex;align-items:center">Enregistrer</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="14d" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;gap:10px"><span style="background:#04182b;color:#ffffff;font-size:13px;font-weight:700;padding:4px 10px;border-radius:6px">14d</span><span style="font-size:18px;font-weight:600">Réglages · préréglages et services</span></div>
+      <div style="width:960px;background:#ffffff;border-radius:16px;padding:36px;box-sizing:border-box;display:flex;flex-direction:column;gap:24px;box-shadow:0 1px 3px rgba(4,24,43,.08)">
+        <div style="display:flex;align-items:center;gap:14px"><span style="width:40px;height:40px;border-radius:8px;border:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center"><span style="width:18px;height:18px;background-color:#04182b;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/arrow-left.svg) center/contain no-repeat"></span></span><span style="font-size:24px;font-weight:600">Paramètres</span></div>
+        <div style="display:flex;align-items:center;gap:12px"><span style="width:20px;height:20px;background-color:#04182b;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/bell.svg) center/contain no-repeat"></span><span style="font-size:20px;font-weight:600;color:#334155">Notifications</span><span style="flex:1;height:1px;background:#e2e8f0"></span></div>
+        <div style="background:#f8fafc;border-radius:12px;padding:24px 28px;display:flex;flex-direction:column;gap:22px">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <span style="font-size:14px;font-weight:600;color:#334155">Niveau</span>
+            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px">
+              <sc-for list="{{ presetsD }}" as="p" hint-placeholder-count="3"><button onClick="{{ p.set }}" style="cursor:pointer;text-align:left;padding:14px;border-radius:10px;border:1.5px solid {{ p.bd }};background:{{ p.bg }};display:flex;flex-direction:column;gap:4px"><span style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600;color:#04182b"><span style="width:16px;height:16px;background-color:{{ p.ic }};mask:url(https://unpkg.com/lucide-static@0.460.0/icons/{{ p.icon }}.svg) center/contain no-repeat"></span>{{ p.l }}</span><span style="font-size:13px;color:#64748b;line-height:1.4;text-wrap:pretty">{{ p.d }}</span></button></sc-for>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <span style="font-size:14px;font-weight:600;color:#334155">Pour quels services</span>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <sc-for list="{{ svcD }}" as="s" hint-placeholder-count="2"><button onClick="{{ s.toggle }}" style="cursor:pointer;height:38px;padding:0 14px;border-radius:8px;border:1px solid {{ s.bd }};background:#ffffff;display:flex;align-items:center;gap:8px;font-size:14px;color:#04182b"><span style="width:16px;height:16px;border-radius:4px;box-sizing:border-box;border:1.5px solid {{ s.cb }};background:{{ s.cbg }};display:flex;align-items:center;justify-content:center"><span style="width:12px;height:12px;background-color:#ffffff;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/check.svg) center/contain no-repeat"></span></span><span style="color:#64748b">{{ s.e }} ›</span><span style="font-weight:600">{{ s.l }}</span></button></sc-for>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:14px;font-weight:600;color:#334155">Détail par événement</span><span style="font-size:13px;color:#64748b">{{ presetNoteD }}</span></div>
+            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden">
+              <sc-for list="{{ rowsD }}" as="r" hint-placeholder-count="7">
+                <div style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-top:1px solid {{ r.bt }}">
+                  <span style="width:30px;height:30px;border-radius:15px;flex-shrink:0;background:{{ r.tint }};display:flex;align-items:center;justify-content:center"><span style="width:14px;height:14px;background-color:{{ r.color }};mask:url(https://unpkg.com/lucide-static@0.460.0/icons/{{ r.icon }}.svg) center/contain no-repeat"></span></span>
+                  <span style="flex:1;min-width:0;font-size:14px;font-weight:500">{{ r.l }}</span>
+                  <div style="display:flex;gap:6px">
+                    <button onClick="{{ r.tApp }}" style="cursor:pointer;height:30px;padding:0 10px;border-radius:15px;border:1px solid {{ r.appBd }};background:{{ r.appBg }};color:{{ r.appFg }};font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px"><span style="width:13px;height:13px;background-color:currentColor;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/bell.svg) center/contain no-repeat"></span>App</button>
+                    <button onClick="{{ r.tMail }}" style="cursor:pointer;height:30px;padding:0 10px;border-radius:15px;border:1px solid {{ r.mailBd }};background:{{ r.mailBg }};color:{{ r.mailFg }};font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px"><span style="width:13px;height:13px;background-color:currentColor;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/mail.svg) center/contain no-repeat"></span>E-mail</button>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:16px">
+            <span style="font-size:13px;color:#64748b;text-wrap:pretty">Les e-mails arrivent à léo.couffinhal@chu-bordeaux.fr, sans données de santé : un lien ouvre MediSync.</span>
+            <span style="height:40px;padding:0 20px;border-radius:8px;background:#2563eb;color:#ffffff;font-size:15px;font-weight:600;display:flex;align-items:center;flex-shrink:0">Enregistrer</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const TYPES = {
+  added: { icon: 'user-plus', color: '#2563eb', tint: '#eff6ff', kind: 'Patient ajouté', cat: 'rdv' },
+  reminder: { icon: 'alarm-clock', color: '#7c3aed', tint: '#f5f3ff', kind: 'Rappel', cat: 'rdv' },
+  moved: { icon: 'calendar-clock', color: '#b45309', tint: '#fffbeb', kind: 'RDV modifié', cat: 'rdv' },
+  cancelled: { icon: 'calendar-x', color: '#b91c1c', tint: '#fef2f2', kind: 'RDV annulé', cat: 'rdv' },
+  absent: { icon: 'user-x', color: '#be185d', tint: '#fdf2f8', kind: 'Absence', cat: 'pat' },
+  full: { icon: 'users', color: '#0891b2', tint: '#ecfeff', kind: 'Créneau', cat: 'slot' },
+  end: { icon: 'flag', color: '#15803d', tint: '#f0fdf4', kind: 'Fin de parcours', cat: 'pat' },
+  diag: { icon: 'clipboard-list', color: '#334155', tint: '#f1f5f9', kind: 'Diagnostic', cat: 'pat' },
+};
+const B = s => ({ t: s, w: 600 }), N = s => ({ t: s, w: 400 });
+const NOTIFS = [
+  { id: 1, day: "Aujourd'hui", type: 'added', when: 'il y a 5 min', svc: 'Cardiologie', cta: 'Voir le RDV', parts: [B('BERNARD Jean'), N(' a été ajouté à votre séance '), B('Alimentation'), N(' du jeu. 22/10 à 09:00, par IDE Leroy.')] },
+  { id: 2, day: "Aujourd'hui", type: 'reminder', when: 'il y a 1 h', svc: 'Cardiologie', cta: 'Voir le RDV', parts: [N('Demain 10:30 : '), B('Diagnostic éducatif'), N(' avec '), B('DUBOIS Marie'), N(', Bureau 2.')] },
+  { id: 3, day: "Aujourd'hui", type: 'moved', when: 'il y a 3 h', svc: 'Diabétologie', cta: 'Voir le RDV', parts: [B('Activité physique'), N(' du mar. 20/10 est déplacée de 14:00 à '), B('15:00'), N(', par Dr Martin.')] },
+  { id: 4, day: "Aujourd'hui", type: 'absent', when: '10:42', svc: 'Cardiologie', cta: 'Ouvrir la fiche', read: true, parts: [B('ROBERT Paul'), N(' était absent à '), B('Alimentation'), N(' ce matin, sans justification.')] },
+  { id: 5, day: 'Hier', type: 'full', when: '17:10', svc: 'Cardiologie', cta: 'Voir le créneau', read: true, parts: [N('Plus qu\'une place à '), B('Alimentation'), N(' du jeu. 29/10.')] },
+  { id: 6, day: 'Hier', type: 'end', when: '09:05', svc: 'Diabétologie', cta: 'Ouvrir la fiche', parts: [B('THOMAS Lucie'), N(' a terminé son parcours. Bilan de fin à réaliser.')] },
+  { id: 7, day: 'Hier', type: 'cancelled', when: '08:30', svc: 'Cardiologie', cta: 'Voir l\'agenda', read: true, parts: [B('Gestion du stress'), N(' du lun. 26/10 est annulée, par IDE Leroy.')] },
+  { id: 8, day: 'Cette semaine', type: 'diag', when: 'lun. 12/10', svc: 'Cardiologie', cta: 'Ouvrir la fiche', read: true, parts: [N('Diagnostic éducatif à réaliser pour '), B('GARCIA Ana'), N(', incluse le 08/10.')] },
+];
+const EVENTS = [
+  { k: 'reminder', g: 'Mes rendez-vous', l: 'Rappel avant mes rendez-vous', d: 'Un rappel pour chaque séance où vous intervenez.', hasDelay: true },
+  { k: 'added', g: 'Mes rendez-vous', l: 'Patient ajouté à un de mes rendez-vous', d: 'Quand un collègue inscrit un patient à votre séance.' },
+  { k: 'moved', g: 'Mes rendez-vous', l: 'Rendez-vous modifié ou annulé', d: 'Changement d\'horaire, de salle, ou annulation.' },
+  { k: 'absent', g: 'Patients', l: 'Absence non justifiée', d: 'Un patient de votre séance n\'est pas venu.' },
+  { k: 'diag', g: 'Patients', l: 'Diagnostic éducatif à réaliser', d: 'Patient inclus sans diagnostic après 7 jours.' },
+  { k: 'end', g: 'Patients', l: 'Fin de parcours : bilan à faire', d: 'Dernière séance du parcours passée.' },
+  { k: 'full', g: 'Créneaux', l: 'Créneau presque complet', d: 'Il reste une place sur un créneau que vous animez.' },
+];
+const PRESETS = {
+  all: Object.fromEntries(EVENTS.map(e => [e.k, { app: true, mail: true }])),
+  essential: Object.fromEntries(EVENTS.map(e => [e.k, { app: true, mail: ['reminder', 'moved'].includes(e.k) }])),
+};
+TYPES.task = { icon: 'list-todo', color: '#0f766e', tint: '#f0fdfa', kind: 'Tâche', cat: 'task' };
+const NOTIFS2 = [{ id: 9, day: "Aujourd'hui", type: 'task', when: 'il y a 20 min', svc: 'Cardiologie', parts: [B('Claire Leroy'), N(' vous a mentionné dans une tâche : '), B('Rappeler DUBOIS Marie')] }, ...NOTIFS];
+const SVCS = ['Cardiologie', 'Diabétologie'];
+const ME = 'leo';
+const SOIG = [
+  { id: 'leo', l: 'Léo Couffinhal', r: 'Diététicienne', svcs: SVCS },
+  { id: 'claire', l: 'Claire Leroy', r: 'IDE', svcs: SVCS },
+  { id: 'martin', l: 'Dr Paul Martin', r: 'Cardiologue', svcs: ['Cardiologie'] },
+  { id: 'petit', l: 'Sophie Petit', r: 'Kinésithérapeute', svcs: SVCS },
+  { id: 'roux', l: 'Anne Roux', r: 'Diététicienne', svcs: ['Cardiologie'] },
+  { id: 'fabre', l: 'Dr Luc Fabre', r: 'Diabétologue', svcs: ['Diabétologie'] },
+];
+const who = id => SOIG.find(x => x.id === id);
+const TASKS0 = [
+  { id: 1, text: 'Rappeler DUBOIS Marie pour décaler son diagnostic éducatif', tags: ['leo'], by: 'claire', svc: 'Cardiologie', patient: 'DUBOIS Marie', due: "Aujourd'hui", late: true, when: 'il y a 20 min' },
+  { id: 2, text: "Préparer les supports de l'atelier Alimentation du 22/10", tags: ['leo', 'roux'], by: 'martin', svc: 'Cardiologie', due: 'Mer. 21/10', when: 'hier' },
+  { id: 3, text: 'Commander deux tensiomètres pour la salle Hublot', tags: ['claire'], by: 'leo', svc: 'Cardiologie', when: 'lun. 12/10' },
+  { id: 4, text: 'Planifier le bilan de fin de THOMAS Lucie', tags: ['leo'], by: 'petit', svc: 'Diabétologie', patient: 'THOMAS Lucie', due: 'Ven. 23/10', when: 'hier' },
+  { id: 5, text: 'Mettre à jour la liste des salles pour novembre', tags: ['fabre'], by: 'claire', svc: 'Diabétologie', when: 'hier' },
+  { id: 6, text: "Envoyer le planning d'octobre aux patients", tags: ['claire'], by: 'leo', svc: 'Cardiologie', when: 'ven. 09/10', done: true },
+];
+const EVENTS2 = [...EVENTS,
+  { k: 'mention', g: 'Tâches', l: 'Mention dans une tâche', d: 'Un collègue vous mentionne dans une tâche.' },
+  { k: 'due', g: 'Tâches', l: "Tâche qui arrive à échéance", d: "Le matin du jour d'échéance, pour vos tâches non terminées." }];
+const PRESETS2 = {
+  all: Object.fromEntries(EVENTS2.map(e => [e.k, { app: true, mail: true }])),
+  essential: Object.fromEntries(EVENTS2.map(e => [e.k, { app: true, mail: ['reminder', 'moved', 'mention'].includes(e.k) }])),
+};
+const MENTION = /@([^\s@]*)$/;
+const sw = on => ({ bg: on ? '#2563eb' : '#cbd5e1', x: on ? '19px' : '3px' });
+class Component extends DCLogic {
+  state = {
+    readA: new Set(NOTIFS.filter(n => n.read).map(n => n.id)), openA: true, tabA: 'unread',
+    readB: new Set(NOTIFS.filter(n => n.read).map(n => n.id)), catB: 'all', onlyB: false,
+    prefsC: { ...PRESETS.essential, absent: { app: true, mail: false }, full: { app: false, mail: false } }, delay: 'eve', digest: 'now',
+    presetD: 'essential', prefsD: PRESETS.essential, svcD: { c: true, d: true },
+    readF: new Set(NOTIFS2.filter(n => n.read).map(n => n.id)), svcN: 'all', scopeN: 'unread',
+    tasks: TASKS0, svcT: 'all', scopeT: 'mine', draft: 'Vérifier les ordonnances avant la séance @cl', draftTags: [], showDone: false,
+    presetE: 'essential', prefsE: PRESETS2.essential, svcE: { c: true, d: true }, delayE: 'eve', digestE: 'now',
+  };
+  group(list, mk) {
+    const days = [...new Set(list.map(n => n.day))];
+    return days.map(d => ({ title: d, items: list.filter(n => n.day === d).map(mk) }));
+  }
+  addTask() {
+    const s = this.state, text = s.draft.replace(MENTION, '').trim();
+    if (!text) return;
+    const svc = s.svcT === 'all' ? 'Cardiologie' : s.svcT;
+    this.setState(st => ({ tasks: [{ id: Date.now(), text, tags: st.draftTags.length ? st.draftTags : [ME], by: ME, svc, when: "à l'instant", fresh: true }, ...st.tasks], draft: '', draftTags: [] }));
+  }
+  pick(id) { this.setState(st => ({ draft: st.draft.replace(MENTION, '').replace(/\s+$/, '') + ' ', draftTags: [...st.draftTags, id] })); }
+  turn15(s) {
+    const unreadN = NOTIFS2.filter(n => !s.readF.has(n.id));
+    const mine = t => t.tags.includes(ME) || t.by === ME;
+    const inScopeT = t => s.scopeT === 'all' || mine(t);
+    const openForMe = s.tasks.filter(t => !t.done && t.tags.includes(ME)).length;
+    const chip = (key, cur, counts) => [['all', 'Tous'], ...SVCS.map(x => [x, x])].map(([k, l]) => { const on = cur === k, n = k === 'all' ? 0 : counts.filter(c => c === k).length;
+      return { l, n: n || '', bd: on ? '#04182b' : '#e2e8f0', bg: on ? '#04182b' : '#ffffff', fg: on ? '#ffffff' : '#334155', nbg: on ? '#ffffff26' : '#f1f5f9', set: () => this.setState({ [key]: k }) }; });
+    const seg = (key, cur, opts) => opts.map(([k, l]) => ({ l, bg: cur === k ? '#f1f5f9' : 'transparent', w: cur === k ? 600 : 500, set: () => this.setState({ [key]: k }) }));
+    const tabs = which => [['notif', 'Notifications', 'bell', unreadN.length], ['tasks', 'Tâches', 'list-todo', openForMe]].map(([k, l, icon, n]) => { const on = which === k;
+      return { l, icon, n: n || '', bd: on ? '#2563eb' : 'transparent', fg: on ? '#04182b' : '#94a3b8', nbg: on ? '#eff6ff' : '#f1f5f9', nfg: on ? '#2563eb' : '#64748b' }; });
+    const listN = NOTIFS2.filter(n => (s.svcN === 'all' || n.svc === s.svcN) && (s.scopeN === 'all' || !s.readF.has(n.id)));
+    const mk = n => { const t = TYPES[n.type], r = s.readF.has(n.id), w = n.day === 'Hier' ? `Hier ${n.when}` : n.when;
+      return { ...n, ...t, meta: s.svcN === 'all' ? `${t.kind} · ${w}` : `${t.kind} · ${w}`, bg: r ? '#ffffff' : '#f8fbff', dot: r ? 'transparent' : '#2563eb', read: () => this.setState(st => ({ readF: new Set([...st.readF, n.id]) })) }; };
+    const groupsF = s.svcN === 'all'
+      ? SVCS.map(v => ({ title: `${v} · ${listN.filter(n => n.svc === v).length}`, icon: 'hospital', items: listN.filter(n => n.svc === v).map(mk) })).filter(g => g.items.length)
+      : [...new Set(listN.map(n => n.day))].map(d => ({ title: d, icon: 'calendar', items: listN.filter(n => n.day === d).map(mk) }));
+    const visT = s.tasks.filter(t => (s.svcT === 'all' || t.svc === s.svcT) && inScopeT(t));
+    const tagV = id => ({ l: id === ME ? 'vous' : who(id).l, bg: id === ME ? '#dbeafe' : '#f1f5f9', fg: id === ME ? '#1147bb' : '#334155' });
+    const mkT = t => ({ ...t, patient: t.patient || '', due: t.due || '', dueFg: t.late ? '#b91c1c' : '#64748b', tagsV: t.tags.map(tagV),
+      meta: `${t.by === ME ? 'Par vous' : 'Par ' + who(t.by).l} · ${t.when}${s.svcT === 'all' ? ' · ' + t.svc : ''}`,
+      fg: t.done ? '#94a3b8' : '#04182b', td: t.done ? 'line-through' : 'none', rowBg: t.fresh ? '#f0fdfa' : '#ffffff',
+      cbBd: t.done ? '#16a34a' : '#cbd5e1', cbBg: t.done ? '#16a34a' : '#ffffff',
+      toggle: () => this.setState(st => ({ tasks: st.tasks.map(x => x.id === t.id ? { ...x, done: !x.done, fresh: false } : x) })) });
+    const m = s.draft.match(MENTION), svcCtx = s.svcT === 'all' ? 'Cardiologie' : s.svcT;
+    const sugg = m ? SOIG.filter(x => x.svcs.includes(svcCtx) && !s.draftTags.includes(x.id) && x.l.toLowerCase().includes(m[1].toLowerCase())).slice(0, 5) : [];
+    const doneList = visT.filter(t => t.done);
+    const frame = which => ({ cap: which === 'notif' ? 'Cloche ouverte · notifications regroupées par service' : 'Coche ouverte · tâches, mention en cours de saisie',
+      pr: which === 'notif' ? '14px' : '62px', title: which === 'notif' ? 'Notifications' : 'Tâches', titleIcon: which === 'notif' ? 'bell' : 'list-todo', titleN: (which === 'notif' ? unreadN.length : openForMe) || '',
+      icons: [['tasks', 'Tâches', 'list-todo', openForMe, '#2563eb'], ['notif', 'Notifications', 'bell', unreadN.length, '#dc2626']].map(([k, l, icon, n, nbg]) => ({ l, icon, n: n || '', nbg, bg: which === k ? '#ffffff26' : 'transparent' })),
+      isNotif: which === 'notif', isTasks: which === 'tasks', badge: unreadN.length, hasBadge: unreadN.length > 0, tabs: tabs(which),
+      svcs: which === 'notif' ? chip('svcN', s.svcN, NOTIFS2.filter(n => !s.readF.has(n.id)).map(n => n.svc)) : chip('svcT', s.svcT, s.tasks.filter(t => !t.done && inScopeT(t)).map(t => t.svc)),
+      scopes: which === 'notif' ? seg('scopeN', s.scopeN, [['unread', 'Non lues'], ['all', 'Toutes']]) : seg('scopeT', s.scopeT, [['mine', 'Pour moi'], ['all', 'Toutes']]) });
+    return {
+      framesF: [frame('notif'), frame('tasks')],
+      readAllF: () => this.setState({ readF: new Set(NOTIFS2.map(n => n.id)) }), readAllFgF: unreadN.length ? '#2563eb' : '#94a3b8',
+      groupsF, emptyF: groupsF.length === 0,
+      draft: s.draft, onDraft: e => this.setState({ draft: e.target.value }),
+      onKey: e => { if (e.key === 'Enter') { e.preventDefault(); if (m && sugg.length) this.pick(sugg[0].id); else this.addTask(); } },
+      addTask: () => this.addTask(), addBg: s.draft.replace(MENTION, '').trim() ? '#2563eb' : '#94a3b8',
+      composeBd: m ? '#2563eb' : '#e2e8f0', showSugg: !!m, noSugg: !!m && !sugg.length, suggSvc: svcCtx,
+      sugg: sugg.map((x, i) => ({ ...x, l: x.id === ME ? `${x.l} (vous)` : x.l, ini: x.l.replace('Dr ', '').split(' ').map(w => w[0]).join(''), bg: i === 0 ? '#f1f5f9' : 'transparent', pick: () => this.pick(x.id) })),
+      hasDraftTags: s.draftTags.length > 0, draftTags: s.draftTags.map(id => ({ ...tagV(id), remove: () => this.setState(st => ({ draftTags: st.draftTags.filter(x => x !== id) })) })),
+      tasksOpen: visT.filter(t => !t.done).map(mkT), emptyTasks: !visT.some(t => !t.done),
+      hasDone: doneList.length > 0, doneCount: doneList.length, doneChev: s.showDone ? 'chevron-down' : 'chevron-right',
+      toggleDone: () => this.setState(st => ({ showDone: !st.showDone })), tasksDone: s.showDone ? doneList.map(mkT) : [],
+      presetsE: [['all', 'Tout', 'bell-ring', "Toutes les notifications, dans l'app et par e-mail."], ['essential', 'Essentiel', 'bell', "Tout dans l'app ; e-mail pour les rappels, changements de RDV et mentions."], ['custom', 'Personnalisé', 'sliders-horizontal', 'Votre propre réglage, ligne par ligne.']].map(([k, l, icon, d]) => { const on = s.presetE === k;
+        return { l, icon, d, bd: on ? '#2563eb' : '#e2e8f0', bg: on ? '#eff6ff' : '#ffffff', ic: on ? '#2563eb' : '#334155', set: () => k === 'custom' ? this.setState({ presetE: 'custom' }) : this.setState({ presetE: k, prefsE: PRESETS2[k] }) }; }),
+      presetNoteE: s.presetE === 'custom' ? 'Réglage personnalisé' : 'Modifier une ligne passe en « Personnalisé ».',
+      svcE: [['c', 'Hôpital Haut-Lévêque', 'Cardiologie'], ['d', 'Hôpital Haut-Lévêque', 'Diabétologie']].map(([k, e, l]) => { const on = s.svcE[k];
+        return { e, l, bd: on ? '#93c5fd' : '#e2e8f0', cb: on ? '#2563eb' : '#cbd5e1', cbg: on ? '#2563eb' : '#ffffff', toggle: () => this.setState(st => ({ svcE: { ...st.svcE, [k]: !st.svcE[k] } })) }; }),
+      gridE: [...new Set(EVENTS2.map(e => e.g))].map(g => ({ title: g, rows: EVENTS2.filter(e => e.g === g).map((e, i) => { const p = s.prefsE[e.k], a = sw(p.app), mm = sw(p.mail);
+        const tg = ch => () => this.setState(st => ({ presetE: 'custom', prefsE: { ...st.prefsE, [e.k]: { ...st.prefsE[e.k], [ch]: !st.prefsE[e.k][ch] } } }));
+        return { ...e, hasDelay: !!e.hasDelay, bt: i ? '#e2e8f0' : 'transparent', appBg: a.bg, appX: a.x, mailBg: mm.bg, mailX: mm.x, tApp: tg('app'), tMail: tg('mail') }; }) })),
+      delaysE: [['eve', 'La veille à 18 h'], ['2h', '2 h avant'], ['1h', '1 h avant']].map(([k, l]) => ({ l, bd: s.delayE === k ? '#2563eb' : '#e2e8f0', bg: s.delayE === k ? '#eff6ff' : '#ffffff', fg: s.delayE === k ? '#1147bb' : '#334155', set: () => this.setState({ delayE: k }) })),
+      digestE: [['now', "Dès l'événement", 'Un e-mail par notification.'], ['day', 'Résumé quotidien à 7 h', "Un seul e-mail par jour. Les rappels restent envoyés à l'heure."]].map(([k, l, d]) => ({ l, d, bd: s.digestE === k ? '#2563eb' : '#e2e8f0', ring: s.digestE === k ? '5px solid #2563eb' : '1.5px solid #cbd5e1', set: () => this.setState({ digestE: k }) })),
+    };
+  }
+  renderVals() {
+    const s = this.state;
+    const unreadA = NOTIFS.filter(n => !s.readA.has(n.id)).length, unreadB = NOTIFS.filter(n => !s.readB.has(n.id)).length;
+    const listA = s.tabA === 'unread' ? NOTIFS.filter(n => !s.readA.has(n.id)) : NOTIFS;
+    const markA = id => this.setState(st => ({ readA: new Set([...st.readA, id]) }));
+    const markB = id => this.setState(st => ({ readB: new Set([...st.readB, id]) }));
+    const listB = NOTIFS.filter(n => (s.catB === 'all' || TYPES[n.type].cat === s.catB) && (!s.onlyB || !s.readB.has(n.id)));
+    const setPref = (key, k, ch) => () => this.setState(st => ({ [key]: { ...st[key], [k]: { ...st[key][k], [ch]: !st[key][k][ch] } }, ...(key === 'prefsD' ? { presetD: 'custom' } : {}) }));
+    const groups = [...new Set(EVENTS.map(e => e.g))];
+    return {
+      nav: [['Agenda', 'calendar-days', true], ['Dashboard', 'calendar-range'], ['Patients', 'users'], ['Suivi', 'list-checks'], ['Pilotage', 'chart-column']].map(([l, icon, a]) => ({ l, icon, fg: a ? '#ffffff' : '#94a3b8', bg: a ? '#2563eb33' : 'transparent', w: a ? 600 : 500 })),
+      openA: s.openA, toggleA: () => this.setState(st => ({ openA: !st.openA })), bellBgA: s.openA ? '#ffffff26' : 'transparent',
+      unreadA, hasUnreadA: unreadA > 0, readAllFgA: unreadA ? '#2563eb' : '#94a3b8',
+      readAllA: () => this.setState({ readA: new Set(NOTIFS.map(n => n.id)) }),
+      tabsA: [['unread', 'Non lues', unreadA], ['all', 'Toutes', 0]].map(([k, l, n]) => ({ l, n: n || '', bd: s.tabA === k ? '#2563eb' : 'transparent', fg: s.tabA === k ? '#04182b' : '#64748b', w: s.tabA === k ? 600 : 500, set: () => this.setState({ tabA: k }) })),
+      groupsA: this.group(listA, n => { const t = TYPES[n.type], r = s.readA.has(n.id); return { ...n, ...t, bg: r ? '#ffffff' : '#f8fbff', dot: r ? 'transparent' : '#2563eb', read: () => markA(n.id) }; }),
+      emptyA: listA.length === 0,
+      unreadB, hasUnreadB: unreadB > 0, readAllB: () => this.setState({ readB: new Set(NOTIFS.map(n => n.id)) }),
+      catsB: [['all', 'Toutes'], ['rdv', 'Mes rendez-vous'], ['pat', 'Patients'], ['slot', 'Créneaux']].map(([k, l]) => { const n = NOTIFS.filter(x => !s.readB.has(x.id) && (k === 'all' || TYPES[x.type].cat === k)).length, on = s.catB === k;
+        return { l, n: n || '', bd: on ? '#04182b' : '#e2e8f0', bg: on ? '#04182b' : '#ffffff', fg: on ? '#ffffff' : '#334155', nbg: on ? '#ffffff26' : '#f1f5f9', set: () => this.setState({ catB: k }) }; }),
+      toggleOnlyB: () => this.setState(st => ({ onlyB: !st.onlyB })), swB: s.onlyB ? '#2563eb' : '#cbd5e1', swLeftB: s.onlyB ? '14px' : '2px',
+      groupsB: this.group(listB, n => { const t = TYPES[n.type], r = s.readB.has(n.id); return { ...n, ...t, bg: r ? '#ffffff' : '#f8fbff', bd: r ? 'transparent' : '#dbeafe', bar: r ? 'transparent' : '#2563eb', read: () => markB(n.id) }; }),
+      emptyB: listB.length === 0,
+      gridC: groups.map(g => ({ title: g, rows: EVENTS.filter(e => e.g === g).map((e, i) => { const p = s.prefsC[e.k], a = sw(p.app), m = sw(p.mail);
+        return { ...e, hasDelay: !!e.hasDelay, bt: i ? '#e2e8f0' : 'transparent', appBg: a.bg, appX: a.x, mailBg: m.bg, mailX: m.x, tApp: setPref('prefsC', e.k, 'app'), tMail: setPref('prefsC', e.k, 'mail') }; }) })),
+      delays: [['eve', 'La veille à 18 h'], ['2h', '2 h avant'], ['1h', '1 h avant']].map(([k, l]) => ({ l, bd: s.delay === k ? '#2563eb' : '#e2e8f0', bg: s.delay === k ? '#eff6ff' : '#ffffff', fg: s.delay === k ? '#1147bb' : '#334155', set: () => this.setState({ delay: k }) })),
+      digestC: [['now', 'Dès l\'événement', 'Un e-mail par notification.'], ['day', 'Résumé quotidien à 7 h', 'Un seul e-mail par jour. Les rappels restent envoyés à l\'heure.']].map(([k, l, d]) => ({ l, d, bd: s.digest === k ? '#2563eb' : '#e2e8f0', ring: s.digest === k ? '5px solid #2563eb' : '1.5px solid #cbd5e1', set: () => this.setState({ digest: k }) })),
+      presetsD: [['all', 'Tout', 'bell-ring', 'Toutes les notifications, dans l\'app et par e-mail.'], ['essential', 'Essentiel', 'bell', 'Tout dans l\'app ; e-mail pour les rappels et changements de RDV.'], ['custom', 'Personnalisé', 'sliders-horizontal', 'Votre propre réglage, ligne par ligne.']].map(([k, l, icon, d]) => { const on = s.presetD === k;
+        return { l, icon, d, bd: on ? '#2563eb' : '#e2e8f0', bg: on ? '#eff6ff' : '#ffffff', ic: on ? '#2563eb' : '#334155', set: () => k === 'custom' ? this.setState({ presetD: 'custom' }) : this.setState({ presetD: k, prefsD: PRESETS[k] }) }; }),
+      presetNoteD: s.presetD === 'custom' ? 'Réglage personnalisé' : 'Modifier une ligne passe en « Personnalisé »',
+      svcD: [['c', 'Hôpital Haut-Lévêque', 'Cardiologie'], ['d', 'Hôpital Haut-Lévêque', 'Diabétologie']].map(([k, e, l]) => { const on = s.svcD[k];
+        return { e, l, bd: on ? '#93c5fd' : '#e2e8f0', cb: on ? '#2563eb' : '#cbd5e1', cbg: on ? '#2563eb' : '#ffffff', toggle: () => this.setState(st => ({ svcD: { ...st.svcD, [k]: !st.svcD[k] } })) }; }),
+      ...this.turn15(s, groups, setPref),
+      rowsD: EVENTS.map((e, i) => { const p = s.prefsD[e.k], t = TYPES[e.k];
+        const chip = on => ({ bd: on ? '#2563eb' : '#e2e8f0', bg: on ? '#2563eb' : '#ffffff', fg: on ? '#ffffff' : '#94a3b8' });
+        const a = chip(p.app), m = chip(p.mail);
+        return { l: e.l, icon: t.icon, color: t.color, tint: t.tint, bt: i ? '#f1f5f9' : 'transparent', appBd: a.bd, appBg: a.bg, appFg: a.fg, mailBd: m.bd, mailBg: m.bg, mailFg: m.fg, tApp: setPref('prefsD', e.k, 'app'), tMail: setPref('prefsD', e.k, 'mail') }; }),
+    };
+  }
+}
+</script>
+</body>
+</html>

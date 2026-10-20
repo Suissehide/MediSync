@@ -44,7 +44,9 @@ beforeEach(() => {
   vi.stubGlobal('fetch', fetchMock)
   render(
     <QueryClientProvider
-      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
     >
       <AddThematicForm />
     </QueryClientProvider>,

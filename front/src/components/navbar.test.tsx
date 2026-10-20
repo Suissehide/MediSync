@@ -8,12 +8,13 @@ import {
   Outlet,
   RouterProvider,
 } from '@tanstack/react-router'
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { InboxApi } from '@/api/inbox.api.ts'
 import { Route as adminRoute } from '@/routes/_authenticated/e/$establishmentId/admin.tsx'
 import { Route as serviceRoute } from '@/routes/_authenticated/e/$establishmentId/s/$serviceId.tsx'
 import { useAuthStore } from '@/store/useAuthStore.ts'
@@ -21,32 +22,28 @@ import type { AuthState, TenantContext, User } from '@/types/auth.ts'
 import Navbar from './navbar.tsx'
 import { TeteDuTiroir } from './navigationMobile.tsx'
 
-// `main.tsx` enregistre ce greffon au demarrage de l'application ; le panneau
-// des taches appelle `dayjs.utc()` des son montage. Le harnais de test ne
-// passe pas par `main.tsx` et doit donc le reproduire.
+vi.mock('@/api/inbox.api.ts', () => ({
+  InboxApi: {
+    tasks: vi.fn(),
+    notifications: vi.fn(),
+    members: vi.fn(),
+    patients: vi.fn(),
+    markRead: vi.fn(),
+    markAllRead: vi.fn(),
+    createTask: vi.fn(),
+    setTaskDone: vi.fn(),
+  },
+}))
+
+// Reproduit l'enregistrement fait par `main.tsx`, que ce harnais de test ne traverse pas.
 dayjs.extend(utc)
 
-// ---------------------------------------------------------------------------
-// INVARIANT MULTI-TENANT — ce que ce bloc verrouille.
-//
-// `front/CLAUDE.md`, `__root.tsx`, `root.layout.tsx` et `_authenticated.tsx`
-// affirment qu'aucun observateur de requete de tenant ne survit a un
-// changement d'etablissement/service, parce que tout ce qui lit une API de
-// tenant vit sous l'un des deux layouts — les seuls a declarer `remountDeps`,
-// donc les seuls demontes au changement de couple.
-//
-// Le panneau des taches de cette barre lit une API de service
-// (`useTodoQueries` -> `tenantApiUrl`). Tant que sa condition d'affichage
-// interrogeait le STORE (`context?.serviceId`), l'affirmation etait fausse :
-// `DashboardLayout` rend cette meme barre sur `/user/settings`, qui vit hors
-// des deux layouts, et le contexte du store y porte encore le dernier service
-// visite. L'observateur y etait donc cree sur un ecran qu'aucun changement de
-// contexte ne demonte, et serait reste lie a l'ancien client de requetes.
-//
-// La condition porte desormais sur la ROUTE. Ces deux tests l'exigent dans
-// les deux sens : absent hors des layouts de tenant, present sous le layout
-// de service. Remettre `context?.serviceId` rend le premier rouge.
-// ---------------------------------------------------------------------------
+beforeEach(() => {
+  vi.mocked(InboxApi.tasks).mockReset().mockResolvedValue([])
+  vi.mocked(InboxApi.notifications).mockReset().mockResolvedValue([])
+})
+
+// Icones Taches/Notifications montees sur `user`, remontees au changement de contexte (`tenantKey`).
 
 const utilisateur: User = {
   id: 'u1',
@@ -200,10 +197,7 @@ const monterNavbar = (depart: string, user: User = utilisateur) => {
   )
 }
 
-const panneauDesTaches = () =>
-  screen.queryByRole('button', { name: 'Liste des tâches' })
-
-describe('panneau des taches de la barre de navigation', () => {
+describe('icones Taches et Notifications de la barre de navigation', () => {
   beforeEach(() => {
     localStorage.clear()
     // Le cas reel : on arrive sur les reglages du compte APRES avoir visite
@@ -213,37 +207,36 @@ describe('panneau des taches de la barre de navigation', () => {
       user: utilisateur,
       context: dernierContexteVisite,
     })
-    // Le panneau, s'il est rendu, emet une vraie requete : on la neutralise
-    // plutot que de laisser `fetch` echouer au hasard de l'environnement.
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => new Response('[]', { status: 200 })),
-    )
   })
 
   afterEach(() => {
-    vi.unstubAllGlobals()
     useAuthStore.setState({ isAuthenticated: false, user: null, context: null })
   })
 
-  it("n'est pas rendu sur un ecran hors des layouts de tenant", async () => {
+  it('affiche les icones Taches et Notifications hors des layouts de tenant', async () => {
     monterNavbar('/user/settings')
 
-    // On attend que la barre soit montee avant de conclure a l'absence :
-    // sans cette attente, l'assertion passerait sur un arbre encore vide.
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(
-        'MediSync',
-      )
-    })
-    expect(panneauDesTaches()).not.toBeInTheDocument()
+    expect(
+      await screen.findByRole('button', { name: 'Notifications' }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Tâches' })).toBeInTheDocument()
   })
 
-  it('est rendu sous le layout de service', async () => {
+  it('remonte le bloc au changement de contexte', async () => {
     monterNavbar('/e/e1/s/s1/dashboard')
+    await screen.findByRole('button', { name: 'Notifications' })
+    const appelsAvant = vi.mocked(InboxApi.notifications).mock.calls.length
+
+    act(() => {
+      useAuthStore.setState({
+        context: { ...dernierContexteVisite, serviceId: 's2' },
+      })
+    })
 
     await waitFor(() => {
-      expect(panneauDesTaches()).toBeInTheDocument()
+      expect(
+        vi.mocked(InboxApi.notifications).mock.calls.length,
+      ).toBeGreaterThan(appelsAvant)
     })
   })
 })

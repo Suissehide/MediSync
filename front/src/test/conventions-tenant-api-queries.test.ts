@@ -98,6 +98,20 @@ const EXCEPTIONS: { fichier: string; raison: string; occurrences: number }[] = [
       "l'affectation visee, une DONNEE de la requete, jamais un tenant implicite",
     occurrences: 5,
   },
+  {
+    fichier: 'api/inbox.api.ts',
+    raison:
+      'panneaux Taches et Notifications de la topbar (2026-10-19) : ils lisent TOUS les services du compte, ' +
+      'y compris hors des layouts de tenant ; le service est une DONNEE de la requete, comme pour setOwnSoignant',
+    occurrences: 2,
+  },
+  {
+    fichier: 'queries/useInbox.ts',
+    raison:
+      'meme raison que api/inbox.api.ts : une requete par service du compte, cle portant le service ' +
+      '-- 7 depuis la mention par metier (2026-10-20), qui ajoute useServiceSoignants',
+    occurrences: 7,
+  },
 ]
 
 // Vitest s'execute depuis `front/`, et l'environnement jsdom ne donne pas d'`import.meta.url` de

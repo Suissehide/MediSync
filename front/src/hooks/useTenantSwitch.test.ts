@@ -21,10 +21,8 @@ import { useDiagnosticTemplateStore } from '@/store/useDiagnosticTemplateStore.t
 import { usePathwayTemplateEditStore } from '@/store/usePathwayTemplateEditStore.ts'
 import { usePlanningStore } from '@/store/usePlanningStore.ts'
 import { useSoignantStore } from '@/store/useSoignantStore.ts'
-import { useTodoStore } from '@/store/useTodoStore.ts'
 import type { TenantContext } from '@/types/auth.ts'
 import type { Soignant } from '@/types/soignant.ts'
-import type { Todo } from '@/types/todo.ts'
 
 const serviceA: TenantContext = {
   establishmentId: 'e1',
@@ -42,12 +40,6 @@ const sansService: TenantContext = {
 }
 
 const soignantDuServiceA: Soignant = { id: 'so1', name: 'Dupont' }
-const tacheDuServiceA: Todo = {
-  id: 't1',
-  title: 'Appeler la famille',
-  createDate: new Date('2026-01-01'),
-  completed: false,
-}
 
 describe('changement de contexte', () => {
   beforeEach(() => {
@@ -86,12 +78,11 @@ describe('changement de contexte', () => {
     expect(order).toEqual(['cancel', 'clear'])
   })
 
-  // Cinq stores, et non trois : `soignants` et `todos` sont des miroirs en
-  // memoire de la donnee du service, exclus de leur `partialize` — donc hors
-  // de portee d'une rehydratation de stores persistes — et affiches par six
-  // composants. Ce sont ceux qui laissaient des noms et des taches de
-  // l'ancien service a l'ecran.
-  it('reinitialise les cinq stores non persistes, miroirs compris', async () => {
+  // Quatre stores, et non trois : `soignants` est un miroir en memoire de la
+  // donnee du service, exclu de son `partialize` — donc hors de portee d'une
+  // rehydratation de stores persistes — et affiche par plusieurs composants.
+  // C'est celui qui laissait des noms de l'ancien service a l'ecran.
+  it('reinitialise les quatre stores non persistes, miroir compris', async () => {
     useDiagnosticStore.setState({ selectedId: 'd1' })
     useDiagnosticTemplateStore.setState({ selectedId: 'dt1' })
     usePathwayTemplateEditStore.setState({
@@ -102,7 +93,6 @@ describe('changement de contexte', () => {
       soignants: [soignantDuServiceA],
       selectedSoignantIDs: ['so1'],
     })
-    useTodoStore.setState({ todos: [tacheDuServiceA] })
 
     await resetOnTenantChange(new QueryClient())
 
@@ -111,13 +101,12 @@ describe('changement de contexte', () => {
     expect(usePathwayTemplateEditStore.getState().editMode).toBe(false)
     expect(usePathwayTemplateEditStore.getState().startDate).toBe('')
     expect(useSoignantStore.getState().soignants).toEqual([])
-    // `selectedSoignantIDs` n'est PAS un de ces cinq : il est persiste, donc
+    // `selectedSoignantIDs` n'est PAS un de ces quatre : il est persiste, donc
     // indexe par service (`scoped-storage.ts`), jamais reinitialise — le
     // reinitialiser en plus de l'indexer serait contradictoire. Ici, le
     // contexte ne change pas (`beforeEach` le laisse a `null`) : la
     // rehydratation relit le meme tiroir et retrouve la meme selection.
     expect(useSoignantStore.getState().selectedSoignantIDs).toEqual(['so1'])
-    expect(useTodoStore.getState().todos).toEqual([])
   })
 
   // Les miroirs sont realimentes par un effet des que la requete du nouveau
@@ -272,7 +261,7 @@ describe('useTenantQueryClient', () => {
   })
 })
 
-// A la difference des cinq stores non persistes, ceux-ci ne sont jamais
+// A la difference des quatre stores non persistes, ceux-ci ne sont jamais
 // reinitialises par `resetOnTenantChange` : ils changent de tiroir avec le
 // service (`scoped-storage.ts`) et sont rehydrates depuis ce nouveau tiroir.
 describe('stores persistes rehydrates au changement de service', () => {
@@ -334,18 +323,16 @@ describe('stores persistes rehydrates au changement de service', () => {
     expect(useSoignantStore.getState().selectedSoignantIDs).toEqual(['so1'])
   })
 
-  // Meme garantie pour les trois autres stores indexes : chacun ecrit sous
+  // Meme garantie pour les deux autres stores indexes : chacun ecrit sous
   // son propre tiroir de service et ne laisse rien filtrer d un service a
   // l autre dans celui qui n a jamais ete visite.
-  it('isole les quatre stores persistes entre deux services jamais visites l un par l autre', () => {
+  it('isole les trois stores persistes entre deux services jamais visites l un par l autre', () => {
     useAuthStore.setState({ context: serviceA })
     rehydratePersistedStores()
     useDashboardFilterStore.setState({
       mode: 'pathway',
       selectedPathwayTemplateIDs: ['pt1'],
     })
-    useTodoStore.setState({ todos: [tacheDuServiceA] })
-    useTodoStore.getState().markTodosAsSeen()
     usePlanningStore.getState().setPlanningDates({
       currentDate: '2026-01-01',
       viewStart: '2026-01-01',
@@ -359,7 +346,6 @@ describe('stores persistes rehydrates au changement de service', () => {
     expect(
       useDashboardFilterStore.getState().selectedPathwayTemplateIDs,
     ).toEqual([])
-    expect(useTodoStore.getState().seenTodoIds).toEqual(new Set())
     expect(usePlanningStore.getState().currentDate).toBe('')
     expect(usePlanningStore.getState().viewStart).toBe('')
     expect(usePlanningStore.getState().viewEnd).toBe('')
