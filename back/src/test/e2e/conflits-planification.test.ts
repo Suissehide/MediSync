@@ -17,8 +17,50 @@ describe('conflits de planification', () => {
   let serviceId: string
   let cookies: Cookies
   let locationID: string
+  let patientID: string
 
   const url = (path: string) => tenantUrl(establishmentId, serviceId, path)
+
+  const inscrire = async (
+    slotID: string,
+    start: Date,
+    end: Date,
+    patientId = patientID,
+  ) => {
+    const appointment = await testDb.appointment.create({
+      data: {
+        startDate: start,
+        endDate: end,
+        slotID,
+        serviceId,
+        establishmentId,
+      },
+    })
+    await testDb.appointmentPatient.create({
+      data: {
+        appointmentId: appointment.id,
+        patientId,
+        serviceId,
+        establishmentId,
+      },
+    })
+    return appointment
+  }
+
+  // Une salle n'est disputée qu'entre créneaux occupés : chacun reçoit son propre patient.
+  const creneauOccupe = async (start: string, end: string, salle: string) => {
+    const slot = await creneau(start, end, salle)
+    const patient = await testDb.patient.create({
+      data: {
+        establishmentId,
+        firstName: 'Occupant',
+        lastName: slot.id,
+        createDate: new Date(),
+      },
+    })
+    await inscrire(slot.id, slot.startDate, slot.endDate, patient.id)
+    return slot
+  }
 
   const creneau = async (start: string, end: string, salle?: string) => {
     const slotTemplate = await testDb.slotTemplate.create({
@@ -64,6 +106,15 @@ describe('conflits de planification', () => {
       data: { name: 'Salle Bleue', serviceId, establishmentId },
     })
     locationID = location.id
+    const patient = await testDb.patient.create({
+      data: {
+        establishmentId,
+        firstName: 'Jeanne',
+        lastName: 'Martin',
+        createDate: new Date(),
+      },
+    })
+    patientID = patient.id
 
     testApp = await buildTestApp()
     cookies = await signIn(testApp.app, 'coordinateur@conflits.fr')
@@ -75,12 +126,12 @@ describe('conflits de planification', () => {
   })
 
   it('GET /slot/conflicts renvoie deux creneaux qui partagent la salle', async () => {
-    const a = await creneau(
+    const a = await creneauOccupe(
       '2026-04-01T09:00:00Z',
       '2026-04-01T10:00:00Z',
       locationID,
     )
-    const b = await creneau(
+    const b = await creneauOccupe(
       '2026-04-01T09:30:00Z',
       '2026-04-01T10:30:00Z',
       locationID,
@@ -99,12 +150,16 @@ describe('conflits de planification', () => {
   })
 
   it('PATCH /slot enregistre et renvoie le conflit cree, puis plus rien une fois deplace', async () => {
-    const c = await creneau(
+    const c = await creneauOccupe(
       '2026-04-02T14:00:00Z',
       '2026-04-02T15:00:00Z',
       locationID,
     )
-    await creneau('2026-04-02T09:00:00Z', '2026-04-02T10:00:00Z', locationID)
+    await creneauOccupe(
+      '2026-04-02T09:00:00Z',
+      '2026-04-02T10:00:00Z',
+      locationID,
+    )
 
     const deplace = await testApp.app.inject({
       method: 'PATCH',
@@ -134,36 +189,10 @@ describe('conflits de planification', () => {
   })
 
   it('PATCH /appointment renvoie le conflit patient quand deux rendez-vous se chevauchent', async () => {
-    const patient = await testDb.patient.create({
-      data: {
-        establishmentId,
-        firstName: 'Jeanne',
-        lastName: 'Martin',
-        createDate: new Date(),
-      },
-    })
     const s1 = await creneau('2026-04-03T09:00:00Z', '2026-04-03T10:00:00Z')
     const s2 = await creneau('2026-04-03T11:00:00Z', '2026-04-03T12:00:00Z')
-    const rendezVous = async (slotID: string, start: string, end: string) => {
-      const appointment = await testDb.appointment.create({
-        data: {
-          startDate: new Date(start),
-          endDate: new Date(end),
-          slotID,
-          serviceId,
-          establishmentId,
-        },
-      })
-      await testDb.appointmentPatient.create({
-        data: {
-          appointmentId: appointment.id,
-          patientId: patient.id,
-          serviceId,
-          establishmentId,
-        },
-      })
-      return appointment
-    }
+    const rendezVous = (slotID: string, start: string, end: string) =>
+      inscrire(slotID, new Date(start), new Date(end))
     await rendezVous(s1.id, '2026-04-03T09:00:00Z', '2026-04-03T09:30:00Z')
     const r2 = await rendezVous(
       s2.id,
@@ -187,7 +216,7 @@ describe('conflits de planification', () => {
       expect.objectContaining({
         type: 'patient',
         slotIDs: [s1.id],
-        patientID: patient.id,
+        patientID,
       }),
     ])
   })

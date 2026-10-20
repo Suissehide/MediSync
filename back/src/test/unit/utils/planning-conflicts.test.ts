@@ -32,24 +32,34 @@ const appointment = (
   appointmentPatients: patientIds.map((patientId) => ({ patientId })),
 })
 
+// Une salle n'est disputée que si les deux créneaux accueillent quelqu'un.
+const occupe = (
+  id: string,
+  start: string,
+  end: string,
+  locationID: string | null,
+) =>
+  slot(id, start, end, {
+    slotTemplate: { locationID, capacity: null },
+    appointments: [appointment(`r-${id}`, start, end, [`p-${id}`])],
+  })
+
 describe('detectConflicts', () => {
   describe('salle', () => {
     it('signale deux creneaux qui se chevauchent dans la meme salle', () => {
-      const salle = { locationID: 'loc-1', capacity: null }
       expect(
         detectConflicts([
-          slot('a', '09:00', '10:00', { slotTemplate: salle }),
-          slot('b', '09:30', '10:30', { slotTemplate: salle }),
+          occupe('a', '09:00', '10:00', 'loc-1'),
+          occupe('b', '09:30', '10:30', 'loc-1'),
         ]),
       ).toEqual([{ type: 'salle', slotIDs: ['a', 'b'], locationID: 'loc-1' }])
     })
 
     it('ne signale pas deux creneaux bout a bout', () => {
-      const salle = { locationID: 'loc-1', capacity: null }
       expect(
         detectConflicts([
-          slot('a', '09:00', '10:00', { slotTemplate: salle }),
-          slot('b', '10:00', '11:00', { slotTemplate: salle }),
+          occupe('a', '09:00', '10:00', 'loc-1'),
+          occupe('b', '10:00', '11:00', 'loc-1'),
         ]),
       ).toEqual([])
     })
@@ -57,27 +67,34 @@ describe('detectConflicts', () => {
     it('ne signale pas deux salles differentes ni deux creneaux sans salle', () => {
       expect(
         detectConflicts([
-          slot('a', '09:00', '10:00', {
-            slotTemplate: { locationID: 'loc-1', capacity: null },
-          }),
-          slot('b', '09:00', '10:00', {
-            slotTemplate: { locationID: 'loc-2', capacity: null },
-          }),
-          slot('c', '09:00', '10:00'),
-          slot('d', '09:00', '10:00'),
+          occupe('a', '09:00', '10:00', 'loc-1'),
+          occupe('b', '09:00', '10:00', 'loc-2'),
+          occupe('c', '09:00', '10:00', null),
+          occupe('d', '09:00', '10:00', null),
         ]),
       ).toEqual([])
     })
 
     it('ignore un creneau archive', () => {
-      const salle = { locationID: 'loc-1', capacity: null }
       expect(
         detectConflicts([
-          slot('a', '09:00', '10:00', { slotTemplate: salle }),
-          slot('b', '09:00', '10:00', {
-            slotTemplate: salle,
+          occupe('a', '09:00', '10:00', 'loc-1'),
+          {
+            ...occupe('b', '09:00', '10:00', 'loc-1'),
             archivedAt: at('08:00'),
+          },
+        ]),
+      ).toEqual([])
+    })
+
+    it('ignore un creneau sans patient, comme une plage de parcours vide', () => {
+      expect(
+        detectConflicts([
+          slot('plage', '09:00', '11:30', {
+            slotTemplate: { locationID: 'loc-1', capacity: null },
+            appointments: [appointment('vide', '09:00', '09:30', [])],
           }),
+          occupe('a', '09:00', '09:45', 'loc-1'),
         ]),
       ).toEqual([])
     })

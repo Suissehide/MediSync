@@ -10,11 +10,13 @@ Trois règles :
 
 | Règle | Conflit quand |
 |---|---|
-| `salle` | deux créneaux non archivés qui se chevauchent ont la même `slotTemplate.locationID` |
+| `salle` | deux créneaux non archivés, **ayant chacun au moins un patient**, qui se chevauchent ont la même `slotTemplate.locationID` |
 | `patient` | un même patient a deux rendez-vous qui se chevauchent (créneaux non archivés, même créneau ou non) |
 | `capacite` | un rendez-vous d'un créneau dont `slotTemplate.capacity` est renseignée compte plus de patients que cette capacité |
 
 Chevauchement : `a.start < b.end && a.end > b.start` (deux intervalles bout à bout ne se chevauchent pas).
+
+Un créneau sans patient ne dispute la salle à personne : une plage de parcours vide, dans laquelle on crée des créneaux individuels, n'est pas un double-booking. Décidé après mesure sur les données de dev (semaine du 19/10 : 47 conflits sans ce filtre, 9 avec).
 
 Hors périmètre :
 

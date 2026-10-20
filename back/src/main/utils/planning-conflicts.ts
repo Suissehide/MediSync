@@ -31,14 +31,19 @@ export type PlanningConflict =
 const overlaps = (a: Interval, b: Interval) =>
   a.startDate < b.endDate && a.endDate > b.startDate
 
+// Une plage vide (parcours sans inscrit) ne dispute la salle à personne.
+const isOccupied = (slot: ConflictSlot) =>
+  slot.appointments.some((a) => a.appointmentPatients.length > 0)
+
 // ponytail: comparaison par paires en O(n²), suffit pour une semaine de service ; balayage trié si les plages s'allongent.
 export const detectConflicts = (slots: ConflictSlot[]): PlanningConflict[] => {
   const live = slots.filter((slot) => !slot.archivedAt)
   const conflicts: PlanningConflict[] = []
 
-  live.forEach((a, index) => {
+  const occupied = live.filter(isOccupied)
+  occupied.forEach((a, index) => {
     const locationID = a.slotTemplate.locationID
-    for (const b of live.slice(index + 1)) {
+    for (const b of occupied.slice(index + 1)) {
       if (
         locationID &&
         locationID === b.slotTemplate.locationID &&
