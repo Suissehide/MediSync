@@ -68,6 +68,28 @@ export const usePdfDesignMutations = () => {
     ...avecToast('Design créé', 'Erreur lors de la création'),
   })
 
+  // Terminer un brouillon, ou y remettre un design fini. Les deux sens par la meme mutation :
+  // c'est un seul reglage, et le toast dit lequel des deux vient de se produire.
+  const setDraftDesign = useMutation({
+    mutationKey: [PDF_DESIGN.UPDATE],
+    mutationFn: ({ id, isDraft }: { id: string; isDraft: boolean }) =>
+      PdfDesignApi.update({ id, isDraft }),
+    onSuccess: (design) => {
+      toast({
+        title: design.isDraft ? 'Design remis en brouillon' : 'Design terminé',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erreur lors du changement d’état',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
+    },
+    onSettled: invalider,
+  })
+
   const renameDesign = useMutation({
     mutationKey: [PDF_DESIGN.UPDATE],
     mutationFn: ({ id, name }: { id: string; name: string }) =>
@@ -110,6 +132,7 @@ export const usePdfDesignMutations = () => {
 
   return {
     duplicateDesign,
+    setDraftDesign,
     createBlankDesign,
     renameDesign,
     saveContent,

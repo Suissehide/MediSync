@@ -884,6 +884,9 @@ model PdfDesign {
   // Le preset copie, pour memoire : aucune synchronisation, la copie est figee.
   sourcePresetId  String?
   isDefault       Boolean   @default(false)
+  // Null = BROUILLON : le design se compose et se modifie, mais n'est pas propose au moment
+  // d'exporter le document d'un patient. La date, elle, dit quand il a ete termine.
+  publishedAt     DateTime?
   archivedAt      DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt

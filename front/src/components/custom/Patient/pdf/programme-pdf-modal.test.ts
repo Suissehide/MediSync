@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { PdfDesignSummary } from '../../../../types/pdfDesignList.ts'
-import { chooseDesign } from './programme-pdf-modal.tsx'
+import { chooseDesign, designsProposables } from './programme-pdf-modal.tsx'
 
 const design = (id: string, isDefault = false): PdfDesignSummary => ({
   id,
@@ -11,6 +11,7 @@ const design = (id: string, isDefault = false): PdfDesignSummary => ({
     pages: [{ kind: 'canvas', id: 'p1', background: '#ffffff', elements: [] }],
   },
   isDefault,
+  isDraft: false,
 })
 
 // Review Focus 3 de l'etape 2. Le test e2e correspondant n'assertait que « il reste des
@@ -48,5 +49,37 @@ describe('chooseDesign', () => {
 
   it('ne rend rien quand il n y a vraiment aucun design', () => {
     expect(chooseDesign([], null)).toBeUndefined()
+  })
+})
+
+// Un brouillon se compose dans les reglages du service : il ne part pas chez un patient tant
+// qu'il n'est pas termine.
+describe('designsProposables', () => {
+  const brouillon = (id: string): PdfDesignSummary => ({
+    ...design(id),
+    isDraft: true,
+  })
+
+  it('ecarte les brouillons du service', () => {
+    const liste = designsProposables(
+      [design('fini'), brouillon('en-cours')],
+      [design('modele')],
+    )
+    expect(liste.map((d) => d.id)).toEqual(['fini', 'modele'])
+  })
+
+  it('garde les designs du service devant les modeles livres', () => {
+    const liste = designsProposables([design('a')], [design('modele')])
+    expect(liste.map((d) => d.id)).toEqual(['a', 'modele'])
+  })
+
+  // Un service dont tous les designs sont en brouillon n'exporte pas rien : il retombe sur
+  // les modeles livres, comme un service qui n'en a aucun.
+  it('retombe sur les modeles livres quand tout est en brouillon', () => {
+    const liste = designsProposables(
+      [brouillon('en-cours')],
+      [design('modele')],
+    )
+    expect(liste.map((d) => d.id)).toEqual(['modele'])
   })
 })

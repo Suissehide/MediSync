@@ -122,6 +122,15 @@ class PdfDesignRepository implements PdfDesignRepositoryInterface {
               : params.archived
                 ? { archivedAt: new Date(), isDefault: false }
                 : { archivedAt: null }),
+            // Repasser en brouillon decroche le defaut pour la meme raison qu'une
+            // suppression : un design qui n'est plus propose a l'export n'est le defaut de
+            // rien. La date de publication est ecrasee a chaque fois qu'on termine : elle dit
+            // quand le design a ete termine, pas quand il l'a ete la premiere fois.
+            ...(params.published === undefined
+              ? {}
+              : params.published
+                ? { publishedAt: new Date() }
+                : { publishedAt: null, isDefault: false }),
           },
         })
       })

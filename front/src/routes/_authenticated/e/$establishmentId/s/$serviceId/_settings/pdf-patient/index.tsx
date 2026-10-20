@@ -52,6 +52,7 @@ function PdfPatientSettings() {
     createBlankDesign,
     renameDesign,
     setDefaultDesign,
+    setDraftDesign,
     archiveDesign,
     restoreDesign,
   } = usePdfDesignMutations()
@@ -115,6 +116,9 @@ function PdfPatientSettings() {
                 }
                 onRenommer={() => setARenommer(design)}
                 onParDefaut={() => setDefaultDesign.mutate(design.id)}
+                onBrouillon={(isDraft) =>
+                  setDraftDesign.mutate({ id: design.id, isDraft })
+                }
                 onDupliquer={() =>
                   duplicateDesign.mutate({ sourceDesignId: design.id })
                 }

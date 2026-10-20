@@ -95,7 +95,8 @@ const design = (
   id: string,
   name: string,
   isDefault = false,
-): PdfDesignSummary => ({ id, name, content: CONTENU, isDefault })
+  isDraft = false,
+): PdfDesignSummary => ({ id, name, content: CONTENU, isDefault, isDraft })
 
 type Liste = { presets: PdfDesignSummary[]; designs: PdfDesignSummary[] }
 
@@ -276,6 +277,54 @@ describe('ecran des designs de PDF patient', () => {
       expect(JSON.parse(String(post?.[1]?.body))).toEqual({
         sourceDesignId: 'd1',
       })
+    })
+  })
+
+  // Un design neuf est un brouillon : la carte le dit, et son menu propose de le terminer
+  // plutot que de le poser par defaut — un brouillon n'est propose a aucun export.
+  it('marque un brouillon et propose de le terminer', async () => {
+    const fetchMock = monter({
+      presets: [],
+      designs: [design('d1', 'En chantier', false, true)],
+    })
+    await screen.findByText('En chantier')
+    expect(screen.getByText('Brouillon')).toBeInTheDocument()
+
+    await ouvrirMenu('En chantier')
+    expect(
+      screen.queryByRole('menuitem', { name: 'Définir par défaut' }),
+    ).not.toBeInTheDocument()
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: 'Terminer' }),
+    )
+
+    await waitFor(() => {
+      const patch = fetchMock.mock.calls.find(
+        ([, init]) => init?.method === 'PATCH',
+      )
+      expect(patch).toBeDefined()
+      expect(JSON.parse(String(patch?.[1]?.body))).toEqual({ isDraft: false })
+    })
+  })
+
+  it('remet un design termine en brouillon', async () => {
+    const fetchMock = monter({
+      presets: [],
+      designs: [design('d1', 'Mon programme')],
+    })
+    await screen.findByText('Mon programme')
+    expect(screen.queryByText('Brouillon')).not.toBeInTheDocument()
+
+    await ouvrirMenu('Mon programme')
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: 'Repasser en brouillon' }),
+    )
+
+    await waitFor(() => {
+      const patch = fetchMock.mock.calls.find(
+        ([, init]) => init?.method === 'PATCH',
+      )
+      expect(JSON.parse(String(patch?.[1]?.body))).toEqual({ isDraft: true })
     })
   })
 

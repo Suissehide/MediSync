@@ -20,6 +20,9 @@ type LigneDeDesign = {
   name: string
   content: unknown
   isDefault?: boolean
+  // Absent pour un preset : un modele livre est fini par construction, il n'a pas d'etat de
+  // brouillon a porter.
+  publishedAt?: Date | null
 }
 
 // Une toile vide et la page calendrier : le point de depart d'un design parti de rien.
@@ -93,6 +96,9 @@ class PdfDesignDomain implements PdfDesignDomainInterface {
         content: analyse.data,
         // Un preset n'est jamais le design par defaut : seul un design de service l'est.
         isDefault: ligne.isDefault ?? false,
+        // Ni un brouillon : `publishedAt` absent (preset) vaut « termine », null vaut
+        // « brouillon ». Les deux ne se confondent pas, d'ou le `in` plutot qu'un `??`.
+        isDraft: 'publishedAt' in ligne ? !ligne.publishedAt : false,
       })
     }
     return retenus
@@ -178,7 +184,24 @@ class PdfDesignDomain implements PdfDesignDomainInterface {
     designID: string,
     params: PdfDesignUpdateDomain,
   ): Promise<PdfDesignSummaryDomain> {
-    return this.#resume(await this.pdfDesignRepository.update(designID, params))
+    const { isDraft, ...reste } = params
+    // Le design par defaut sert a CHAQUE export : un brouillon ne peut pas l'etre. La garde
+    // est ici et pas seulement a l'ecran — une route ne se garde pas sur la foi de son ecran —
+    // et elle laisse passer le geste qui termine et pose le defaut d'un seul coup.
+    if (params.isDefault === true && isDraft !== false) {
+      const design = await this.pdfDesignRepository.findByID(designID)
+      if (design && !design.publishedAt) {
+        throw Boom.badRequest(
+          'Un brouillon ne peut pas être le design par défaut : terminez-le d’abord.',
+        )
+      }
+    }
+    return this.#resume(
+      await this.pdfDesignRepository.update(designID, {
+        ...reste,
+        ...(isDraft === undefined ? {} : { published: !isDraft }),
+      }),
+    )
   }
 
   async archive(designID: string): Promise<void> {

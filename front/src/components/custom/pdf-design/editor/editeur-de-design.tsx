@@ -1,6 +1,7 @@
 import { Document, PDFViewer } from '@react-pdf/renderer'
 import {
   ArrowLeft,
+  Check,
   FileDown,
   Pencil,
   PencilRuler,
@@ -52,7 +53,13 @@ type EditeurDeDesignProps = {
   // `null` tant que la source n'a pas repondu. C'est cette garde qui empeche la colonne de
   // pages de se monter sur un contenu VIDE, et un clic d'y condamner la resynchronisation :
   // l'enregistrement remplacait alors toutes les pages par une page vierge (etape 3).
-  design: { id: string; name: string; content: PdfDesignContent } | null
+  design: {
+    id: string
+    name: string
+    content: PdfDesignContent
+    // Absent pour un modele livre : il n'a pas d'etat de brouillon.
+    isDraft?: boolean
+  } | null
   chargement: boolean
   enregistrementEnCours: boolean
   // Rend une promesse : le composant ne marque « enregistre » qu'au succes.
@@ -61,6 +68,9 @@ type EditeurDeDesignProps = {
   // Le renommage en place. Absent, le crayon du titre n'est pas rendu — un ecran qui ne sait
   // pas renommer ne doit pas en montrer le geste.
   onRenommer?: (nom: string) => Promise<unknown>
+  // Termine le brouillon : le design devient proposable au moment d'exporter. Absent, le
+  // bouton n'est pas rendu — un ecran qui ne sait pas publier ne doit pas en montrer le geste.
+  onTerminer?: () => Promise<unknown>
   // Absents pour un modele livre : il n'utilise que les images de l'application, et promettre
   // un depot afficherait un champ dont le resultat ne pourrait jamais y etre pose.
   assets?: PdfAssetSummary[]
@@ -120,16 +130,38 @@ const executer = (
   })
 }
 
+// La bascule entre la toile et le vrai document. Un composant a elle : les deux etats ne se
+// distinguent que par son libelle et son icone.
+const BoutonApercu = ({
+  apercu,
+  onBasculer,
+}: {
+  apercu: boolean
+  onBasculer: () => void
+}) => (
+  <Button variant="outline" onClick={onBasculer}>
+    {apercu ? (
+      <PencilRuler className="w-4 h-4" />
+    ) : (
+      <FileDown className="w-4 h-4" />
+    )}
+    {apercu ? 'Éditer' : 'Aperçu PDF'}
+  </Button>
+)
+
 // Le nom du design, renommable en place, et l'etat de l'enregistrement sous lui. Son propre
 // composant : l'etat du renommage ne concerne que ces deux lignes.
 const BlocTitre = ({
   nom,
   modifie,
+  brouillon,
   onRenommer,
 }: {
   // `null` tant que le design n'est pas arrive.
   nom: string | null
   modifie: boolean
+  // Le design n'est pas encore propose a l'export : la pastille le dit a cote de son nom.
+  brouillon: boolean
   onRenommer?: (nom: string) => Promise<unknown>
 }) => {
   const [enCours, setEnCours] = useState<string | null>(null)
@@ -152,6 +184,11 @@ const BlocTitre = ({
           <h1 className="text-[17px] font-semibold truncate">
             {nom ?? 'Design'}
           </h1>
+          {brouillon && (
+            <span className="h-5 px-2 shrink-0 rounded-full bg-a-saisir-fond text-a-saisir-texte text-[11px] font-semibold flex items-center">
+              Brouillon
+            </span>
+          )}
           {onRenommer && nom && (
             <Button
               variant="transparent"
@@ -208,6 +245,7 @@ export default function EditeurDeDesign({
   onEnregistrer,
   onRetour,
   onRenommer,
+  onTerminer,
   assets,
   onDeposer,
   messageAbsent,
@@ -386,6 +424,16 @@ export default function EditeurDeDesign({
       .catch(() => undefined)
   }
 
+  // « Terminer » enregistre d'abord ce qui ne l'est pas : on termine ce qu'on VOIT, pas la
+  // version du serveur. Publier sur un contenu non enregistre proposerait a l'export un
+  // document different de celui qu'on vient de composer.
+  const terminer = () => {
+    const prealable = modifie
+      ? onEnregistrer(contenu).then(() => marquerEnregistre())
+      : Promise.resolve()
+    prealable.then(() => onTerminer?.()).catch(() => undefined)
+  }
+
   return (
     <DashboardLayout>
       <div className="flex-1 min-h-0 bg-background rounded-lg flex flex-col w-full overflow-hidden border border-border">
@@ -400,6 +448,7 @@ export default function EditeurDeDesign({
           <BlocTitre
             nom={design?.name ?? null}
             modifie={modifie}
+            brouillon={!!design?.isDraft}
             onRenommer={onRenommer}
           />
 
@@ -423,14 +472,13 @@ export default function EditeurDeDesign({
               <Redo2 className="w-4 h-4" />
             </Button>
           </div>
-          <Button variant="outline" onClick={() => setApercu(!apercu)}>
-            {apercu ? (
-              <PencilRuler className="w-4 h-4" />
-            ) : (
-              <FileDown className="w-4 h-4" />
-            )}
-            {apercu ? 'Éditer' : 'Aperçu PDF'}
-          </Button>
+          <BoutonApercu apercu={apercu} onBasculer={() => setApercu(!apercu)} />
+          {onTerminer && design?.isDraft && (
+            <Button variant="outline" onClick={terminer}>
+              <Check className="w-4 h-4" />
+              Terminer
+            </Button>
+          )}
           <Button
             onClick={enregistrer}
             isLoading={enregistrementEnCours}
