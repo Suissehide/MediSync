@@ -7,6 +7,7 @@ import {
   NOTIFICATION_TYPES,
   notificationTarget,
   notificationText,
+  notificationTypeOf,
 } from './notificationTypes.tsx'
 
 const n = (
@@ -57,6 +58,23 @@ describe('NOTIFICATION_TYPES', () => {
       expect(entry.kind).toBeTruthy()
       expect(entry.cta).toBeTruthy()
     }
+  })
+
+  it('type inconnu : pastille neutre sans lien plutot qu un plantage', () => {
+    const entry = notificationTypeOf('INCONNU' as NotificationType)
+    expect(entry.kind).toBe('Notification')
+    expect(entry.cta).toBe('')
+    expect(entry.color).toMatch(/^#/)
+    expect(entry.tint).toMatch(/^#/)
+    expect(() =>
+      notificationText(n('INCONNU' as NotificationType, {}), []),
+    ).not.toThrow()
+    expect(
+      notificationText(n('INCONNU' as NotificationType, {}), []),
+    ).toBeNull()
+    expect(() =>
+      notificationTarget(n('INCONNU' as NotificationType, {})),
+    ).not.toThrow()
   })
 })
 

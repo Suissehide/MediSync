@@ -1,5 +1,6 @@
 import {
   AlarmClock,
+  Bell,
   CalendarClock,
   CalendarX,
   ClipboardList,
@@ -101,6 +102,27 @@ export const NOTIFICATION_TYPES: Record<
     cta: 'Ouvrir la tâche',
   },
 }
+
+// Type inconnu (donnee serveur en avance sur ce front, ou corrompue) : une pastille neutre sans
+// lien plutot qu'un plantage du panneau entier.
+const FALLBACK_TYPE: {
+  icon: LucideIcon
+  color: string
+  tint: string
+  kind: string
+  cta: string
+} = {
+  icon: Bell,
+  color: '#334155',
+  tint: '#f1f5f9',
+  kind: 'Notification',
+  cta: '',
+}
+
+export const notificationTypeOf = (
+  type: NotificationType,
+): (typeof NOTIFICATION_TYPES)[NotificationType] =>
+  NOTIFICATION_TYPES[type] ?? FALLBACK_TYPE
 
 const str = (p: Record<string, unknown>, key: string): string =>
   typeof p[key] === 'string' ? (p[key] as string) : ''

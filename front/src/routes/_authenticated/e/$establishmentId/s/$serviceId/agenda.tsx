@@ -2,7 +2,7 @@ import { DateCalendar } from '@mui/x-date-pickers'
 import { createFileRoute } from '@tanstack/react-router'
 import dayjs, { type Dayjs } from 'dayjs'
 import { CalendarDays } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { getDayAppointmentColumns } from '@/columns/dayAppointment.column.tsx'
 import { DATE_CALENDAR_SX } from '@/components/custom/Calendar/calendarDatePickerButton.tsx'
@@ -92,10 +92,22 @@ function Agenda() {
     null,
   )
 
-  const handleDayChange = (day: Dayjs) => {
+  const handleDayChange = useCallback((day: Dayjs) => {
     setSelectedDay(day)
     localStorage.setItem(SELECTED_DAY_STORAGE_KEY, day.format('YYYY-MM-DD'))
-  }
+  }, [])
+
+  // Un clic sur une notification navigue vers cette meme route avec un `date` different : sans
+  // cet effet, un agenda deja monte sur ce service ignorerait le nouveau parametre.
+  useEffect(() => {
+    if (!date) {
+      return
+    }
+    const parsed = dayjs.utc(date)
+    if (parsed.isValid()) {
+      handleDayChange(parsed.startOf('day'))
+    }
+  }, [date, handleDayChange])
 
   const today = dayjs.utc().startOf('day')
 

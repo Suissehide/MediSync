@@ -9,9 +9,9 @@ import {
 } from '@/queries/useInbox.ts'
 import { dayGroup, whenLabel } from './inbox.utils.ts'
 import {
-  NOTIFICATION_TYPES,
   notificationTarget,
   notificationText,
+  notificationTypeOf,
 } from './notificationTypes.tsx'
 import {
   FilterBar,
@@ -31,9 +31,9 @@ function NotificationRow({
 }) {
   const members = useServiceMembers(n.service)
   const unread = n.readAt === null
-  const { icon: Icon, color, tint, kind, cta } = NOTIFICATION_TYPES[n.type]
+  const { icon: Icon, color, tint, kind, cta } = notificationTypeOf(n.type)
   const target = notificationTarget(n)
-  const showCta = target.kind !== 'task' || n.service.canTasks
+  const showCta = cta !== '' && (target.kind !== 'task' || n.service.canTasks)
   return (
     <button
       type="button"

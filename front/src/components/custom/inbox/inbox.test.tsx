@@ -17,7 +17,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { InboxApi } from '@/api/inbox.api.ts'
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { User } from '@/types/auth.ts'
-import type { Notification, Task } from '@/types/task.ts'
+import type { Notification, NotificationType, Task } from '@/types/task.ts'
 import { Inbox } from './inbox.tsx'
 
 // `main.tsx` enregistre ce greffon au demarrage ; le DatePicker d'echeance en depend (dayjs.utc).
@@ -40,6 +40,16 @@ vi.mock('@/api/inbox.api.ts', () => ({
 // Le panneau Taches lit l'echelle courante, inutile hors RouterProvider dans ces scenarios.
 vi.mock('@/navigation/navigation.ts', () => ({ useCurrentScale: () => null }))
 
+// `Inbox` navigue reellement (cibles agenda/fiche patient) : on observe l'appel plutot que de
+// laisser le routeur de test resoudre une vraie destination, absente de son arbre minimal.
+const { navigateMock } = vi.hoisted(() => ({ navigateMock: vi.fn() }))
+vi.mock('@tanstack/react-router', async () => {
+  const actual = await vi.importActual<typeof import('@tanstack/react-router')>(
+    '@tanstack/react-router',
+  )
+  return { ...actual, useNavigate: () => navigateMock }
+})
+
 const notif = (
   id: string,
   readAt: string | null,
@@ -49,6 +59,17 @@ const notif = (
   type: 'MENTION',
   payload: { taskId: 't1', authorId: 'u2', text },
   readAt,
+  createdAt: new Date().toISOString(),
+})
+const notifOf = (
+  id: string,
+  type: NotificationType,
+  payload: Record<string, unknown>,
+): Notification => ({
+  id,
+  type,
+  payload,
+  readAt: null,
   createdAt: new Date().toISOString(),
 })
 const task = (id: string, assigneeIds: string[]): Task => ({
@@ -104,6 +125,7 @@ const renderInbox = (ui: ReactNode = <Inbox />) =>
 describe('Inbox', () => {
   beforeEach(() => {
     useAuthStore.setState({ user })
+    navigateMock.mockReset()
     vi.mocked(InboxApi.tasks).mockReset().mockResolvedValue([])
     vi.mocked(InboxApi.notifications).mockReset().mockResolvedValue([])
     vi.mocked(InboxApi.markRead).mockReset().mockResolvedValue(undefined)
@@ -307,5 +329,57 @@ describe('Inbox', () => {
     await u.keyboard('{Escape}')
     expect(screen.queryByRole('grid')).toBeNull()
     expect(screen.getByRole('heading', { name: /Tâches/ })).toBeInTheDocument()
+  })
+
+  it('clic sur un rendez-vous deplace : navigue vers l agenda a la date apres, marque lue, ferme le panneau', async () => {
+    const u = userEvent.setup()
+    vi.mocked(InboxApi.notifications).mockImplementation(async (s) =>
+      s.serviceId === 's1'
+        ? [
+            notifOf('n1', 'APPOINTMENT_MOVED', {
+              thematicName: 'Alimentation',
+              before: { startDate: '2026-10-20T07:00:00.000Z' },
+              after: { startDate: '2026-10-22T07:00:00.000Z' },
+              actorId: 'u2',
+            }),
+          ]
+        : [],
+    )
+    renderInbox()
+    await u.click(await screen.findByRole('button', { name: 'Notifications' }))
+    await u.click(await screen.findByText('Alimentation'))
+    expect(InboxApi.markRead).toHaveBeenCalled()
+    expect(navigateMock).toHaveBeenCalledWith({
+      to: '/e/$establishmentId/s/$serviceId/agenda',
+      params: { establishmentId: 'e1', serviceId: 's1' },
+      search: { date: '2026-10-22' },
+    })
+    expect(screen.queryByRole('heading', { name: /Notifications/ })).toBeNull()
+  })
+
+  it('clic sur une absence : navigue vers la fiche patient, marque lue, ferme le panneau', async () => {
+    const u = userEvent.setup()
+    vi.mocked(InboxApi.notifications).mockImplementation(async (s) =>
+      s.serviceId === 's1'
+        ? [
+            notifOf('n1', 'ABSENT', {
+              patientId: 'p1',
+              patientName: 'DUPONT Paul',
+              thematicName: 'Alimentation',
+              startDate: '2026-10-22T07:00:00.000Z',
+              actorId: 'u2',
+            }),
+          ]
+        : [],
+    )
+    renderInbox()
+    await u.click(await screen.findByRole('button', { name: 'Notifications' }))
+    await u.click(await screen.findByText('DUPONT Paul'))
+    expect(InboxApi.markRead).toHaveBeenCalled()
+    expect(navigateMock).toHaveBeenCalledWith({
+      to: '/e/$establishmentId/s/$serviceId/patient/$patientID',
+      params: { establishmentId: 'e1', serviceId: 's1', patientID: 'p1' },
+    })
+    expect(screen.queryByRole('heading', { name: /Notifications/ })).toBeNull()
   })
 })
