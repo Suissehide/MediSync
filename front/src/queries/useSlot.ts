@@ -89,7 +89,7 @@ export const useSlotConflictsQuery = (
   const { data, isPending, isError, error } = useQuery({
     queryKey: [SLOT.CONFLICTS, range?.from, range?.to, slotsUpdatedAt],
     queryFn: () => SlotApi.getConflicts(range as SlotDateRange),
-    enabled: !!range,
+    enabled: !!range && slotsUpdatedAt > 0,
     placeholderData: keepPreviousData,
     retry: 0,
   })

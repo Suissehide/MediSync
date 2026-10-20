@@ -36,12 +36,13 @@ class SlotDomain implements SlotDomainInterface {
     return detectConflicts(await this.slotRepository.findAll(dateRange))
   }
 
-  // Les créneaux qui chevauchent celui-ci suffisent : un conflit exige un recouvrement horaire.
+  // Fenêtre du créneau élargie à ses rendez-vous : déplacer un créneau ne déplace pas ses rendez-vous.
   async conflictsOf(slotID: string): Promise<PlanningConflict[]> {
     const slot = await this.slotRepository.findByID(slotID)
+    const intervals = [slot, ...slot.appointments]
     const conflicts = await this.findConflicts({
-      from: slot.startDate,
-      to: slot.endDate,
+      from: new Date(Math.min(...intervals.map((i) => i.startDate.getTime()))),
+      to: new Date(Math.max(...intervals.map((i) => i.endDate.getTime()))),
     })
     return conflicts.filter((conflict) => conflict.slotIDs.includes(slotID))
   }
