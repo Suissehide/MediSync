@@ -1,8 +1,8 @@
+import { DateCalendar } from '@mui/x-date-pickers'
 import dayjs from 'dayjs'
 import { Calendar, User, Users, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-import { DatePicker } from '@/components/ui/datePicker.tsx'
 import {
   type InboxService,
   useInboxMutations,
@@ -268,17 +268,20 @@ export function TaskComposer({
         </div>
       )}
       {dateOpen && (
-        <div className="mt-2">
-          <DatePicker
-            label="Date d'échéance"
-            open
-            onClose={() => setDateOpen(false)}
-            onAccept={() => setDateOpen(false)}
+        <div
+          role="dialog"
+          aria-label="Date d'échéance"
+          onKeyDown={(e) => e.key === 'Escape' && setDateOpen(false)}
+          className="absolute left-[18px] mt-1 z-10 rounded-lg border border-border bg-white shadow-md"
+        >
+          <DateCalendar
+            autoFocus
+            timezone="UTC"
             value={dueDate ? dayjs.utc(dueDate) : null}
-            onChange={(date) => {
-              // Une frappe clavier incomplete/invalide ne doit ni poser dueDate ni fermer la ligne.
-              if (date?.isValid()) {
+            onChange={(date, state) => {
+              if (date?.isValid() && state === 'finish') {
                 setDueDate(date.format('YYYY-MM-DD'))
+                setDateOpen(false)
               }
             }}
           />
