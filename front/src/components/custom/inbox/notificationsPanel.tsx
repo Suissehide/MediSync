@@ -30,7 +30,7 @@ function MentionRow({
     <button
       type="button"
       onClick={() => onOpen(n)}
-      className={`w-full text-left flex gap-3 px-[18px] py-3 hover:bg-[#f8fafc] ${unread ? 'bg-[#f8fbff]' : 'bg-white'}`}
+      className={`cursor-pointer w-full text-left flex gap-3 px-[18px] py-3 hover:bg-[#f8fafc] ${unread ? 'bg-[#f8fbff]' : 'bg-white'}`}
     >
       <span className="w-[34px] h-[34px] shrink-0 rounded-full bg-[#f0fdfa] text-[#0f766e] flex items-center justify-center">
         <ListTodo className="w-4 h-4" />
@@ -124,7 +124,7 @@ export function NotificationsPanel({
             onClick={() =>
               markAllRead.mutate(services.filter((s) => counts[s.serviceId]))
             }
-            className={`flex items-center gap-1 text-[13px] font-semibold ${unread.length ? 'text-primary' : 'text-[#94a3b8]'}`}
+            className={`cursor-pointer disabled:cursor-default flex items-center gap-1 text-[13px] font-semibold ${unread.length ? 'text-primary' : 'text-[#94a3b8]'}`}
           >
             <CheckCheck className="w-4 h-4" /> Tout lu
           </button>

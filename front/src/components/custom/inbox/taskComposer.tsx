@@ -124,7 +124,12 @@ export function TaskComposer({
       className="flex items-center gap-1 pl-2 pr-1 rounded-full bg-blue-50 text-primary text-xs font-medium"
     >
       {label}
-      <button type="button" aria-label={`Retirer ${label}`} onClick={onRemove}>
+      <button
+        type="button"
+        aria-label={`Retirer ${label}`}
+        onClick={onRemove}
+        className="cursor-pointer"
+      >
         <X className="w-3 h-3" />
       </button>
     </span>
@@ -178,7 +183,7 @@ export function TaskComposer({
               input?.click()
             }
           }}
-          className="w-8 h-8 rounded-md flex items-center justify-center text-text-light hover:bg-muted"
+          className="cursor-pointer w-8 h-8 rounded-md flex items-center justify-center text-text-light hover:bg-muted"
         >
           <Calendar className="w-4 h-4" />
         </button>
@@ -196,7 +201,7 @@ export function TaskComposer({
           aria-label="Patient"
           title="Patient"
           onClick={() => setPatientSearch(patientSearch === null ? '' : null)}
-          className="w-8 h-8 rounded-md flex items-center justify-center text-text-light hover:bg-muted"
+          className="cursor-pointer w-8 h-8 rounded-md flex items-center justify-center text-text-light hover:bg-muted"
         >
           <User className="w-4 h-4" />
         </button>
@@ -204,7 +209,7 @@ export function TaskComposer({
           type="button"
           disabled={!text}
           onClick={submit}
-          className="h-8 px-3 rounded-lg bg-primary text-white text-[13px] font-semibold disabled:opacity-40"
+          className="cursor-pointer h-8 px-3 rounded-lg bg-primary text-white text-[13px] font-semibold disabled:opacity-40 disabled:cursor-default"
         >
           Ajouter
         </button>
@@ -223,7 +228,7 @@ export function TaskComposer({
               aria-selected={i === active}
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => pick(c.user.id)}
-              className={`w-full text-left px-3 py-1.5 text-sm ${i === active ? 'bg-muted' : ''}`}
+              className={`cursor-pointer w-full text-left px-3 py-1.5 text-sm ${i === active ? 'bg-muted' : ''}`}
             >
               {memberName(members, c.user.id)}
             </button>
@@ -250,7 +255,7 @@ export function TaskComposer({
                 })
                 setPatientSearch(null)
               }}
-              className="w-full text-left px-3 py-1.5 text-sm hover:bg-muted"
+              className="cursor-pointer w-full text-left px-3 py-1.5 text-sm hover:bg-muted"
             >
               {p.lastName.toUpperCase()} {p.firstName}
             </button>

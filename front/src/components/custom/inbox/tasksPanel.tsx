@@ -147,7 +147,7 @@ export function TasksPanel({
             <button
               type="button"
               onClick={() => setShowDone(!showDone)}
-              className="w-full flex items-center gap-1 px-[18px] py-2.5 text-[13px] font-semibold text-text-light"
+              className="cursor-pointer w-full flex items-center gap-1 px-[18px] py-2.5 text-[13px] font-semibold text-text-light"
             >
               {showDone ? (
                 <ChevronDown className="w-4 h-4" />
