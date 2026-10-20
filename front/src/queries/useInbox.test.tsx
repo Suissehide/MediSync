@@ -24,7 +24,13 @@ const user: User = {
       name: 'CHU',
       role: 'MEMBER',
       services: [
-        { id: 's1', name: 'Cardio', role: 'INTERVENANT', affecte: true },
+        {
+          id: 's1',
+          name: 'Cardio',
+          role: 'INTERVENANT',
+          affecte: true,
+          soignantId: 'soi1',
+        },
         { id: 's2', name: 'Diabeto', role: 'LECTURE', affecte: true },
         { id: 's3', name: 'Implicite', role: 'COORDINATEUR', affecte: false },
       ],
@@ -55,12 +61,14 @@ describe('useInbox', () => {
         serviceId: 's1',
         name: 'Cardio',
         canTasks: true,
+        soignantId: 'soi1',
       },
       {
         establishmentId: 'e1',
         serviceId: 's2',
         name: 'Diabeto',
         canTasks: false,
+        soignantId: null,
       },
     ])
   })

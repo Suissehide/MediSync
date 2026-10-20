@@ -1,4 +1,5 @@
 import type { ServiceMember } from '@/types/serviceMember.ts'
+import type { Soignant } from '@/types/soignant.ts'
 
 const DAY = 86_400_000
 const startOfDay = (d: Date) =>
@@ -16,6 +17,11 @@ export const memberName = (
   }
   return [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email
 }
+
+export const soignantName = (
+  soignants: Soignant[],
+  soignantId: string,
+): string => soignants.find((s) => s.id === soignantId)?.name ?? 'Un métier'
 
 export const dayGroup = (iso: string, now = new Date()) => {
   const days = Math.round((startOfDay(now) - startOfDay(new Date(iso))) / DAY)

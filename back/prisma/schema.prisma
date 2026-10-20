@@ -341,6 +341,7 @@ model Soignant {
   slotTemplateLinks  SlotTemplateSoignant[]
   thematicLinks      SoignantThematic[]
   serviceMemberships ServiceMembership[]
+  taskTags           TaskSoignant[]
 
   @@unique([id, serviceId])
   @@index([serviceId])
@@ -945,6 +946,7 @@ model Task {
   doneAt          DateTime?
   createdAt       DateTime       @default(now())
   assignees       TaskAssignee[]
+  soignants       TaskSoignant[]
 
   @@unique([id, serviceId])
   @@index([serviceId])
@@ -960,6 +962,24 @@ model TaskAssignee {
   @@id([taskId, userId])
   @@index([serviceId])
   @@index([userId])
+}
+
+// Mention par metier (« @Psychologue ») : la tache est taguee a un Soignant (un metier du
+// service), pas a un compte. Relation composite vers Soignant, comme SlotTemplateSoignant et
+// SoignantThematic (son unicite porte [id, serviceId]), plutot que la reference simple de
+// ServiceMembership.soignantId : ici la ligne ne vit que dans CE service, il n'y a pas de raison
+// de s'en passer.
+model TaskSoignant {
+  establishmentId String
+  serviceId       String
+  taskId          String
+  soignantId      String
+  task            Task     @relation(fields: [taskId, serviceId], references: [id, serviceId], onDelete: Cascade)
+  soignant        Soignant @relation(fields: [soignantId, serviceId], references: [id, serviceId], onDelete: Cascade)
+
+  @@id([taskId, soignantId])
+  @@index([serviceId])
+  @@index([soignantId])
 }
 
 enum NotificationType {

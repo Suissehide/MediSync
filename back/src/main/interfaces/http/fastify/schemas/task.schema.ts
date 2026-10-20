@@ -5,6 +5,7 @@ export const taskResponseSchema = z.object({
   text: z.string(),
   authorId: z.string().nullable(),
   assigneeIds: z.array(z.string()),
+  soignantIds: z.array(z.string()),
   patient: z
     .object({ id: z.string(), firstName: z.string(), lastName: z.string() })
     .nullable(),
@@ -17,6 +18,7 @@ export const tasksResponseSchema = z.array(taskResponseSchema)
 export const createTaskSchema = z.object({
   text: z.string().trim().min(1).max(500),
   assigneeIds: z.array(z.string()).max(20).default([]),
+  soignantIds: z.array(z.string()).max(20).default([]),
   patientId: z.string().optional(),
   dueDate: z.iso.date().optional(),
 })

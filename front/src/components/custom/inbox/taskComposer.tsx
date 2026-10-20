@@ -1,4 +1,4 @@
-import { Calendar, User, X } from 'lucide-react'
+import { Calendar, User, Users, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import {
@@ -6,9 +6,15 @@ import {
   useInboxMutations,
   useServiceMembers,
   useServicePatients,
+  useServiceSoignants,
 } from '@/queries/useInbox.ts'
-import { memberName } from './inbox.utils.ts'
-import { mentionCandidates, mentionQuery, stripMention } from './mention.ts'
+import { memberName, soignantName } from './inbox.utils.ts'
+import {
+  type MentionCandidate,
+  mentionCandidates,
+  mentionQuery,
+  stripMention,
+} from './mention.ts'
 
 const fold = (s: string) =>
   s
@@ -26,9 +32,11 @@ export function TaskComposer({
   onMentionOpenChange?: (open: boolean) => void
 }) {
   const members = useServiceMembers(service)
+  const soignants = useServiceSoignants(service)
   const { createTask } = useInboxMutations()
   const [draft, setDraft] = useState('')
   const [tags, setTags] = useState<string[]>([])
+  const [soignantTags, setSoignantTags] = useState<string[]>([])
   const [dueDate, setDueDate] = useState('')
   const [patient, setPatient] = useState<{ id: string; label: string } | null>(
     null,
@@ -40,15 +48,21 @@ export function TaskComposer({
 
   const query = mentionQuery(draft)
   const candidates =
-    query === null ? [] : mentionCandidates(members, query, tags)
+    query === null
+      ? []
+      : mentionCandidates(members, soignants, query, tags, soignantTags)
   const mentionOpen = candidates.length > 0
   // Remonte l'ouverture de la liste au Popover des Taches, pour qu'Echap ne ferme QUE la liste.
   useEffect(() => {
     onMentionOpenChange?.(mentionOpen)
   }, [mentionOpen, onMentionOpenChange])
   useEffect(() => () => onMentionOpenChange?.(false), [onMentionOpenChange])
-  const pick = (userId: string) => {
-    setTags([...tags, userId])
+  const pick = (candidate: MentionCandidate) => {
+    if (candidate.kind === 'soignant') {
+      setSoignantTags([...soignantTags, candidate.soignant.id])
+    } else {
+      setTags([...tags, candidate.member.user.id])
+    }
     setDraft(stripMention(draft))
     setActive(0)
   }
@@ -64,6 +78,7 @@ export function TaskComposer({
         input: {
           text,
           assigneeIds: tags,
+          soignantIds: soignantTags,
           ...(patient ? { patientId: patient.id } : {}),
           ...(dueDate ? { dueDate } : {}),
         },
@@ -72,6 +87,7 @@ export function TaskComposer({
         onSuccess: (task) => {
           setDraft('')
           setTags([])
+          setSoignantTags([])
           setDueDate('')
           setPatient(null)
           onCreated(task.id)
@@ -82,7 +98,7 @@ export function TaskComposer({
   // Isole des touches de la liste de mention pour alleger la complexite cognitive des deux.
   const onCandidateKey = (
     e: React.KeyboardEvent<HTMLInputElement>,
-    list: ReturnType<typeof mentionCandidates>,
+    list: MentionCandidate[],
   ): boolean => {
     if (e.key === 'ArrowDown') {
       e.preventDefault()
@@ -98,7 +114,7 @@ export function TaskComposer({
       e.preventDefault()
       const c = list[active] ?? list[0]
       if (c) {
-        pick(c.user.id)
+        pick(c)
       }
       return true
     }
@@ -142,11 +158,16 @@ export function TaskComposer({
 
   return (
     <div className="px-[18px] py-3 border-b border-border relative">
-      {(tags.length > 0 || patient || dueDate) && (
+      {(tags.length > 0 || soignantTags.length > 0 || patient || dueDate) && (
         <div className="flex flex-wrap gap-1.5 mb-2">
           {tags.map((id) =>
             chip(id, `@${memberName(members, id)}`, () =>
               setTags(tags.filter((x) => x !== id)),
+            ),
+          )}
+          {soignantTags.map((id) =>
+            chip(`soi-${id}`, `@${soignantName(soignants, id)}`, () =>
+              setSoignantTags(soignantTags.filter((x) => x !== id)),
             ),
           )}
           {patient && chip('patient', patient.label, () => setPatient(null))}
@@ -220,19 +241,34 @@ export function TaskComposer({
           aria-label={`Mentionner un soignant · ${service.name}`}
           className="absolute left-[18px] right-[18px] mt-1 z-10 rounded-lg border border-border bg-white shadow-md py-1"
         >
-          {candidates.map((c, i) => (
-            <button
-              key={c.user.id}
-              type="button"
-              role="option"
-              aria-selected={i === active}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => pick(c.user.id)}
-              className={`cursor-pointer w-full text-left px-3 py-1.5 text-sm ${i === active ? 'bg-muted' : ''}`}
-            >
-              {memberName(members, c.user.id)}
-            </button>
-          ))}
+          {candidates.map((c, i) => {
+            const key =
+              c.kind === 'soignant'
+                ? `soi-${c.soignant.id}`
+                : `mb-${c.member.user.id}`
+            const label =
+              c.kind === 'soignant'
+                ? c.soignant.name
+                : memberName(members, c.member.user.id)
+            return (
+              <button
+                key={key}
+                type="button"
+                role="option"
+                aria-selected={i === active}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => pick(c)}
+                className={`cursor-pointer w-full flex items-center justify-between text-left px-3 py-1.5 text-sm ${i === active ? 'bg-muted' : ''}`}
+              >
+                {label}
+                {c.kind === 'soignant' && (
+                  <span className="flex items-center gap-1 text-xs text-text-light">
+                    <Users className="w-3 h-3" /> métier
+                  </span>
+                )}
+              </button>
+            )
+          })}
         </div>
       )}
       {patientSearch !== null && (

@@ -9,7 +9,10 @@ import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import type { TenantContextInterface } from '../../../types/utils/tenant-context'
 import type { PostgresOrm, PostgresPrismaClient } from '../postgres-client'
 
-const include = { assignees: { select: { userId: true } } } as const
+const include = {
+  assignees: { select: { userId: true } },
+  soignants: { select: { soignantId: true } },
+} as const
 
 class TaskRepository implements TaskRepositoryInterface {
   private readonly prisma: PostgresPrismaClient
@@ -57,13 +60,18 @@ class TaskRepository implements TaskRepositoryInterface {
               userId,
             })),
           },
+          soignants: {
+            create: input.soignantIds.map((soignantId) => ({
+              establishmentId: scope.establishmentId,
+              soignantId,
+            })),
+          },
         },
         include,
       })
-      const mentionned = input.assigneeIds.filter((id) => id !== input.authorId)
-      if (mentionned.length > 0) {
+      if (input.notifyUserIds.length > 0) {
         await tx.notification.createMany({
-          data: mentionned.map((userId) => ({
+          data: input.notifyUserIds.map((userId) => ({
             ...scope,
             userId,
             type: 'MENTION' as const,

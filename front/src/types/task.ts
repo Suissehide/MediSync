@@ -3,6 +3,7 @@ export type Task = {
   text: string
   authorId: string | null
   assigneeIds: string[]
+  soignantIds: string[]
   patient: { id: string; firstName: string; lastName: string } | null
   dueDate: string | null
   doneAt: string | null
@@ -20,6 +21,7 @@ export type Notification = {
 export type CreateTaskInput = {
   text: string
   assigneeIds: string[]
+  soignantIds: string[]
   patientId?: string
   dueDate?: string
 }

@@ -75,7 +75,12 @@ export function Inbox() {
   }
   const onFocusDone = useCallback(() => setFocus(null), [])
   const myOpenTasks = tasks.filter(
-    (t) => !t.doneAt && me && t.assigneeIds.includes(me),
+    (t) =>
+      !t.doneAt &&
+      me &&
+      (t.assigneeIds.includes(me) ||
+        (t.service.soignantId !== null &&
+          t.soignantIds.includes(t.service.soignantId))),
   ).length
   const unread = notifications.filter((n) => n.readAt === null).length
 

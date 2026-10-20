@@ -63,8 +63,11 @@ export function TasksPanel({
   }, [highlight])
 
   const isDone = (t: InboxTask) => pending[t.id] ?? t.doneAt !== null
+  const myMetier = (t: InboxTask) =>
+    t.service.soignantId !== null &&
+    t.soignantIds.includes(t.service.soignantId)
   const mine = (t: InboxTask) =>
-    me ? t.assigneeIds.includes(me) || t.authorId === me : false
+    me ? t.assigneeIds.includes(me) || t.authorId === me || myMetier(t) : false
   const visible = tasks.filter(
     (t) =>
       (serviceId === 'all' || t.service.serviceId === serviceId) &&
@@ -80,7 +83,7 @@ export function TasksPanel({
     ]),
   )
   const myOpen = tasks.filter(
-    (t) => !isDone(t) && me && t.assigneeIds.includes(me),
+    (t) => !isDone(t) && me && (t.assigneeIds.includes(me) || myMetier(t)),
   ).length
   const target =
     services.find((s) => s.serviceId === serviceId) ??

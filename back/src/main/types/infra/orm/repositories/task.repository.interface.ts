@@ -1,10 +1,17 @@
 import type { Task } from '../../../../../generated/client'
 
-export type TaskEntityRepo = Task & { assignees: { userId: string }[] }
+export type TaskEntityRepo = Task & {
+  assignees: { userId: string }[]
+  soignants: { soignantId: string }[]
+}
 export type TaskCreateEntityRepo = {
   text: string
   authorId: string
   assigneeIds: string[]
+  soignantIds: string[]
+  // Destinataires MENTION : deja dedupliques et prives de l'auteur par le domaine, qui seul
+  // connait les membres du service — le repository se contente d'ecrire.
+  notifyUserIds: string[]
   patientId: string | null
   dueDate: Date | null
 }

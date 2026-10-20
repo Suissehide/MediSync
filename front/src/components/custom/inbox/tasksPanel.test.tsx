@@ -16,6 +16,7 @@ vi.mock('@/api/inbox.api.ts', () => ({
     tasks: vi.fn(),
     notifications: vi.fn(),
     members: vi.fn(),
+    soignants: vi.fn(),
     patients: vi.fn(),
     markRead: vi.fn(),
     markAllRead: vi.fn(),
@@ -32,6 +33,7 @@ const s1: InboxService = {
   serviceId: 's1',
   name: 'Cardio',
   canTasks: true,
+  soignantId: null,
 }
 
 const task = (id: string, assigneeIds: string[]): Task => ({
@@ -39,6 +41,7 @@ const task = (id: string, assigneeIds: string[]): Task => ({
   text: `Tache ${id}`,
   authorId: 'u2',
   assigneeIds,
+  soignantIds: [],
   patient: null,
   dueDate: null,
   doneAt: null,
@@ -77,6 +80,7 @@ describe('TasksPanel', () => {
     vi.mocked(InboxApi.createTask).mockReset()
     vi.mocked(InboxApi.setTaskDone).mockReset()
     vi.mocked(InboxApi.patients).mockReset().mockResolvedValue([])
+    vi.mocked(InboxApi.soignants).mockReset().mockResolvedValue([])
     vi.mocked(InboxApi.members)
       .mockReset()
       .mockResolvedValue([
@@ -134,6 +138,7 @@ describe('TasksPanel', () => {
     expect(InboxApi.createTask).toHaveBeenCalledWith(s1, {
       text: 'Vérifier les ordonnances',
       assigneeIds: ['u2'],
+      soignantIds: [],
     })
   })
 
@@ -303,6 +308,59 @@ describe('TasksPanel', () => {
     expect(InboxApi.createTask).toHaveBeenCalledWith(s1, {
       text: 'Écrire à dr.martin@chu.fr',
       assigneeIds: [],
+      soignantIds: [],
     })
   })
+
+  it('@Psychologue propose le metier avant les personnes ; le choisir cree l etiquette et envoie soignantIds', async () => {
+    const u = userEvent.setup()
+    vi.mocked(InboxApi.soignants)
+      .mockReset()
+      .mockResolvedValue([{ id: 'so1', name: 'Psychologue' }])
+    vi.mocked(InboxApi.createTask).mockResolvedValue(task('new', []))
+    render(
+      <TasksPanel
+        services={[s1]}
+        tasks={[]}
+        focus={null}
+        onFocusDone={() => undefined}
+      />,
+      { wrapper },
+    )
+    const input = screen.getByPlaceholderText(
+      'Nouvelle tâche… tapez @ pour mentionner',
+    )
+    await u.type(input, 'Voir @psy')
+    const option = await screen.findByRole('option', { name: /Psychologue/ })
+    expect(option.textContent).toContain('métier')
+    await u.click(option)
+    expect(screen.getByText('@Psychologue')).toBeInTheDocument()
+    await u.keyboard('{Enter}')
+    expect(InboxApi.createTask).toHaveBeenCalledWith(s1, {
+      text: 'Voir',
+      assigneeIds: [],
+      soignantIds: ['so1'],
+    })
+  })
+
+  it('une tache taguee sur mon metier apparait sous Pour moi', () => {
+    const monService: InboxService = { ...s1, soignantId: 'so1' }
+    const autre = {
+      ...task('t1', []),
+      authorId: 'u2',
+      soignantIds: ['so1'],
+      service: monService,
+    }
+    render(
+      <TasksPanel
+        services={[monService]}
+        tasks={[autre]}
+        focus={null}
+        onFocusDone={() => undefined}
+      />,
+      { wrapper },
+    )
+    expect(screen.getByText('Tache t1')).toBeInTheDocument()
+  })
+
 })
