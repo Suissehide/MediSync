@@ -52,8 +52,7 @@ export function TaskComposer({
     setDraft(stripMention(draft))
     setActive(0)
   }
-  // Le texte envoye est le brouillon tel quel : un `@...` non resolu (une adresse e-mail,
-  // une mention sans correspondance) n'est jamais tronque.
+  // Le texte envoye est le brouillon tel quel : un `@...` non resolu n'est jamais tronque.
   const text = draft.trim()
   const submit = () => {
     if (!text) {

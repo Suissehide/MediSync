@@ -43,8 +43,7 @@ beforeEach(() => {
   vi.mocked(InboxApi.notifications).mockReset().mockResolvedValue([])
 })
 
-// Les icones Taches et Notifications (`Inbox`) sont montees sur `user`, visibles partout sous
-// `_authenticated` ; le bloc se remonte au changement de contexte via `key={tenantKey(context)}`.
+// Icones Taches/Notifications montees sur `user`, remontees au changement de contexte (`tenantKey`).
 
 const utilisateur: User = {
   id: 'u1',

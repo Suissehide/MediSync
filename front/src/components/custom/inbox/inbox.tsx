@@ -95,8 +95,7 @@ export function Inbox() {
             sideOffset={9}
             className={PANEL_CLASS}
             onEscapeKeyDown={(e) => {
-              // Radix ecoute Echap au niveau du document, avant l'input : sans ce garde, Echap
-              // fermerait tout le panneau (brouillon perdu) au lieu de ne fermer que la liste.
+              // Sans ce garde, Echap fermerait tout le panneau (brouillon perdu) au lieu de la liste.
               if (mentionOpen) {
                 e.preventDefault()
               }

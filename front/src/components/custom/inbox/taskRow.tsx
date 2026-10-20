@@ -34,9 +34,11 @@ export function TaskRow({
   const members = useServiceMembers(task.service)
   const late = !done && task.dueDate !== null && task.dueDate < today()
   const author =
-    task.authorId === me
-      ? 'Par vous'
-      : `Par ${memberName(members, task.authorId)}`
+    task.authorId === null
+      ? null
+      : task.authorId === me
+        ? 'Par vous'
+        : `Par ${memberName(members, task.authorId)}`
   return (
     <div
       data-task={task.id}
@@ -87,7 +89,8 @@ export function TaskRow({
           </div>
         )}
         <p className="text-xs text-text-light mt-1">
-          {author} · {whenLabel(task.createdAt)}
+          {author ? `${author} · ` : ''}
+          {whenLabel(task.createdAt)}
           {showService ? ` · ${task.service.name}` : ''}
         </p>
       </div>

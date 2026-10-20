@@ -203,6 +203,24 @@ describe('TasksPanel', () => {
     expect(screen.getByText('Tache t1')).toHaveClass('line-through')
   })
 
+  it('tache migree sans auteur : pas de "Par ..." devant le quand', () => {
+    const sansAuteur = { ...task('t1', ['u1']), authorId: null, service: s1 }
+    render(
+      <TasksPanel
+        services={[s1]}
+        tasks={[sansAuteur]}
+        focus={null}
+        onFocusDone={() => undefined}
+      />,
+      { wrapper },
+    )
+    const row = screen
+      .getByText('Tache t1')
+      .closest('[data-task]') as HTMLElement
+    expect(row.textContent).not.toContain('Par')
+    expect(row.textContent).toContain("l'instant")
+  })
+
   it('Pour moi masque les taches ou je ne suis ni tague ni auteur', async () => {
     const u = userEvent.setup()
     const autre = { ...task('t2', ['u2']), authorId: 'u2', service: s1 }
@@ -239,6 +257,29 @@ describe('TasksPanel', () => {
       'data-highlighted',
       'true',
     )
+  })
+
+  it('une mention cliquee sur une tache ouverte ne deplie pas Terminees', () => {
+    const ouverte = { ...task('t1', ['u1']), service: s1 }
+    const terminee = {
+      ...task('t2', ['u1']),
+      doneAt: '2026-10-19T10:00:00Z',
+      service: s1,
+    }
+    render(
+      <TasksPanel
+        services={[s1]}
+        tasks={[ouverte, terminee]}
+        focus={{ serviceId: 's1', taskId: 't1' }}
+        onFocusDone={() => undefined}
+      />,
+      { wrapper },
+    )
+    expect(screen.getByText('Tache t1').closest('[data-task]')).toHaveAttribute(
+      'data-highlighted',
+      'true',
+    )
+    expect(screen.queryByText('Tache t2')).toBeNull()
   })
 
   it('un @... non resolu (ex. une adresse e-mail) reste intact dans le texte envoye', async () => {

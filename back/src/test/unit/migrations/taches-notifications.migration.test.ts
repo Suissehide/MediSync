@@ -3,19 +3,10 @@ import { join } from 'node:path'
 import { config as loadDotenv } from 'dotenv'
 import { Client, types } from 'pg'
 
-// `timestamp` sans fuseau (le type de Todo.createDate et Task.doneAt) : le parseur par defaut de
-// `pg` le lit comme une heure LOCALE du process puis le convertit en UTC, ce qui decale la valeur
-// selon le fuseau de la machine qui lance le test. On le force a lire la valeur telle qu'ecrite.
+// `timestamp` sans fuseau : on force la lecture en UTC, pas l'heure locale de la machine qui lance le test.
 types.setTypeParser(1114, (val) => new Date(`${val.replace(' ', 'T')}Z`))
 
-// Joue la VRAIE migration `taches_notifications` — le fichier sur disque — sur des bases Postgres
-// jetables, creees et detruites ici, jamais `medisync` ni `medisync_test`. Meme principe que
-// `soignants-salles-par-service.migration.test.ts` (voir son en-tete).
-//
-// Ce qu'on verifie : chaque Todo devient une Task du meme service (texte, date de creation, date
-// de completion), les tagues sont les membres hors LECTURE qui incarnent le soignant du Todo (et
-// l'auteur le premier d'entre eux par userId), un Todo sans soignant ou sans membre correspondant
-// devient une tache sans tague et sans auteur, et la table Todo disparait.
+// Joue la VRAIE migration `taches_notifications` sur des bases Postgres jetables (jamais medisync/medisync_test) ; verifie Todo -> Task, tagues/auteur, et la disparition de Todo.
 
 jest.setTimeout(180_000)
 

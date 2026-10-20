@@ -46,10 +46,10 @@ export function TasksPanel({
     }
     setServiceId(focus.serviceId)
     setScope('all')
-    setShowDone(true)
+    setShowDone(tasks.some((t) => t.id === focus.taskId && t.doneAt !== null))
     setHighlight(focus.taskId)
     onFocusDone()
-  }, [focus, onFocusDone])
+  }, [focus, onFocusDone, tasks])
 
   useEffect(() => {
     if (!highlight) {
