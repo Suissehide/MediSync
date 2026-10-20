@@ -2,7 +2,30 @@ import {
   allows,
   DEFAULT_PREFS,
   normalizePrefs,
+  withLiveServices,
 } from '../../../main/utils/notification-prefs'
+
+describe('withLiveServices', () => {
+  const avec = (services: string[] | null) => ({ ...DEFAULT_PREFS, services })
+
+  it('liste sans aucun service actuel : vaut tous, la notification part', () => {
+    const p = withLiveServices(avec(['parti']), ['s1'])
+    expect(p.services).toBeNull()
+    expect(allows(p, 'MENTION', 's1')).toBe(true)
+  })
+
+  it('liste qui recoupe un service actuel : inchangee, un service decoche reste muet', () => {
+    const p = withLiveServices(avec(['s2', 'parti']), ['s1', 's2'])
+    expect(p.services).toEqual(['s2', 'parti'])
+    expect(allows(p, 'MENTION', 's1')).toBe(false)
+    expect(allows(p, 'MENTION', 's2')).toBe(true)
+  })
+
+  it('null ou aucun service actuel connu : rien ne change pour null, une liste devient tous', () => {
+    expect(withLiveServices(avec(null), ['s1']).services).toBeNull()
+    expect(withLiveServices(avec(['s1']), []).services).toBeNull()
+  })
+})
 
 describe('notification-prefs', () => {
   it('complete des preferences absentes par le defaut', () => {

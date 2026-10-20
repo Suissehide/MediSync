@@ -144,6 +144,64 @@ describe('preferences de notification', () => {
     expect((await get()).json()).toEqual({ ...prefs, services: null })
   })
 
+  it('a l envoi aussi : une liste sans aucun service actuel vaut tous, une liste vivante filtre toujours', async () => {
+    const e = await createEstablishment('E-ENVOI')
+    const quitte = (await createService(e.id, 'Quitte')).id
+    const reste = (await createService(e.id, 'Reste')).id
+    const compte = (email: string) =>
+      createUser({
+        email,
+        memberships: [
+          {
+            establishmentId: e.id,
+            services: [
+              { serviceId: quitte, role: 'INTERVENANT' },
+              { serviceId: reste, role: 'INTERVENANT' },
+            ],
+          },
+        ],
+      })
+    const parti = await compte('parti@t.fr')
+    const temoin = await compte('temoin@t.fr')
+    await testDb.user.updateMany({
+      where: { id: { in: [parti.id, temoin.id] } },
+      data: { notificationPrefs: { services: [quitte] } },
+    })
+    await testDb.serviceMembership.deleteMany({
+      where: {
+        serviceId: quitte,
+        establishmentMembership: { userId: parti.id },
+      },
+    })
+    const task = await testDb.task.create({
+      data: {
+        text: 'Envoi',
+        establishmentId: e.id,
+        serviceId: reste,
+        dueDate: new Date('2026-10-21T00:00:00Z'),
+        assignees: {
+          create: [
+            { userId: parti.id, establishmentId: e.id },
+            { userId: temoin.id, establishmentId: e.id },
+          ],
+        },
+      },
+    })
+
+    await t.instances.tenantContext.runAsSystem(() =>
+      t.instances.notificationScheduler.runOnce(
+        new Date('2026-10-21T05:00:00.000Z'),
+      ),
+    )
+    const recus = await testDb.notification.findMany({
+      where: {
+        type: 'TASK_DUE',
+        payload: { path: ['taskId'], equals: task.id },
+      },
+    })
+    expect(recus.map((r) => r.userId)).toEqual([parti.id])
+  })
+
   it('exige une session', async () => {
     expect(
       (

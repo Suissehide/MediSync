@@ -24,13 +24,14 @@ import ts from 'typescript'
 // chacun soit DECLARE (enumere ci-dessous, avec sa raison, dans un fichier PRECIS).
 //
 // LE COMPTE, DIT UNE SEULE FOIS ET DANS UNE SEULE UNITE :
-//   - SIX emplois DECLARES, c'est-a-dire six entrees d'`AUTORISES` ci-dessous, une par FICHIER,
+//   - SEPT emplois DECLARES, c'est-a-dire sept entrees d'`AUTORISES` ci-dessous, une par FICHIER,
 //     chacune avec sa raison ;
-//   - DIX APPELS au total, `application/starter.ts` en portant trois, `patientServiceFile.repository.ts` et
+//   - ONZE APPELS au total, `application/starter.ts` en portant trois, `patientServiceFile.repository.ts` et
 //     `membership.repository.ts` en portant deux chacun.
 //
 // La liste ci-dessous enumere les SITES D'APPEL, groupes par question posee — c'est l'unite qui
-// se relit, pas celle qui se compte. Elle en porte SEPT, parce que les deux appels de
+// se relit, pas celle qui se compte. Elle en porte HUIT (le huitieme : les services actuels des
+// destinataires de notifications), parce que les deux appels de
 // `application/starter.ts` repondent a la meme question (purger un journal) alors que les deux
 // de `patientServiceFile.repository.ts` en posent deux distinctes, et que le site de la
 // reemission de lien par le super-admin (`services/activity-log.subscriber.ts`) en ajoute un
@@ -98,6 +99,7 @@ import ts from 'typescript'
 //      une VRAIE perte de contexte sur une route de tenant. Ce que ce fichier-ci garde est la
 //      DECLARATION du site ; que la ligne soit reellement ecrite est prouve par execution
 //      ailleurs (`src/test/e2e/activity-log-emissions-declarees.test.ts`).
+//   8. Les services actuels des destinataires (`infra/orm/repositories/user.repository.ts`, `#currentServices`) : bornee aux comptes lus, seule une liste perimee en sort, ramenee a « tous ».
 //
 // `runAsSuperAdmin` (meme fichier) y ajoute un troisieme mode, qui ne retire
 // rien mais substitue au filtre de tenant une liste declaree et exhaustive de couples (modele,
@@ -226,6 +228,15 @@ const AUTORISES = [
       'tenant, il n y a pas d etablissement a poser, seulement `establishmentId: null`. N encadre ' +
       'QUE cette souscription, pas les onze autres actions de ce fichier : les elargir toutes ' +
       'masquerait silencieusement une VRAIE perte de contexte sur une route de tenant.',
+    appels: 1,
+  },
+  {
+    fichier: 'infra/orm/repositories/user.repository.ts',
+    raison:
+      '#currentServices — les services actuels des destinataires d une notification, tous ' +
+      'etablissements confondus : une liste de services enregistree qui n en contient plus ' +
+      'aucun vaut « tous » a l envoi comme a l ecran. Aucune requete bornee au tenant courant ne ' +
+      'voit les autres etablissements ; bornee aux comptes lus, rien de la lecture ne sort du depot',
     appels: 1,
   },
 ]

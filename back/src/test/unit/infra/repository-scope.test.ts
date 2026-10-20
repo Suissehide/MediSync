@@ -2318,6 +2318,41 @@ describe('UserRepository.findNotificationPrefsMany, sous contexte de tenant (Tas
     expect(prefs.get('u2')?.level).toBe('essential')
   })
 
+  it('liste de services filtree : services actuels relus sous systeme, bornes aux seuls comptes filtres', async () => {
+    const { prisma, calls } = buildFakePrisma({
+      'user.findMany': [
+        { id: 'u1', notificationPrefs: { services: ['parti'] } },
+        { id: 'u2', notificationPrefs: { services: ['s1'] } },
+        { id: 'u3', notificationPrefs: {} },
+      ],
+      'serviceMembership.findMany': [
+        { serviceId: 's1', establishmentMembership: { userId: 'u1' } },
+        { serviceId: 's1', establishmentMembership: { userId: 'u2' } },
+      ],
+    })
+    const ctx = new TenantContext()
+    const repo = new UserRepository(buildContainer(prisma, ctx))
+
+    const prefs = await ctx.run(tenant, () =>
+      repo.findNotificationPrefsMany(['u1', 'u2', 'u3']),
+    )
+
+    expect(calls[1]).toEqual({
+      model: 'serviceMembership',
+      op: 'findMany',
+      args: {
+        where: { establishmentMembership: { userId: { in: ['u1', 'u2'] } } },
+        select: {
+          serviceId: true,
+          establishmentMembership: { select: { userId: true } },
+        },
+      },
+    })
+    expect(prefs.get('u1')?.services).toBeNull()
+    expect(prefs.get('u2')?.services).toEqual(['s1'])
+    expect(prefs.get('u3')?.services).toBeNull()
+  })
+
   // La forme exacte construite ci-dessus, jugee par le garde-fou : permise sous tenant, refusee sans contexte.
   it('la forme de requete qu elle construit est permise sous tenant, refusee sans contexte', () => {
     const args = {

@@ -75,6 +75,15 @@ export const PREF_KEY_OF_TYPE: Record<NotificationType, NotificationPrefKey> = {
   TASK_DUE: 'due',
 }
 
+// Liste sans aucun service actuel du compte : perimee, elle vaut « tous », comme a l'ecran.
+export const withLiveServices = (
+  prefs: NotificationPrefs,
+  current: readonly string[],
+): NotificationPrefs =>
+  prefs.services?.some((s) => current.includes(s)) === false
+    ? { ...prefs, services: null }
+    : prefs
+
 export const allows = (
   prefs: NotificationPrefs,
   type: NotificationType,

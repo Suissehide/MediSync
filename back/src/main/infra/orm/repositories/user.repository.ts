@@ -8,10 +8,12 @@ import type {
   UserWithMemberships,
 } from '../../../types/infra/orm/repositories/user.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
+import type { TenantContextInterface } from '../../../types/utils/tenant-context'
 import { hashPassword } from '../../../utils/hash'
 import {
   type NotificationPrefs,
   normalizePrefs,
+  withLiveServices,
 } from '../../../utils/notification-prefs'
 import type { PostgresPrismaClient } from '../postgres-client'
 
@@ -32,10 +34,12 @@ const membershipsInclude = {
 class UserRepository implements UserRepositoryInterface {
   private readonly prisma: PostgresPrismaClient
   private readonly errorHandler: ErrorHandlerInterface
+  private readonly tenantContext: TenantContextInterface
 
-  constructor({ postgresOrm, errorHandler }: IocContainer) {
+  constructor({ postgresOrm, errorHandler, tenantContext }: IocContainer) {
     this.prisma = postgresOrm.prisma
     this.errorHandler = errorHandler
+    this.tenantContext = tenantContext
   }
 
   async findByID(userID: string): Promise<UserWithMemberships> {
@@ -240,9 +244,41 @@ class UserRepository implements UserRepositoryInterface {
       where: { id: { in: userIds } },
       select: { id: true, notificationPrefs: true },
     })
-    return new Map(
+    const prefs = new Map(
       users.map((u) => [u.id, normalizePrefs(u.notificationPrefs)]),
     )
+    const filtres = [...prefs]
+      .filter(([, p]) => p.services !== null)
+      .map(([id]) => id)
+    if (filtres.length === 0) {
+      return prefs
+    }
+    const actuels = await this.#currentServices(filtres)
+    return new Map(
+      [...prefs].map(([id, p]) => [
+        id,
+        withLiveServices(p, actuels.get(id) ?? []),
+      ]),
+    )
+  }
+
+  // Services actuels de ces comptes, tous etablissements : lecture systeme bornee aux comptes, rien n'en sort.
+  #currentServices(userIds: string[]): Promise<Map<string, string[]>> {
+    return this.tenantContext.runAsSystem(async () => {
+      const rows = await this.prisma.serviceMembership.findMany({
+        where: { establishmentMembership: { userId: { in: userIds } } },
+        select: {
+          serviceId: true,
+          establishmentMembership: { select: { userId: true } },
+        },
+      })
+      const byUser = new Map<string, string[]>()
+      for (const r of rows) {
+        const userId = r.establishmentMembership.userId
+        byUser.set(userId, [...(byUser.get(userId) ?? []), r.serviceId])
+      }
+      return byUser
+    })
   }
 }
 

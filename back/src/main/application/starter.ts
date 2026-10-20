@@ -44,9 +44,9 @@ const scheduleActivityLogCleanup = (instances: IocContainer): void => {
 //
 // SECOND APPEL du PREMIER emploi déclaré de `runAsSystem` — l'entrée
 // `application/starter.ts` de `runAsSystem-unicite.test.ts` porte
-// `appels: 3` (le troisième : `scheduleNotifications`). La convention du fichier cité compte SIX emplois déclarés —
-// un par fichier, avec sa raison — pour DIX appels au total ; ce site-ci
-// n'en ouvre aucun septième, il s'ajoute au premier.
+// `appels: 3` (le troisième : `scheduleNotifications`). La convention du fichier cité compte SEPT emplois déclarés —
+// un par fichier, avec sa raison — pour ONZE appels au total ; ce site-ci
+// n'en ouvre aucun nouveau, il s'ajoute au premier.
 //
 // RAPPEL `async` AVEC UN `await` INTERNE, et non le rappel synchrone nu de la
 // purge ci-dessus. Ce n'est PAS parce que l'enrobage `async` tiendrait la
