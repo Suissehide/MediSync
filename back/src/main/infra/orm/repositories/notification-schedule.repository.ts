@@ -92,12 +92,7 @@ class NotificationScheduleRepository
       }))
   }
 
-  // Deux passes bornees plutot qu'une lecture de tous les rendez-vous de parcours du depot : la
-  // premiere ne cherche que les parcours ayant une seance (non annulee) finissant dans [from, to]
-  // (condition necessaire pour que leur derniere seance tombe dans cette fenetre) ; la seconde ne
-  // relit que CES parcours, en entier, pour calculer la vraie derniere date et detecter un Bilan
-  // de fin (prevu ou honore, sans filtre de date). Un creneau annule (archivedAt) est ignore dans
-  // les deux passes : il ne doit ni fixer la derniere date, ni comptabiliser comme un Bilan de fin.
+  // Deux passes bornees (candidats par date, puis relecture complete de leurs seuls parcours) ; creneau annule toujours ignore.
   async pathwaysEnded(from: Date, to: Date): Promise<PathwayEndedRow[]> {
     const candidats = await this.prisma.appointment.findMany({
       where: {

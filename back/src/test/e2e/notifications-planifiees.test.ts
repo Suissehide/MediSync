@@ -220,7 +220,7 @@ describe('NotificationScheduler', () => {
         '2026-11-05T09:00:00Z',
         '2026-11-05T09:30:00Z',
       )
-      // Deja commence au moment du premier runOnce ci-dessous : jamais dans la fenetre [now, now+30h].
+      // Deja commence au moment du premier runOnce ci-dessous : jamais dans la fenetre [now, now+31h].
       dejaCommenceId = await creerCreneau(
         '2026-11-04T08:00:00Z',
         '2026-11-04T08:30:00Z',
@@ -237,8 +237,7 @@ describe('NotificationScheduler', () => {
         '2026-11-07T09:30:00Z',
         { sansPatient: true },
       )
-      // A travers le changement d'heure d'octobre (nuit du 24 au 25) : la veille 18h doit rester
-      // 18h Paris (16h UTC), pas 19h Paris (17h UTC) en gardant le decalage de l'instant d'arrivee.
+      // A travers le changement d'heure d'octobre : la veille doit rester 18h Paris (16h UTC), pas 19h.
       dstId = await creerCreneau('2026-10-25T09:00:00Z', '2026-10-25T09:30:00Z')
     })
 
@@ -518,8 +517,7 @@ describe('NotificationScheduler', () => {
         },
       })
 
-      // Bilan AVANT la derniere seance : s'il etait apres, il deviendrait lui-meme la derniere
-      // seance et sortirait de la fenetre par la date seule, sans jamais exercer le filtre bilan.
+      // Bilan AVANT la derniere seance (apres, il deviendrait lui-meme la derniere et sortirait de la fenetre par la date seule).
       const thBilanSession = await testDb.thematic.create({
         data: {
           name: 'Bilan session',
@@ -788,9 +786,7 @@ describe('NotificationScheduler', () => {
 
   describe('preferences', () => {
     it('ide1 avec app.reminder = false : aucun rappel', async () => {
-      // Date relative a l'execution reelle (pas un 2026-xx-xx fige) : la purge de runOnce tourne
-      // sur `now - 30 j`, et un `now` fige a 30 j pile d'aujourd'hui l'approcherait trop pres de
-      // l'horloge reelle au moment ou ce test tourne.
+      // Date relative a l'execution reelle : un `now` fige approcherait trop pres du seuil de purge (now - 30 j).
       const startDate = new Date(Date.now() + 3 * 86_400_000)
       const endDate = new Date(startDate.getTime() + 30 * 60_000)
       const slotTemplate = await testDb.slotTemplate.create({
@@ -830,6 +826,26 @@ describe('NotificationScheduler', () => {
           slotID: slot.id,
         },
       })
+      const p = await patient('Controle', 'PATIENT')
+      await testDb.appointmentPatient.create({
+        data: {
+          establishmentId: E,
+          serviceId: A,
+          appointmentId: appointment.id,
+          patientId: p.id,
+        },
+      })
+
+      // Temoin positif, meme soignant, prefs par defaut : prouve que ide1 l'aurait recu aussi.
+      const temoin = await createUser({
+        email: 'controle@planif.fr',
+        memberships: [
+          {
+            establishmentId: E,
+            services: [{ serviceId: A, role: 'INTERVENANT', soignantId: S }],
+          },
+        ],
+      })
 
       await testDb.user.update({
         where: { id: ide1 },
@@ -837,6 +853,15 @@ describe('NotificationScheduler', () => {
       })
 
       await runOnceAt(reminderTime(startDate, 'eve').toISOString())
+      expect(
+        await testDb.notification.count({
+          where: {
+            userId: temoin.id,
+            type: 'REMINDER',
+            payload: { path: ['appointmentId'], equals: appointment.id },
+          },
+        }),
+      ).toBe(1)
       expect(
         await testDb.notification.count({
           where: {

@@ -37,10 +37,7 @@ type Candidate = {
 }
 type ReminderTarget = { a: UpcomingAppointmentRow; userId: string }
 
-// 'eve' : la veille a 18h heure de Paris. Reconstruit depuis une chaine de date plutot que
-// d'enchainer .subtract(1,'day').hour(18) sur l'instant d'origine : ce dernier garde le DECALAGE
-// de l'instant de depart (ete ou hiver), pas celui du jour cible — autour du changement d'heure
-// (ex. 2026-10-25), le rappel partait a 19h/17h Paris au lieu de 18h.
+// 'eve' : 18h Paris la veille, reconstruite depuis une chaine de date (pas chainee sur l'instant d'origine, dont le decalage ete/hiver survivrait au changement de jour).
 export const reminderTime = (startDate: Date, delay: ReminderDelay): Date => {
   if (delay === '2h') {
     return dayjs(startDate).subtract(2, 'hour').toDate()
@@ -204,7 +201,7 @@ class NotificationScheduler implements NotificationSchedulerInterface {
 
     const appointments = await repo.upcomingAppointments(
       now,
-      dayjs(now).add(30, 'hour').toDate(),
+      dayjs(now).add(31, 'hour').toDate(),
     )
     const diagnostics = await repo.entryDatesWithoutDiagnostic(
       dayjs(now).subtract(37, 'day').toDate(),

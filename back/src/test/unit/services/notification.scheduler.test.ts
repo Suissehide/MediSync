@@ -9,9 +9,7 @@ dayjs.extend(timezone)
 
 const paris = (s: string) => dayjs.tz(s, 'Europe/Paris').toDate()
 
-// reminderTime('eve') : la veille a 18h Paris, reconstruite depuis une chaine de date plutot que
-// chainee sur l'instant de depart — sinon le decalage (ete/hiver) de `startDate` survit au
-// changement de jour et fausse l'heure autour d'un changement d'heure (preuve ici).
+// Preuve que reminderTime('eve') tient 18h Paris autour d'un changement d'heure.
 describe('NotificationScheduler.reminderTime', () => {
   it('veille du changement d heure d octobre (2026-10-25, 10h Paris) : 18h Paris la veille, pas 19h', () => {
     expect(reminderTime(paris('2026-10-25 10:00'), 'eve')).toEqual(
