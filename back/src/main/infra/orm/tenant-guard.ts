@@ -22,6 +22,7 @@ export const SERVICE_MODELS: readonly string[] = [
   'PlanningCycle',
   'Task',
   'TaskAssignee',
+  'TaskSoignant',
   'Notification',
   'SlotTemplateSoignant',
   'SoignantThematic',
@@ -127,7 +128,7 @@ export const SUPERADMIN_OPERATIONS: Readonly<
 // tenant-guard-schema.test.ts. Ce test y vérifie seulement l'autre sens : aucune entrée ne doit
 // désigner une relation qui n'existe plus (ou plus sous ce nom) dans le schéma.
 export const NESTED_RELATIONS: Record<string, Record<string, string>> = {
-  Task: { assignees: 'TaskAssignee' },
+  Task: { assignees: 'TaskAssignee', soignants: 'TaskSoignant' },
   Appointment: { appointmentPatients: 'AppointmentPatient' },
   Slot: { appointments: 'Appointment' },
   Pathway: { slots: 'Slot' },
@@ -388,14 +389,19 @@ export const MODEL_RELATIONS: Record<string, Record<string, ModelRelation>> = {
   // `ForbiddenWeek` et `PlanningCycle` ne déclarent aucune relation dans le schéma.
   ForbiddenWeek: {},
   PlanningCycle: {},
-  Task: { assignees: many('TaskAssignee') },
+  Task: {
+    assignees: many('TaskAssignee'),
+    soignants: many('TaskSoignant'),
+  },
   TaskAssignee: { task: one('Task') },
+  TaskSoignant: { task: one('Task'), soignant: one('Soignant') },
   // `Notification` ne déclare aucune relation dans le schéma.
   Notification: {},
   Soignant: {
     slotTemplateLinks: many('SlotTemplateSoignant'),
     thematicLinks: many('SoignantThematic'),
     serviceMemberships: many('ServiceMembership'),
+    taskTags: many('TaskSoignant'),
   },
   PdfDesign: {
     service: one('Service'),

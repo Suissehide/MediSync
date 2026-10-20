@@ -1,6 +1,10 @@
+import { LocalizationProvider } from '@mui/x-date-pickers'
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -10,11 +14,15 @@ import type { User } from '@/types/auth.ts'
 import type { Notification, Task } from '@/types/task.ts'
 import { Inbox } from './inbox.tsx'
 
+// `main.tsx` enregistre ce greffon au demarrage ; le DatePicker d'echeance en depend (dayjs.utc).
+dayjs.extend(utc)
+
 vi.mock('@/api/inbox.api.ts', () => ({
   InboxApi: {
     tasks: vi.fn(),
     notifications: vi.fn(),
     members: vi.fn(),
+    soignants: vi.fn(),
     patients: vi.fn(),
     markRead: vi.fn(),
     markAllRead: vi.fn(),
@@ -42,6 +50,7 @@ const task = (id: string, assigneeIds: string[]): Task => ({
   text: `Tache ${id}`,
   authorId: 'u2',
   assigneeIds,
+  soignantIds: [],
   patient: null,
   dueDate: null,
   doneAt: null,
@@ -82,6 +91,7 @@ describe('Inbox', () => {
     vi.mocked(InboxApi.notifications).mockReset().mockResolvedValue([])
     vi.mocked(InboxApi.markRead).mockReset().mockResolvedValue(undefined)
     vi.mocked(InboxApi.markAllRead).mockReset().mockResolvedValue(undefined)
+    vi.mocked(InboxApi.soignants).mockReset().mockResolvedValue([])
     vi.mocked(InboxApi.members)
       .mockReset()
       .mockResolvedValue([
@@ -234,6 +244,52 @@ describe('Inbox', () => {
     await screen.findByRole('option', { name: /Léo/ })
     await u.keyboard('{Escape}')
     expect(screen.queryByRole('listbox')).toBeNull()
+    expect(screen.getByRole('heading', { name: /Tâches/ })).toBeInTheDocument()
+  })
+
+  it('la pastille bleue compte une tache taguee sur mon metier', async () => {
+    useAuthStore.setState({
+      user: {
+        ...user,
+        establishments: [
+          {
+            ...user.establishments[0],
+            services: [
+              {
+                id: 's1',
+                name: 'Cardio',
+                role: 'INTERVENANT',
+                affecte: true,
+                soignantId: 'so1',
+              },
+              { id: 's2', name: 'Diabeto', role: 'LECTURE', affecte: true },
+            ],
+          },
+        ],
+      },
+    })
+    vi.mocked(InboxApi.tasks).mockImplementation(async (s) =>
+      s.serviceId === 's1'
+        ? [{ ...task('t1', []), authorId: 'u2', soignantIds: ['so1'] }]
+        : [],
+    )
+    render(<Inbox />, { wrapper })
+    expect(await screen.findByTestId('badge-tasks')).toHaveTextContent('1')
+  })
+
+  it('Echap ferme la ligne Échéance sans fermer le panneau Taches', async () => {
+    const u = userEvent.setup()
+    render(
+      <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="fr">
+        <Inbox />
+      </LocalizationProvider>,
+      { wrapper },
+    )
+    await u.click(await screen.findByRole('button', { name: 'Tâches' }))
+    await u.click(await screen.findByRole('button', { name: 'Échéance' }))
+    expect(await screen.findByRole('grid')).toBeInTheDocument()
+    await u.keyboard('{Escape}')
+    expect(screen.queryByRole('grid')).toBeNull()
     expect(screen.getByRole('heading', { name: /Tâches/ })).toBeInTheDocument()
   })
 })

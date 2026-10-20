@@ -3,8 +3,9 @@ import type { ReactNode } from 'react'
 
 import type { InboxService } from '@/queries/useInbox.ts'
 
+// `overflow-visible` sinon le `overflow-hidden` de base de PopoverContent rognerait le calendrier du DatePicker d'echeance.
 export const PANEL_CLASS =
-  'w-[490px] max-w-[calc(100vw-16px)] max-h-[min(740px,calc(100vh-80px))] p-0 flex flex-col rounded-xl border border-border bg-white shadow-[0_16px_40px_rgba(4,24,43,.22)]'
+  'w-[490px] max-w-[calc(100vw-16px)] max-h-[min(740px,calc(100vh-80px))] p-0 flex flex-col rounded-xl border border-border bg-white shadow-[0_16px_40px_rgba(4,24,43,.22)] overflow-visible'
 
 export function PanelHeader({
   icon: Icon,

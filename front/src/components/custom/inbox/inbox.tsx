@@ -63,7 +63,7 @@ export function Inbox() {
   const { notifications } = useNotifications(services)
   const [open, setOpen] = useState<InboxPanel>(null)
   const [focus, setFocus] = useState<Focus>(null)
-  const [mentionOpen, setMentionOpen] = useState(false)
+  const [subPopupOpen, setSubPopupOpen] = useState(false)
   const toggle = (panel: Exclude<InboxPanel, null>) => (next: boolean) =>
     setOpen(next ? panel : null)
   const openTasksFor = (n: InboxNotification) => {
@@ -75,7 +75,12 @@ export function Inbox() {
   }
   const onFocusDone = useCallback(() => setFocus(null), [])
   const myOpenTasks = tasks.filter(
-    (t) => !t.doneAt && me && t.assigneeIds.includes(me),
+    (t) =>
+      !t.doneAt &&
+      me &&
+      (t.assigneeIds.includes(me) ||
+        (t.service.soignantId !== null &&
+          t.soignantIds.includes(t.service.soignantId))),
   ).length
   const unread = notifications.filter((n) => n.readAt === null).length
 
@@ -95,8 +100,9 @@ export function Inbox() {
             sideOffset={9}
             className={PANEL_CLASS}
             onEscapeKeyDown={(e) => {
-              // Sans ce garde, Echap fermerait tout le panneau (brouillon perdu) au lieu de la liste.
-              if (mentionOpen) {
+              // Sans ce garde, Echap fermerait tout le panneau (brouillon perdu) au lieu de la
+              // liste de mention ou de la ligne Échéance.
+              if (subPopupOpen) {
                 e.preventDefault()
               }
             }}
@@ -106,7 +112,7 @@ export function Inbox() {
               tasks={tasks}
               focus={focus}
               onFocusDone={onFocusDone}
-              onMentionOpenChange={setMentionOpen}
+              onSubPopupOpenChange={setSubPopupOpen}
             />
           </PopoverContent>
         </PopoverRoot>

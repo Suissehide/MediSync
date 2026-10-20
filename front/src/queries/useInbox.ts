@@ -11,7 +11,12 @@ import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { CreateTaskInput, Notification, Task } from '@/types/task.ts'
 import { SERVICE_PERMISSIONS } from '@/utils/permissions.ts'
 
-export type InboxService = ServiceRef & { name: string; canTasks: boolean }
+export type InboxService = ServiceRef & {
+  name: string
+  canTasks: boolean
+  // Le metier (Soignant) que je incarne dans ce service, pour « pour moi » et la pastille.
+  soignantId: string | null
+}
 export type InboxTask = Task & { service: InboxService }
 export type InboxNotification = Notification & { service: InboxService }
 
@@ -35,6 +40,7 @@ export const useInboxServices = (): InboxService[] => {
             serviceId: s.id,
             name: s.name,
             canTasks: SERVICE_PERMISSIONS[s.role].includes('tasks:read'),
+            soignantId: s.soignantId ?? null,
           })),
       ),
     [user],
@@ -82,6 +88,14 @@ export const useServiceMembers = (service: InboxService | undefined) =>
   useQuery({
     queryKey: ['inbox', 'membres', service?.serviceId],
     queryFn: () => InboxApi.members(service as InboxService),
+    enabled: service !== undefined,
+    staleTime: 5 * 60_000,
+  }).data ?? []
+
+export const useServiceSoignants = (service: InboxService | undefined) =>
+  useQuery({
+    queryKey: ['inbox', 'soignants', service?.serviceId],
+    queryFn: () => InboxApi.soignants(service as InboxService),
     enabled: service !== undefined,
     staleTime: 5 * 60_000,
   }).data ?? []

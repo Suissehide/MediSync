@@ -7,6 +7,7 @@ import type {
   TaskDTO,
 } from '../types/domain/task.domain.interface'
 import type { MembershipRepositoryInterface } from '../types/infra/orm/repositories/membership.repository.interface'
+import type { SoignantRepositoryInterface } from '../types/infra/orm/repositories/soignant.repository.interface'
 import type {
   TaskEntityRepo,
   TaskRepositoryInterface,
@@ -18,15 +19,18 @@ const DONE_WINDOW_MS = 30 * 86_400_000
 class TaskDomain implements TaskDomainInterface {
   private readonly taskRepository: TaskRepositoryInterface
   private readonly membershipRepository: MembershipRepositoryInterface
+  private readonly soignantRepository: SoignantRepositoryInterface
   private readonly tenantContext: TenantContextInterface
 
   constructor({
     taskRepository,
     membershipRepository,
+    soignantRepository,
     tenantContext,
   }: IocContainer) {
     this.taskRepository = taskRepository
     this.membershipRepository = membershipRepository
+    this.soignantRepository = soignantRepository
     this.tenantContext = tenantContext
   }
 
@@ -38,9 +42,13 @@ class TaskDomain implements TaskDomainInterface {
 
   async create(input: TaskCreateDomain): Promise<TaskDTO> {
     const { userId } = this.tenantContext.current()
-    const requested = [...new Set(input.assigneeIds)]
-    if (requested.length > 0) {
-      const members = await this.membershipRepository.findServiceMembers()
+    const requestedAssignees = [...new Set(input.assigneeIds)]
+    const requestedSoignants = [...new Set(input.soignantIds)]
+    const members =
+      requestedAssignees.length > 0 || requestedSoignants.length > 0
+        ? await this.membershipRepository.findServiceMembers()
+        : []
+    if (requestedAssignees.length > 0) {
       const eligible = new Set(
         members
           .filter(
@@ -50,9 +58,19 @@ class TaskDomain implements TaskDomainInterface {
           )
           .map((m) => m.establishmentMembership.user.id),
       )
-      if (requested.some((id) => !eligible.has(id))) {
+      if (requestedAssignees.some((id) => !eligible.has(id))) {
         throw Boom.badRequest(
           'Assignee is not an active member of this service',
+        )
+      }
+    }
+    if (requestedSoignants.length > 0) {
+      const actifs = new Set(
+        (await this.soignantRepository.findAll(false)).map((s) => s.id),
+      )
+      if (requestedSoignants.some((id) => !actifs.has(id))) {
+        throw Boom.badRequest(
+          'Soignant is not an active soignant of this service',
         )
       }
     }
@@ -62,10 +80,29 @@ class TaskDomain implements TaskDomainInterface {
     ) {
       throw Boom.badRequest('Patient is not followed in this service')
     }
+    // Destinataires MENTION : les personnes taguees, plus les membres actifs hors LECTURE qui
+    // incarnent un des metiers tagues — deduplique, l'auteur jamais notifie de sa propre tache.
+    const soignantRecipientIds = members
+      .filter(
+        (m) =>
+          m.role !== 'LECTURE' &&
+          m.establishmentMembership.user.deactivatedAt === null &&
+          m.soignantId !== null &&
+          requestedSoignants.includes(m.soignantId),
+      )
+      .map((m) => m.establishmentMembership.user.id)
+    const notifyUserIds = [
+      ...new Set([...requestedAssignees, ...soignantRecipientIds]),
+    ].filter((id) => id !== userId)
     const task = await this.taskRepository.createWithMentions({
       text: input.text,
       authorId: userId,
-      assigneeIds: requested.length > 0 ? requested : [userId],
+      assigneeIds:
+        requestedAssignees.length > 0 || requestedSoignants.length > 0
+          ? requestedAssignees
+          : [userId],
+      soignantIds: requestedSoignants,
+      notifyUserIds,
       patientId: input.patientId ?? null,
       dueDate: input.dueDate ? new Date(`${input.dueDate}T00:00:00Z`) : null,
     })
@@ -95,6 +132,7 @@ class TaskDomain implements TaskDomainInterface {
       text: t.text,
       authorId: t.authorId,
       assigneeIds: t.assignees.map((a) => a.userId),
+      soignantIds: t.soignants.map((s) => s.soignantId),
       patient: (t.patientId && patients.get(t.patientId)) || null,
       dueDate: t.dueDate ? t.dueDate.toISOString().slice(0, 10) : null,
       doneAt: t.doneAt,

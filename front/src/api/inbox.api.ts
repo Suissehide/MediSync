@@ -2,6 +2,7 @@ import { apiUrl } from '@/constants/config.constant.ts'
 import { handleHttpError } from '@/libs/httpErrorHandler.ts'
 import type { Patient } from '@/types/patient.ts'
 import type { ServiceMember } from '@/types/serviceMember.ts'
+import type { Soignant } from '@/types/soignant.ts'
 import type { CreateTaskInput, Notification, Task } from '@/types/task.ts'
 import { fetchWithAuth } from './fetchWithAuth.ts'
 
@@ -99,6 +100,15 @@ export const InboxApi = {
         '/patient',
         { method: 'GET' },
         'Impossible de charger les patients',
+      )
+    ).json(),
+  soignants: async (s: ServiceRef): Promise<Soignant[]> =>
+    (
+      await send(
+        s,
+        '/soignant',
+        { method: 'GET' },
+        'Impossible de charger les soignants du service',
       )
     ).json(),
 }

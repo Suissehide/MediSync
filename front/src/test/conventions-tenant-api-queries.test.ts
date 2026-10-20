@@ -108,8 +108,9 @@ const EXCEPTIONS: { fichier: string; raison: string; occurrences: number }[] = [
   {
     fichier: 'queries/useInbox.ts',
     raison:
-      'meme raison que api/inbox.api.ts : une requete par service du compte, cle portant le service',
-    occurrences: 6,
+      'meme raison que api/inbox.api.ts : une requete par service du compte, cle portant le service ' +
+      '-- 7 depuis la mention par metier (2026-10-20), qui ajoute useServiceSoignants',
+    occurrences: 7,
   },
 ]
 
