@@ -5,6 +5,7 @@ import type {
   ServiceMembership,
   User,
 } from '../../../../../generated/client'
+import type { NotificationPrefs } from '../../../../utils/notification-prefs'
 import type { PrimaTransactionClient } from '../client'
 
 export type UserEntityRepo = User
@@ -64,4 +65,19 @@ export interface UserRepositoryInterface {
     userID: string,
     client?: PrimaTransactionClient,
   ) => Promise<UserEntityRepo>
+  // `GET /me/notification-preferences` — aucun contexte (voir NO_CONTEXT_GLOBAL_OPERATIONS,
+  // `User.findUnique`), complétées des défauts via `normalizePrefs`.
+  findNotificationPrefs: (userId: string) => Promise<NotificationPrefs>
+  // `PUT /me/notification-preferences` — même absence de contexte, `User.update`.
+  setNotificationPrefs: (
+    userId: string,
+    prefs: NotificationPrefs,
+  ) => Promise<void>
+  // Appelée par le dispatcher de notifications (Task 3) SOUS CONTEXTE DE TENANT : une lecture
+  // plate sur `User` (modèle global), `where: { id: { in } }` et `select` de colonnes scalaires
+  // seulement — jamais d'`include` d'appartenances, qui franchirait le pont que le garde-fou
+  // ferme (voir tenant-guard.ts, GLOBAL_TENANT_RELATIONS).
+  findNotificationPrefsMany: (
+    userIds: string[],
+  ) => Promise<Map<string, NotificationPrefs>>
 }

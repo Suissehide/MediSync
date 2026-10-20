@@ -1,3 +1,4 @@
+import Boom from '@hapi/boom'
 import type { FastifyPluginAsync } from 'fastify'
 
 import { liveGrantsForUser } from '../../../../domain/accessGrant.domain'
@@ -7,9 +8,14 @@ import {
   type UpdateMeBody,
   updateMeSchema,
 } from '../schemas/me.schema'
+import {
+  type NotificationPrefsBody,
+  notificationPrefsSchema,
+} from '../schemas/notification-prefs.schema'
 
 const meRouter: FastifyPluginAsync = (fastify) => {
-  const { userDomain, accessGrantRepository } = fastify.iocContainer
+  const { userDomain, accessGrantRepository, userRepository } =
+    fastify.iocContainer
 
   fastify.get(
     '/',
@@ -45,6 +51,37 @@ const meRouter: FastifyPluginAsync = (fastify) => {
       const updated = await userDomain.findByID(userID)
       const grants = await liveGrantsForUser(updated.id, accessGrantRepository)
       return toMeResponse(updated, grants, new Date())
+    },
+  )
+
+  fastify.get(
+    '/notification-preferences',
+    { schema: { response: { 200: notificationPrefsSchema } } },
+    (request) => userRepository.findNotificationPrefs(request.currentUser.id),
+  )
+
+  fastify.put<{ Body: NotificationPrefsBody }>(
+    '/notification-preferences',
+    {
+      schema: {
+        body: notificationPrefsSchema,
+        response: { 200: notificationPrefsSchema },
+      },
+    },
+    async (request) => {
+      const mine = new Set(
+        request.currentUser.establishmentMemberships.flatMap((e) =>
+          e.serviceMemberships.map((s) => s.serviceId),
+        ),
+      )
+      if (request.body.services?.some((s) => !mine.has(s))) {
+        throw Boom.badRequest('Service is not one of the account services')
+      }
+      await userRepository.setNotificationPrefs(
+        request.currentUser.id,
+        request.body,
+      )
+      return request.body
     },
   )
   return Promise.resolve()

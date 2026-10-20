@@ -17,6 +17,7 @@ import { SlotRepository } from '../../../main/infra/orm/repositories/slot.reposi
 import { SlotTemplateRepository } from '../../../main/infra/orm/repositories/slotTemplate.repository'
 import { SoignantRepository } from '../../../main/infra/orm/repositories/soignant.repository'
 import { ThematicRepository } from '../../../main/infra/orm/repositories/thematic.repository'
+import { UserRepository } from '../../../main/infra/orm/repositories/user.repository'
 import { assertTenantScope } from '../../../main/infra/orm/tenant-guard'
 import type { IocContainer } from '../../../main/types/application/ioc'
 import type { Tenant } from '../../../main/types/utils/tenant-context'
@@ -2285,5 +2286,60 @@ describe('PdfAssetRepository, ce qui part vers Postgres', () => {
       op: 'count',
       args: { where: { id: 'a1', serviceId: 's1', establishmentId: 'e1' } },
     })
+  })
+})
+
+describe('UserRepository.findNotificationPrefsMany, sous contexte de tenant (Task 3)', () => {
+  it('lit User.findMany a plat, colonnes scalaires seulement, sous le tenant courant', async () => {
+    const { prisma, calls } = buildFakePrisma({
+      'user.findMany': [
+        { id: 'u1', notificationPrefs: { level: 'all' } },
+        { id: 'u2', notificationPrefs: {} },
+      ],
+    })
+    const ctx = new TenantContext()
+    const repo = new UserRepository(buildContainer(prisma, ctx))
+
+    const prefs = await ctx.run(tenant, () =>
+      repo.findNotificationPrefsMany(['u1', 'u2']),
+    )
+
+    expect(calls).toEqual([
+      {
+        model: 'user',
+        op: 'findMany',
+        args: {
+          where: { id: { in: ['u1', 'u2'] } },
+          select: { id: true, notificationPrefs: true },
+        },
+      },
+    ])
+    expect(prefs.get('u1')?.level).toBe('all')
+    expect(prefs.get('u2')?.level).toBe('essential')
+  })
+
+  // Le mecanisme, isole : la forme exacte que le repository construit ci-dessus est bien ce que
+  // le garde-fou juge, et sous CONTEXTE DE TENANT precisement (celui que Task 3 emploiera depuis
+  // les routes de service) — jamais sans contexte, ou `User.findMany` n'est pas declare dans
+  // NO_CONTEXT_GLOBAL_OPERATIONS et resterait refuse.
+  it('la forme de requete qu elle construit est permise sous tenant, refusee sans contexte', () => {
+    const args = {
+      where: { id: { in: ['u1', 'u2'] } },
+      select: { id: true, notificationPrefs: true },
+    }
+
+    expect(() =>
+      assertTenantScope(
+        { model: 'User', operation: 'findMany', args },
+        { kind: 'tenant', tenant },
+      ),
+    ).not.toThrow()
+
+    expect(() =>
+      assertTenantScope(
+        { model: 'User', operation: 'findMany', args },
+        undefined,
+      ),
+    ).toThrow(TenantScopeMissingError)
   })
 })

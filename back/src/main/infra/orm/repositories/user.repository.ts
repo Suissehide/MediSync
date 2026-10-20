@@ -9,6 +9,10 @@ import type {
 } from '../../../types/infra/orm/repositories/user.repository.interface'
 import type { ErrorHandlerInterface } from '../../../types/utils/error-handler'
 import { hashPassword } from '../../../utils/hash'
+import {
+  type NotificationPrefs,
+  normalizePrefs,
+} from '../../../utils/notification-prefs'
 import type { PostgresPrismaClient } from '../postgres-client'
 
 // Inclusion de l'arbre des appartenances (établissements puis services).
@@ -206,6 +210,41 @@ class UserRepository implements UserRepositoryInterface {
         error: err,
       })
     }
+  }
+
+  // Sans contexte (`GET /me/notification-preferences`) : `User.findUnique`, déjà déclaré dans
+  // NO_CONTEXT_GLOBAL_OPERATIONS.
+  async findNotificationPrefs(userId: string): Promise<NotificationPrefs> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { notificationPrefs: true },
+    })
+    return normalizePrefs(user?.notificationPrefs)
+  }
+
+  // Sans contexte (`PUT /me/notification-preferences`) : `User.update`, déjà déclaré.
+  async setNotificationPrefs(
+    userId: string,
+    prefs: NotificationPrefs,
+  ): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { notificationPrefs: prefs },
+    })
+  }
+
+  // Sous contexte de tenant (dispatcher de notifications, Task 3) : lecture plate de `User`
+  // (modèle global), colonnes scalaires seulement — voir le commentaire sur l'interface.
+  async findNotificationPrefsMany(
+    userIds: string[],
+  ): Promise<Map<string, NotificationPrefs>> {
+    const users = await this.prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, notificationPrefs: true },
+    })
+    return new Map(
+      users.map((u) => [u.id, normalizePrefs(u.notificationPrefs)]),
+    )
   }
 }
 
