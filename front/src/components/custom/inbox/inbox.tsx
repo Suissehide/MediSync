@@ -154,6 +154,7 @@ export function Inbox() {
             services={services}
             notifications={notifications}
             onOpenNotification={openNotification}
+            onClose={() => setOpen(null)}
           />
         </PopoverContent>
       </PopoverRoot>

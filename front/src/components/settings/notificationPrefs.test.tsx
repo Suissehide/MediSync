@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -103,13 +103,61 @@ describe('NotificationPrefs', () => {
     expect(diabeto).toBeDisabled()
   })
 
-  it('delai du rappel', async () => {
+  it('delai du rappel, sans toucher au niveau (pas une ligne de la grille)', async () => {
     const u = userEvent.setup()
     render(<NotificationPrefs />, { wrapper })
     await u.click(await screen.findByRole('button', { name: '1 h avant' }))
     expect(put).toHaveBeenLastCalledWith(
-      expect.objectContaining({ reminderDelay: '1h' }),
+      expect.objectContaining({ reminderDelay: '1h', level: 'essential' }),
     )
+  })
+
+  it('deux bascules rapprochees : un premier PUT qui echoue apres le succes du second ne doit pas effacer ce dernier', async () => {
+    const u = userEvent.setup()
+    let resolveSecond!: () => void
+    let rejectFirst!: (error: unknown) => void
+    const firstPut = new Promise<void>((_resolve, reject) => {
+      rejectFirst = reject
+    })
+    const secondPut = new Promise<void>((resolve) => {
+      resolveSecond = resolve
+    })
+    const tick = () => new Promise<void>((r) => setTimeout(r, 0))
+    put
+      .mockReset()
+      .mockImplementationOnce((body: Prefs) => firstPut.then(() => body))
+      .mockImplementationOnce((body: Prefs) => secondPut.then(() => body))
+
+    render(<NotificationPrefs />, { wrapper })
+    await u.click(
+      await screen.findByRole('switch', {
+        name: /Diagnostic éducatif à réaliser/,
+      }),
+    )
+    await u.click(
+      screen.getByRole('switch', { name: /Fin de parcours : bilan à faire/ }),
+    )
+
+    // Le second PUT (la bascule la plus recente) reussit en premier.
+    await act(async () => {
+      resolveSecond()
+      await tick()
+    })
+    // Le premier PUT, en retard, echoue ensuite : son retour arriere ne doit pas effacer le
+    // changement du second, deja confirme par le serveur.
+    await act(async () => {
+      rejectFirst(new Error('reseau'))
+      await tick()
+    })
+
+    expect(
+      screen.getByRole('switch', { name: /Fin de parcours : bilan à faire/ }),
+    ).toHaveAttribute('aria-checked', 'false')
+    expect(
+      screen.getByRole('switch', {
+        name: /Diagnostic éducatif à réaliser/,
+      }),
+    ).toHaveAttribute('aria-checked', 'false')
   })
 
   it('services null = tous coches', async () => {

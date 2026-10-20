@@ -1,6 +1,11 @@
-import { createFileRoute, useNavigate, useRouter } from '@tanstack/react-router'
+import {
+  createFileRoute,
+  useLocation,
+  useNavigate,
+  useRouter,
+} from '@tanstack/react-router'
 import { ArrowLeft, Bell, Hospital, Shield, UserRoundPen } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { AuthApi } from '../../../api/auth.api.ts'
 import { ServiceMembersApi } from '../../../api/serviceMembers.api.ts'
@@ -31,6 +36,15 @@ function UserSettings() {
   const updateUser = useAuthStore((state) => state.update)
   const { toast } = useToast()
   const affectations = affectationsDe(user)
+  // Aucune `<ScrollRestoration />` n'est montee dans l'app (voir main.tsx) : le defilement
+  // jusqu'a l'ancre n'est pas automatique, cet effet le fait a l'arrivee depuis le lien
+  // « Préférences » du panneau de notifications (`/user/settings#notifications`).
+  const hash = useLocation({ select: (location) => location.hash })
+  useEffect(() => {
+    if (hash === 'notifications') {
+      document.getElementById('notifications')?.scrollIntoView()
+    }
+  }, [hash])
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false)
   const [isUpdatingServices, setIsUpdatingServices] = useState(false)
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false)

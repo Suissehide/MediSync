@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router'
 import { Bell, CheckCheck } from 'lucide-react'
 import { useState } from 'react'
 
@@ -76,10 +77,12 @@ export function NotificationsPanel({
   services,
   notifications,
   onOpenNotification,
+  onClose,
 }: {
   services: InboxService[]
   notifications: InboxNotification[]
   onOpenNotification: (n: InboxNotification) => void
+  onClose: () => void
 }) {
   const [serviceId, setServiceId] = useState('all')
   const [scope, setScope] = useState<'unread' | 'all'>('unread')
@@ -184,12 +187,14 @@ export function NotificationsPanel({
       </div>
       <div className="px-[18px] py-2.5 border-t border-border text-xs text-text-light flex items-center justify-between">
         <span>Conservées 30 jours</span>
-        <a
-          href="/user/settings#notifications"
+        <Link
+          to="/user/settings"
+          hash="notifications"
+          onClick={onClose}
           className="text-primary font-medium"
         >
           Préférences
-        </a>
+        </Link>
       </div>
     </>
   )

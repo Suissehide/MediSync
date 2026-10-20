@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { Bell, BellRing, SlidersHorizontal } from 'lucide-react'
 import { Checkbox, RadioGroup } from 'radix-ui'
+import { useRef } from 'react'
 
 import { Switch } from '@/components/ui/switch.tsx'
 import {
@@ -123,18 +124,27 @@ export function NotificationPrefs() {
   const services = useAccountServices()
   const update = useUpdateNotificationPrefs()
   const queryClient = useQueryClient()
+  // Dernière valeur confirmée par le serveur, pas la valeur au clic : deux changements
+  // rapprochés envoient deux PUT, et s'ils résolvent dans le désordre, un retour arrière sur
+  // l'ancienne valeur écraserait un changement suivant déjà réussi. Mise à jour à chaque succès.
+  const lastConfirmed = useRef<Prefs | null>(null)
+  if (data && lastConfirmed.current === null) {
+    lastConfirmed.current = data
+  }
 
   if (!data) {
     return <p className="text-sm text-text-light">Chargement…</p>
   }
 
-  // Mise à jour optimiste : la valeur d'avant reste dans cette fermeture (pas de relecture du
-  // cache) pour le retour arrière si le PUT échoue.
+  // Mise à jour optimiste ; `getQueryData` est interdit, le retour arrière relit `lastConfirmed`.
   const save = (next: Prefs) => {
-    const before = data
     queryClient.setQueryData(NOTIFICATION_PREFS_KEY, next)
     update.mutate(next, {
-      onError: () => queryClient.setQueryData(NOTIFICATION_PREFS_KEY, before),
+      onSuccess: (confirmed) => {
+        lastConfirmed.current = confirmed
+      },
+      onError: () =>
+        queryClient.setQueryData(NOTIFICATION_PREFS_KEY, lastConfirmed.current),
     })
   }
 
