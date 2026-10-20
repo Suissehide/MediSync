@@ -1,0 +1,18 @@
+meta {
+  name: Add Tache
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{BASE_URL}}/e/{{establishmentId}}/s/{{serviceId}}/taches
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "text": "Rappeler le labo",
+    "assigneeIds": []
+  }
+}
