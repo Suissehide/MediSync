@@ -2,7 +2,9 @@ import { tenantApiUrl } from '../constants/config.constant.ts'
 import { handleHttpError } from '../libs/httpErrorHandler.ts'
 import type {
   CreateSlotParams,
+  PlanningConflict,
   Slot,
+  SlotDateRange,
   SlotQuery,
   UpdateSlotParams,
 } from '../types/slot.ts'
@@ -31,6 +33,30 @@ export const SlotApi = {
       )
     }
     return response.json()
+  },
+
+  getConflicts: async ({
+    from,
+    to,
+  }: SlotDateRange): Promise<PlanningConflict[]> => {
+    const params = new URLSearchParams({
+      action: 'getSlotConflicts',
+      from,
+      to,
+    })
+    const response = await fetchWithAuth(
+      `${tenantApiUrl()}/slot/conflicts?${params}`,
+      { method: 'GET' },
+    )
+    if (!response.ok) {
+      handleHttpError(
+        response,
+        {},
+        'Impossible de vérifier les conflits du planning',
+      )
+    }
+    const { conflicts } = await response.json()
+    return conflicts
   },
 
   getByID: async (slotID: string): Promise<Slot> => {

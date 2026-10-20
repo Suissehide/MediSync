@@ -15,7 +15,24 @@ export type Slot = {
   appointments: Appointment[]
   pathway?: Pathway
   slotTemplate: SlotTemplate
+  conflicts?: PlanningConflict[]
 }
+
+export type PlanningConflict =
+  | { type: 'salle'; slotIDs: string[]; locationID: string }
+  | {
+      type: 'patient'
+      slotIDs: string[]
+      appointmentIDs: string[]
+      patientID: string
+    }
+  | {
+      type: 'capacite'
+      slotIDs: string[]
+      appointmentID: string
+      capacity: number
+      count: number
+    }
 
 /** Dates seules (YYYY-MM-DD) en UTC, `to` exclusive. */
 export type SlotDateRange = {

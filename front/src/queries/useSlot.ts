@@ -17,7 +17,9 @@ import {
 import { useToast } from '../hooks/useToast.ts'
 import type {
   CreateSlotParams,
+  PlanningConflict,
   Slot,
+  SlotDateRange,
   SlotQuery,
   UpdateSlotParams,
 } from '../types/slot.ts'
@@ -54,6 +56,7 @@ export const usePatientSlotsQuery = (patientID?: string) => {
 export const useSlotsInRangeQuery = (range: SlotQuery | null) => {
   const {
     data: slots,
+    dataUpdatedAt,
     isPending,
     isFetching,
     isError,
@@ -72,7 +75,25 @@ export const useSlotsInRangeQuery = (range: SlotQuery | null) => {
     error,
   })
 
-  return { slots, isPending, isFetching, isError, error }
+  return { slots, dataUpdatedAt, isPending, isFetching, isError, error }
+}
+
+// Clé hors de SLOT.GET_ALL, que les mises à jour optimistes réécrivent ; `slotsUpdatedAt` la rafraîchit avec les créneaux.
+export const useSlotConflictsQuery = (
+  range: SlotDateRange | null,
+  slotsUpdatedAt: number,
+): PlanningConflict[] => {
+  const { data, isPending, isError, error } = useQuery({
+    queryKey: [SLOT.CONFLICTS, range?.from, range?.to, slotsUpdatedAt],
+    queryFn: () => SlotApi.getConflicts(range as SlotDateRange),
+    enabled: !!range,
+    placeholderData: keepPreviousData,
+    retry: 0,
+  })
+
+  useDataFetching({ isPending, isError, error })
+
+  return data ?? []
 }
 
 export const useSlotByIDQuery = (slotID: string, options = {}) => {
