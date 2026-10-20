@@ -19,10 +19,7 @@ export type SlotWithTemplateAndAppointmentsRepo = SlotEntityRepo & {
 export type PathwayWithTemplateRepo = PathwayEntityRepo & {
   template: PathwayTemplate | null
 }
-// `slotTemplate` porte toujours `location` ici : contrairement à
-// `SlotWithTemplateAndAppointmentsRepo` (certains appelants n'incluent que les
-// liens soignants), `slotInclude` (slot.repository.ts) inclut systématiquement
-// `slotTemplateInclude` au complet pour ce DTO.
+// `location` toujours presente ici : `slotInclude` inclut `slotTemplateInclude` au complet pour ce DTO.
 export type SlotDTORepo = SlotEntityRepo & {
   pathway: PathwayWithTemplateRepo | null
   slotTemplate: SlotTemplateWithSoignantsRepo & { location?: Location | null }

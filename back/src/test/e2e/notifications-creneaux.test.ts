@@ -31,9 +31,7 @@ describe('NotificationDispatcher, creneaux et inscriptions', () => {
       payload: body,
     })
 
-  // Memes helpers que notifications-rendez-vous.test.ts : les notifications s'ecrivent en tache
-  // de fond, on attend qu'elles apparaissent (ou, pour un attendu nul, on attend sans retour
-  // anticipe avant de constater une absence).
+  // Memes helpers que notifications-rendez-vous.test.ts : on attend l'ecriture en tache de fond.
   const compteFiltre = async (
     email: string,
     type: string,
@@ -219,7 +217,6 @@ describe('NotificationDispatcher, creneaux et inscriptions', () => {
       })
     ).id
 
-    Object.assign(ids, { coord, ide1, ide2, diet })
     ids['coord@c.fr'] = coord
     ids['ide1@c.fr'] = ide1
     ids['ide2@c.fr'] = ide2
@@ -398,6 +395,60 @@ describe('NotificationDispatcher, creneaux et inscriptions', () => {
         0,
       ),
     ).toBe(0)
+  })
+
+  it('suppression d un creneau avec patients : APPOINTMENT_CANCELLED, avec thematique et patient', async () => {
+    const thematic = await testDb.thematic.create({
+      data: { name: 'Alimentation', establishmentId: E, serviceId: A },
+    })
+    const { slot } = await creerCreneau(
+      '2026-11-17T09:00:00Z',
+      '2026-11-17T09:30:00Z',
+      S,
+    )
+    const patient = await creerPatient('Marc', 'DUPONT')
+    const apt = await testDb.appointment.create({
+      data: {
+        startDate: new Date('2026-11-17T09:00:00Z'),
+        endDate: new Date('2026-11-17T09:30:00Z'),
+        establishmentId: E,
+        serviceId: A,
+        slotID: slot.id,
+        thematicId: thematic.id,
+      },
+    })
+    await testDb.appointmentPatient.create({
+      data: {
+        establishmentId: E,
+        serviceId: A,
+        appointmentId: apt.id,
+        patientId: patient.id,
+      },
+    })
+
+    const res = await t.app.inject({
+      method: 'DELETE',
+      url: url(`/slot/${slot.id}`),
+      cookies: coordC,
+    })
+    expect(res.statusCode).toBe(204)
+
+    expect(
+      await comptePourRdv('ide1@c.fr', 'APPOINTMENT_CANCELLED', apt.id, 1),
+    ).toBe(1)
+    expect(
+      await comptePourRdv('coord@c.fr', 'APPOINTMENT_CANCELLED', apt.id, 0),
+    ).toBe(0)
+
+    const payload = await dernierPourRdv(
+      'ide1@c.fr',
+      'APPOINTMENT_CANCELLED',
+      apt.id,
+    )
+    expect(payload).toMatchObject({
+      thematicName: 'Alimentation',
+      patients: [{ name: 'DUPONT Marc' }],
+    })
   })
 
   it('suppression d un creneau dont le seul rendez-vous est vide de patients : rien', async () => {
@@ -610,5 +661,89 @@ describe('NotificationDispatcher, creneaux et inscriptions', () => {
     expect(
       await comptePourSlot('ide1@c.fr', 'SLOT_ALMOST_FULL', slotUnitaire.id, 0),
     ).toBe(0)
+  })
+
+  it('creneau presque complet via une inscription a un parcours : une seule SLOT_ALMOST_FULL', async () => {
+    const template = await testDb.pathwayTemplate.create({
+      data: {
+        name: 'PARCOURS-PRESQUE-COMPLET',
+        color: '#123456',
+        mainTag: 'PARCOURS-PRESQUE-COMPLET',
+        secondaryTags: [],
+        establishmentId: E,
+        serviceId: A,
+      },
+    })
+    const pathway = await testDb.pathway.create({
+      data: {
+        startDate: new Date('2026-11-23T00:00:00Z'),
+        templateID: template.id,
+        establishmentId: E,
+        serviceId: A,
+      },
+    })
+    const slotTemplate = await testDb.slotTemplate.create({
+      data: {
+        startTime: new Date('2026-11-23T09:00:00Z'),
+        endTime: new Date('2026-11-23T09:30:00Z'),
+        offsetDays: 0,
+        isIndividual: false,
+        capacity: 3,
+        color: '#fff',
+        templateID: template.id,
+        establishmentId: E,
+        serviceId: A,
+      },
+    })
+    await testDb.slotTemplateSoignant.create({
+      data: {
+        slotTemplateId: slotTemplate.id,
+        soignantId: S,
+        serviceId: A,
+        establishmentId: E,
+      },
+    })
+    const slot = await testDb.slot.create({
+      data: {
+        startDate: new Date('2026-11-23T09:00:00Z'),
+        endDate: new Date('2026-11-23T09:30:00Z'),
+        pathwayID: pathway.id,
+        slotTemplateID: slotTemplate.id,
+        serviceId: A,
+        establishmentId: E,
+      },
+    })
+    const dejaInscrit = await creerPatient('Premier', 'INSCRIT')
+    const apt = await creerRdv(
+      slot.id,
+      '2026-11-23T09:00:00Z',
+      '2026-11-23T09:30:00Z',
+    )
+    await testDb.appointmentPatient.create({
+      data: {
+        establishmentId: E,
+        serviceId: A,
+        appointmentId: apt.id,
+        patientId: dejaInscrit.id,
+      },
+    })
+
+    const nouveauPatient = await creerPatient('Second', 'INSCRIT')
+    const res = await t.app.inject({
+      method: 'POST',
+      url: url(`/patient/${nouveauPatient.id}/enroll`),
+      cookies: coordC,
+      payload: {
+        patientID: nouveauPatient.id,
+        startDate: '2026-11-01T00:00:00.000Z',
+        pathways: [{ tag: 'PARCOURS-PRESQUE-COMPLET', timeOfDay: 'ALL_DAY' }],
+      },
+    })
+    expect(res.statusCode).toBe(200)
+    expect(res.json().failedEnrollments).toEqual([])
+
+    expect(
+      await comptePourSlot('ide1@c.fr', 'SLOT_ALMOST_FULL', slot.id, 1),
+    ).toBe(1)
   })
 })

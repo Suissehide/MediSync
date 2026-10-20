@@ -54,8 +54,7 @@ class SlotDomain implements SlotDomainInterface {
     }
     const timeChanged = before.startDate.getTime() !== after.startDate.getTime()
     const roomChanged =
-      (before.slotTemplate.location?.name ?? null) !==
-      (after.slotTemplate.location?.name ?? null)
+      before.slotTemplate.locationID !== after.slotTemplate.locationID
     if (timeChanged || roomChanged) {
       for (const a of after.appointments.filter(
         (x) => x.appointmentPatients.length > 0,

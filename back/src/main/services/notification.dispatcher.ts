@@ -105,8 +105,7 @@ class NotificationDispatcher implements NotificationDispatcherInterface {
     })
   }
 
-  // `after` : surcharge optionnelle de la date, pour un deplacement au niveau du creneau — le
-  // rendez-vous ne bouge pas avec lui, l'instantane rendrait donc sa date perimee.
+  // `after` : date du creneau, pour un deplacement au niveau du creneau (le rendez-vous ne bouge pas avec lui).
   moved(
     actorId: string,
     appointmentId: string,
