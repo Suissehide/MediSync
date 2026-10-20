@@ -1,4 +1,5 @@
 import { buildTestApp, type TestApp } from './setup/app'
+import { futur } from './setup/dates'
 import { testDb, truncateAll } from './setup/db'
 import {
   createEstablishment,
@@ -214,8 +215,8 @@ describe('NotificationDispatcher et rendez-vous', () => {
     // Rendez-vous principal : modele lie a S, capacite 3, salle et thematique sur le modele.
     const slotTemplate = await testDb.slotTemplate.create({
       data: {
-        startTime: new Date('2026-11-01T09:00:00Z'),
-        endTime: new Date('2026-11-01T09:30:00Z'),
+        startTime: new Date(futur(12, '09:00')),
+        endTime: new Date(futur(12, '09:30')),
         offsetDays: 0,
         isIndividual: false,
         capacity: 3,
@@ -236,8 +237,8 @@ describe('NotificationDispatcher et rendez-vous', () => {
     })
     const slot = await testDb.slot.create({
       data: {
-        startDate: new Date('2026-11-01T09:00:00Z'),
-        endDate: new Date('2026-11-01T09:30:00Z'),
+        startDate: new Date(futur(12, '09:00')),
+        endDate: new Date(futur(12, '09:30')),
         establishmentId: E,
         serviceId: A,
         slotTemplateID: slotTemplate.id,
@@ -245,8 +246,8 @@ describe('NotificationDispatcher et rendez-vous', () => {
     })
     const appointment = await testDb.appointment.create({
       data: {
-        startDate: new Date('2026-11-01T09:00:00Z'),
-        endDate: new Date('2026-11-01T09:30:00Z'),
+        startDate: new Date(futur(12, '09:00')),
+        endDate: new Date(futur(12, '09:30')),
         establishmentId: E,
         serviceId: A,
         slotID: slot.id,
@@ -280,16 +281,14 @@ describe('NotificationDispatcher et rendez-vous', () => {
     ).id
 
     // Troisieme rendez-vous : propre modele, meme soignant S, aucun patient au depart.
-    const slot3 = await nouveauCreneau(
-      '2026-11-02T09:00:00Z',
-      '2026-11-02T09:30:00Z',
-      { capacity: 5 },
-    )
+    const slot3 = await nouveauCreneau(futur(13, '09:00'), futur(13, '09:30'), {
+      capacity: 5,
+    })
     troisiemeRdv = (
       await testDb.appointment.create({
         data: {
-          startDate: new Date('2026-11-02T09:00:00Z'),
-          endDate: new Date('2026-11-02T09:30:00Z'),
+          startDate: new Date(futur(13, '09:00')),
+          endDate: new Date(futur(13, '09:30')),
           establishmentId: E,
           serviceId: A,
           slotID: slot3.id,
@@ -298,17 +297,15 @@ describe('NotificationDispatcher et rendez-vous', () => {
     ).id
 
     // Autre rendez-vous, voue a la suppression : meme soignant et meme thematique, un patient deja present.
-    const slot2 = await nouveauCreneau(
-      '2026-11-04T09:00:00Z',
-      '2026-11-04T09:30:00Z',
-      { thematicId: thematic.id },
-    )
+    const slot2 = await nouveauCreneau(futur(15, '09:00'), futur(15, '09:30'), {
+      thematicId: thematic.id,
+    })
     const P5 = (await patient('Marie', 'DUBOIS')).id
     autreRdv = (
       await testDb.appointment.create({
         data: {
-          startDate: new Date('2026-11-04T09:00:00Z'),
-          endDate: new Date('2026-11-04T09:30:00Z'),
+          startDate: new Date(futur(15, '09:00')),
+          endDate: new Date(futur(15, '09:30')),
           establishmentId: E,
           serviceId: A,
           slotID: slot2.id,
@@ -356,10 +353,7 @@ describe('NotificationDispatcher et rendez-vous', () => {
   })
 
   it('creation avec patientIDs : patients ajoutes au meme mouvement, l auteur non notifie', async () => {
-    const slot5 = await nouveauCreneau(
-      '2026-11-06T09:00:00Z',
-      '2026-11-06T09:30:00Z',
-    )
+    const slot5 = await nouveauCreneau(futur(17, '09:00'), futur(17, '09:30'))
     const patientCree = (
       await testDb.patient.create({
         data: {
@@ -376,8 +370,8 @@ describe('NotificationDispatcher et rendez-vous', () => {
       url: tenantUrl(E, A, '/appointment'),
       cookies: coordC,
       payload: {
-        startDate: '2026-11-06T09:00:00.000Z',
-        endDate: '2026-11-06T09:30:00.000Z',
+        startDate: futur(17, '09:00'),
+        endDate: futur(17, '09:30'),
         slotID: slot5.id,
         patientIDs: [patientCree],
       },
@@ -423,15 +417,15 @@ describe('NotificationDispatcher et rendez-vous', () => {
 
   it('changement d horaire du rendez-vous : modifie, avec avant et apres', async () => {
     const res = await patchAppointment(appointmentId, {
-      startDate: '2026-11-03T10:00:00.000Z',
-      endDate: '2026-11-03T11:00:00.000Z',
+      startDate: futur(14, '10:00'),
+      endDate: futur(14, '11:00'),
     })
     expect(res.statusCode).toBe(200)
 
     const [n] = await notifs('ide1@t.fr', 'APPOINTMENT_MOVED')
     expect(n?.payload).toMatchObject({
       before: { startDate: expect.any(String), locationName: 'Bureau 2' },
-      after: { startDate: '2026-11-03T10:00:00.000Z' },
+      after: { startDate: futur(14, '10:00') },
     })
   })
 
@@ -475,15 +469,12 @@ describe('NotificationDispatcher et rendez-vous', () => {
       where: { id: ids['ide1@t.fr'] },
       data: { notificationPrefs: { services: [autreService] } },
     })
-    const slot4 = await nouveauCreneau(
-      '2026-11-05T09:00:00Z',
-      '2026-11-05T09:30:00Z',
-    )
+    const slot4 = await nouveauCreneau(futur(16, '09:00'), futur(16, '09:30'))
     const quatriemeRdv = (
       await testDb.appointment.create({
         data: {
-          startDate: new Date('2026-11-05T09:00:00Z'),
-          endDate: new Date('2026-11-05T09:30:00Z'),
+          startDate: new Date(futur(16, '09:00')),
+          endDate: new Date(futur(16, '09:30')),
           establishmentId: E,
           serviceId: A,
           slotID: slot4.id,
@@ -545,15 +536,12 @@ describe('NotificationDispatcher et rendez-vous', () => {
   })
 
   it('une erreur de lecture du contexte n echoue pas la suppression, le rendez-vous disparait', async () => {
-    const slot6 = await nouveauCreneau(
-      '2026-11-07T09:00:00Z',
-      '2026-11-07T09:30:00Z',
-    )
+    const slot6 = await nouveauCreneau(futur(18, '09:00'), futur(18, '09:30'))
     const cinquiemeRdv = (
       await testDb.appointment.create({
         data: {
-          startDate: new Date('2026-11-07T09:00:00Z'),
-          endDate: new Date('2026-11-07T09:30:00Z'),
+          startDate: new Date(futur(18, '09:00')),
+          endDate: new Date(futur(18, '09:30')),
           establishmentId: E,
           serviceId: A,
           slotID: slot6.id,

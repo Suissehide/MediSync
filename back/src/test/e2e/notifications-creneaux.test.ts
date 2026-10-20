@@ -1,4 +1,5 @@
 import { buildTestApp, type TestApp } from './setup/app'
+import { futur } from './setup/dates'
 import { testDb, truncateAll } from './setup/db'
 import {
   createEstablishment,
@@ -235,16 +236,16 @@ describe('NotificationDispatcher, creneaux et inscriptions', () => {
       data: { name: 'Local A', establishmentId: E, serviceId: A },
     })
     const { slot } = await creerCreneau(
-      '2026-11-10T09:00:00Z',
-      '2026-11-10T09:30:00Z',
+      futur(21, '09:00'),
+      futur(21, '09:30'),
       S,
       { locationID: location.id },
     )
     const patient = await creerPatient('Paul', 'MARTIN')
     const aptAvecPatient = await creerRdv(
       slot.id,
-      '2026-11-10T09:00:00Z',
-      '2026-11-10T09:30:00Z',
+      futur(21, '09:00'),
+      futur(21, '09:30'),
     )
     await testDb.appointmentPatient.create({
       data: {
@@ -256,13 +257,13 @@ describe('NotificationDispatcher, creneaux et inscriptions', () => {
     })
     const aptSansPatient = await creerRdv(
       slot.id,
-      '2026-11-10T09:00:00Z',
-      '2026-11-10T09:30:00Z',
+      futur(21, '09:00'),
+      futur(21, '09:30'),
     )
 
     const res = await patch(`/slot/${slot.id}`, {
-      startDate: '2026-11-12T10:00:00.000Z',
-      endDate: '2026-11-12T10:30:00.000Z',
+      startDate: futur(23, '10:00'),
+      endDate: futur(23, '10:30'),
     })
     expect(res.statusCode).toBe(200)
 
@@ -298,7 +299,7 @@ describe('NotificationDispatcher, creneaux et inscriptions', () => {
     )
     expect(payload).toMatchObject({
       before: { locationName: 'Local A' },
-      after: { startDate: '2026-11-12T10:00:00.000Z' },
+      after: { startDate: futur(23, '10:00') },
     })
   })
 
@@ -310,17 +311,13 @@ describe('NotificationDispatcher, creneaux et inscriptions', () => {
       data: { name: 'Salle Verte', establishmentId: E, serviceId: A },
     })
     const { slot, slotTemplate } = await creerCreneau(
-      '2026-11-13T09:00:00Z',
-      '2026-11-13T09:30:00Z',
+      futur(24, '09:00'),
+      futur(24, '09:30'),
       S,
       { locationID: bureau2.id },
     )
     const patient = await creerPatient('Jean', 'DURAND')
-    const apt = await creerRdv(
-      slot.id,
-      '2026-11-13T09:00:00Z',
-      '2026-11-13T09:30:00Z',
-    )
+    const apt = await creerRdv(slot.id, futur(24, '09:00'), futur(24, '09:30'))
     await testDb.appointmentPatient.create({
       data: {
         establishmentId: E,
@@ -351,15 +348,15 @@ describe('NotificationDispatcher, creneaux et inscriptions', () => {
 
   it('archivage d un creneau avec patients : APPOINTMENT_CANCELLED ; creneau vide : rien', async () => {
     const { slot: slotAvecPatients } = await creerCreneau(
-      '2026-11-14T09:00:00Z',
-      '2026-11-14T09:30:00Z',
+      futur(25, '09:00'),
+      futur(25, '09:30'),
       S,
     )
     const patient = await creerPatient('Claire', 'LEFEBVRE')
     const apt = await creerRdv(
       slotAvecPatients.id,
-      '2026-11-14T09:00:00Z',
-      '2026-11-14T09:30:00Z',
+      futur(25, '09:00'),
+      futur(25, '09:30'),
     )
     await testDb.appointmentPatient.create({
       data: {
@@ -371,7 +368,7 @@ describe('NotificationDispatcher, creneaux et inscriptions', () => {
     })
 
     const res = await patch(`/slot/${slotAvecPatients.id}`, {
-      archivedAt: '2026-11-14T08:00:00.000Z',
+      archivedAt: futur(25, '08:00'),
     })
     expect(res.statusCode).toBe(200)
     expect(
@@ -379,12 +376,12 @@ describe('NotificationDispatcher, creneaux et inscriptions', () => {
     ).toBeGreaterThanOrEqual(1)
 
     const { slot: slotVide } = await creerCreneau(
-      '2026-11-15T09:00:00Z',
-      '2026-11-15T09:30:00Z',
+      futur(26, '09:00'),
+      futur(26, '09:30'),
       S,
     )
     const resVide = await patch(`/slot/${slotVide.id}`, {
-      archivedAt: '2026-11-15T08:00:00.000Z',
+      archivedAt: futur(26, '08:00'),
     })
     expect(resVide.statusCode).toBe(200)
     expect(
@@ -432,15 +429,15 @@ describe('NotificationDispatcher, creneaux et inscriptions', () => {
       data: { name: 'Alimentation', establishmentId: E, serviceId: A },
     })
     const { slot } = await creerCreneau(
-      '2026-11-17T09:00:00Z',
-      '2026-11-17T09:30:00Z',
+      futur(28, '09:00'),
+      futur(28, '09:30'),
       S,
     )
     const patient = await creerPatient('Marc', 'DUPONT')
     const apt = await testDb.appointment.create({
       data: {
-        startDate: new Date('2026-11-17T09:00:00Z'),
-        endDate: new Date('2026-11-17T09:30:00Z'),
+        startDate: new Date(futur(28, '09:00')),
+        endDate: new Date(futur(28, '09:30')),
         establishmentId: E,
         serviceId: A,
         slotID: slot.id,
@@ -483,11 +480,11 @@ describe('NotificationDispatcher, creneaux et inscriptions', () => {
 
   it('suppression d un creneau dont le seul rendez-vous est vide de patients : rien', async () => {
     const { slot } = await creerCreneau(
-      '2026-11-16T09:00:00Z',
-      '2026-11-16T09:30:00Z',
+      futur(27, '09:00'),
+      futur(27, '09:30'),
       S,
     )
-    await creerRdv(slot.id, '2026-11-16T09:00:00Z', '2026-11-16T09:30:00Z')
+    await creerRdv(slot.id, futur(27, '09:00'), futur(27, '09:30'))
 
     const res = await t.app.inject({
       method: 'DELETE',
@@ -513,7 +510,7 @@ describe('NotificationDispatcher, creneaux et inscriptions', () => {
     })
     const pathway = await testDb.pathway.create({
       data: {
-        startDate: new Date('2026-11-20T00:00:00Z'),
+        startDate: new Date(futur(31, '00:00')),
         templateID: template.id,
         establishmentId: E,
         serviceId: A,
@@ -555,9 +552,9 @@ describe('NotificationDispatcher, creneaux et inscriptions', () => {
         },
       })
     }
-    await seance('2026-11-20T09:00:00Z', S)
-    await seance('2026-11-20T10:00:00Z', S)
-    await seance('2026-11-20T11:00:00Z', Tm)
+    await seance(futur(31, '09:00'), S)
+    await seance(futur(31, '10:00'), S)
+    await seance(futur(31, '11:00'), Tm)
 
     const createdPatient = await t.app.inject({
       method: 'POST',
@@ -574,7 +571,7 @@ describe('NotificationDispatcher, creneaux et inscriptions', () => {
       cookies: coordC,
       payload: {
         patientID: patientId,
-        startDate: '2026-11-01T00:00:00.000Z',
+        startDate: futur(12, '00:00'),
         pathways: [{ tag: 'PARCOURS-MULTI', timeOfDay: 'ALL_DAY' }],
       },
     })
@@ -607,16 +604,12 @@ describe('NotificationDispatcher, creneaux et inscriptions', () => {
 
   it('creneau presque complet : une seule SLOT_ALMOST_FULL, dedupliquee, jamais en capacite 1', async () => {
     const { slot } = await creerCreneau(
-      '2026-11-21T09:00:00Z',
-      '2026-11-21T09:30:00Z',
+      futur(32, '09:00'),
+      futur(32, '09:30'),
       S,
       { capacity: 3 },
     )
-    const apt = await creerRdv(
-      slot.id,
-      '2026-11-21T09:00:00Z',
-      '2026-11-21T09:30:00Z',
-    )
+    const apt = await creerRdv(slot.id, futur(32, '09:00'), futur(32, '09:30'))
     const P1 = await creerPatient('Un', 'PATIENT')
     const P2 = await creerPatient('Deux', 'PATIENT')
     const P3 = await creerPatient('Trois', 'PATIENT')
@@ -673,15 +666,15 @@ describe('NotificationDispatcher, creneaux et inscriptions', () => {
 
     // Capacite 1 : jamais, meme complet.
     const { slot: slotUnitaire } = await creerCreneau(
-      '2026-11-22T09:00:00Z',
-      '2026-11-22T09:30:00Z',
+      futur(33, '09:00'),
+      futur(33, '09:30'),
       S,
       { capacity: 1 },
     )
     const aptUnitaire = await creerRdv(
       slotUnitaire.id,
-      '2026-11-22T09:00:00Z',
-      '2026-11-22T09:30:00Z',
+      futur(33, '09:00'),
+      futur(33, '09:30'),
     )
     const P4 = await creerPatient('Quatre', 'PATIENT')
     const rUnitaire = await patch(`/appointment/${aptUnitaire.id}`, {
@@ -706,7 +699,7 @@ describe('NotificationDispatcher, creneaux et inscriptions', () => {
     })
     const pathway = await testDb.pathway.create({
       data: {
-        startDate: new Date('2026-11-23T00:00:00Z'),
+        startDate: new Date(futur(34, '00:00')),
         templateID: template.id,
         establishmentId: E,
         serviceId: A,
@@ -714,8 +707,8 @@ describe('NotificationDispatcher, creneaux et inscriptions', () => {
     })
     const slotTemplate = await testDb.slotTemplate.create({
       data: {
-        startTime: new Date('2026-11-23T09:00:00Z'),
-        endTime: new Date('2026-11-23T09:30:00Z'),
+        startTime: new Date(futur(34, '09:00')),
+        endTime: new Date(futur(34, '09:30')),
         offsetDays: 0,
         isIndividual: false,
         capacity: 3,
@@ -735,8 +728,8 @@ describe('NotificationDispatcher, creneaux et inscriptions', () => {
     })
     const slot = await testDb.slot.create({
       data: {
-        startDate: new Date('2026-11-23T09:00:00Z'),
-        endDate: new Date('2026-11-23T09:30:00Z'),
+        startDate: new Date(futur(34, '09:00')),
+        endDate: new Date(futur(34, '09:30')),
         pathwayID: pathway.id,
         slotTemplateID: slotTemplate.id,
         serviceId: A,
@@ -744,11 +737,7 @@ describe('NotificationDispatcher, creneaux et inscriptions', () => {
       },
     })
     const dejaInscrit = await creerPatient('Premier', 'INSCRIT')
-    const apt = await creerRdv(
-      slot.id,
-      '2026-11-23T09:00:00Z',
-      '2026-11-23T09:30:00Z',
-    )
+    const apt = await creerRdv(slot.id, futur(34, '09:00'), futur(34, '09:30'))
     await testDb.appointmentPatient.create({
       data: {
         establishmentId: E,
@@ -765,7 +754,7 @@ describe('NotificationDispatcher, creneaux et inscriptions', () => {
       cookies: coordC,
       payload: {
         patientID: nouveauPatient.id,
-        startDate: '2026-11-01T00:00:00.000Z',
+        startDate: futur(12, '00:00'),
         pathways: [{ tag: 'PARCOURS-PRESQUE-COMPLET', timeOfDay: 'ALL_DAY' }],
       },
     })
