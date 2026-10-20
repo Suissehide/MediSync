@@ -161,7 +161,10 @@ const appointmentRouter: FastifyPluginAsync = (fastify) => {
     async (request, reply) => {
       const { appointmentID } = request.params
 
-      const deleted = await appointmentDomain.delete(appointmentID)
+      const deleted = await appointmentDomain.delete(
+        appointmentID,
+        request.user.userID,
+      )
       if (!deleted) {
         logger.info('Appointment not found')
         throw Boom.notFound('Appointment not found')

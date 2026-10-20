@@ -16,8 +16,21 @@ const buildDomain = (known: { thematics: string[] }) => {
       },
       update: (_id: string, params: unknown) => {
         updated.push(params)
-        return Promise.resolve({ id: 'apt', ...(params as object) })
+        return Promise.resolve({
+          id: 'apt',
+          startDate: base.startDate,
+          slotID: 'slot-1',
+          appointmentPatients: [],
+          ...(params as object),
+        })
       },
+      findByID: () =>
+        Promise.resolve({
+          id: 'apt',
+          startDate: base.startDate,
+          slotID: 'slot-1',
+          appointmentPatients: [],
+        }),
     },
     slotDomain: {
       findByID: (id: string) => Promise.resolve({ id, locked: false }),
@@ -29,6 +42,15 @@ const buildDomain = (known: { thematics: string[] }) => {
           : notFound('Thematic'),
     },
     appEventBus: { emit: () => undefined },
+    notificationDispatcher: {
+      snapshot: () => Promise.resolve([]),
+      patientsAdded: () => undefined,
+      absent: () => undefined,
+      moved: () => undefined,
+      cancelled: () => undefined,
+      enrolled: () => undefined,
+      slotFilled: () => undefined,
+    },
   } as unknown as IocContainer
   return { domain: new AppointmentDomain(container), created, updated }
 }

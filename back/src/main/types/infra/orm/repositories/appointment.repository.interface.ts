@@ -46,10 +46,14 @@ export interface AppointmentRepositoryInterface {
   create: (
     appointmentCreateParams: AppointmentCreateEntityRepo,
   ) => Promise<AppointmentEntityRepo>
+  // Meme forme que `findByID` : chaque branche de l'implementation (mise a
+  // jour, lecture partielle, suppression) relit via `appointmentInclude`.
   update: (
     appointmentID: string,
     appointmentUpdateParams: AppointmentUpdateEntityRepo,
-  ) => Promise<AppointmentEntityRepo>
+  ) => Promise<
+    AppointmentWithPatientsRepo & { thematic: { name: string } | null }
+  >
   addPatientToAppointment: (
     appointmentPatientUpdateParams: AppointmentPatientAddEntityRepo,
   ) => Promise<AppointmentPatientEntityRepo>

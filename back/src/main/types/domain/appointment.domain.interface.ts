@@ -47,5 +47,8 @@ export interface AppointmentDomainInterface {
     convocationSent: boolean,
     userID: string,
   ) => Promise<void>
-  delete: (appointmentID: string) => Promise<AppointmentEntityDomain>
+  delete: (
+    appointmentID: string,
+    userID: string,
+  ) => Promise<AppointmentEntityDomain>
 }
