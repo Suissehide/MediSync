@@ -51,7 +51,7 @@ export function TaskRow({
           checked={done}
           onChange={onToggle}
           aria-label={task.text}
-          className={`appearance-none w-5 h-5 rounded-md border-[1.5px] ${done ? 'bg-[#16a34a] border-[#16a34a]' : 'border-[#cbd5e1] bg-white'}`}
+          className={`cursor-pointer appearance-none w-5 h-5 rounded-md border-[1.5px] ${done ? 'bg-[#16a34a] border-[#16a34a]' : 'border-[#cbd5e1] bg-white'}`}
         />
         {done && (
           <Check className="w-3.5 h-3.5 text-white absolute inset-0 m-auto pointer-events-none" />

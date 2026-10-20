@@ -48,7 +48,7 @@ export function ServiceChips({
       type="button"
       aria-pressed={value === id}
       onClick={() => onChange(id)}
-      className={`h-[30px] px-3 shrink-0 whitespace-nowrap rounded-full text-[13px] font-medium flex items-center gap-1.5 ${value === id ? 'bg-foreground text-white' : 'border border-border bg-white text-text-dark'}`}
+      className={`cursor-pointer h-[30px] px-3 shrink-0 whitespace-nowrap rounded-full text-[13px] font-medium flex items-center gap-1.5 ${value === id ? 'bg-foreground text-white' : 'border border-border bg-white text-text-dark'}`}
     >
       {label}
       {n ? (
@@ -85,7 +85,7 @@ export function Segmented<T extends string>({
           type="button"
           aria-pressed={value === k}
           onClick={() => onChange(k)}
-          className={`h-[26px] px-2.5 rounded-md text-[13px] ${value === k ? 'bg-muted font-semibold' : 'font-medium'}`}
+          className={`cursor-pointer h-[26px] px-2.5 rounded-md text-[13px] ${value === k ? 'bg-muted font-semibold' : 'font-medium'}`}
         >
           {label}
         </button>

@@ -39,7 +39,7 @@ function IconButton({
         type="button"
         aria-label={label}
         title={label}
-        className={`relative w-10 h-10 rounded-[10px] flex items-center justify-center text-white ${open ? 'bg-white/15' : 'hover:bg-white/10'}`}
+        className={`cursor-pointer relative w-10 h-10 rounded-[10px] flex items-center justify-center text-white ${open ? 'bg-white/15' : 'hover:bg-white/10'}`}
       >
         <Icon className="w-5 h-5" />
         {count > 0 && (
