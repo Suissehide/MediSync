@@ -16,6 +16,8 @@ import type {
   UpcomingAppointmentRow,
 } from '../types/infra/orm/repositories/notification-schedule.repository.interface'
 import type { UserRepositoryInterface } from '../types/infra/orm/repositories/user.repository.interface'
+import type { Logger } from '../types/utils/logger'
+import { sessionInstant } from '../utils/date'
 import {
   allows,
   type NotificationPrefs,
@@ -37,19 +39,15 @@ type Candidate = {
 }
 type ReminderTarget = { a: UpcomingAppointmentRow; userId: string }
 
-// 'eve' : 18h Paris la veille, reconstruite depuis une chaine de date (pas chainee sur l'instant d'origine, dont le decalage ete/hiver survivrait au changement de jour).
+// 'eve' : 18h Paris la veille du jour stocke ; '2h'/'1h' depuis l'instant reel de la seance.
 export const reminderTime = (startDate: Date, delay: ReminderDelay): Date => {
-  if (delay === '2h') {
-    return dayjs(startDate).subtract(2, 'hour').toDate()
+  if (delay === 'eve') {
+    const veille = dayjs.utc(startDate).subtract(1, 'day').format('YYYY-MM-DD')
+    return dayjs.tz(`${veille} 18:00`, PARIS).toDate()
   }
-  if (delay === '1h') {
-    return dayjs(startDate).subtract(1, 'hour').toDate()
-  }
-  const veille = dayjs(startDate)
-    .tz(PARIS)
-    .subtract(1, 'day')
-    .format('YYYY-MM-DD')
-  return dayjs.tz(`${veille} 18:00`, PARIS).toDate()
+  return dayjs(sessionInstant(startDate))
+    .subtract(delay === '2h' ? 2 : 1, 'hour')
+    .toDate()
 }
 
 // Jour calendaire de Paris de `now`, minuit UTC (convention de TaskDomain.create).
@@ -162,7 +160,7 @@ const reminderCandidatesOf = (
   targets.flatMap(({ a, userId }) => {
     const delay = prefs.get(userId)?.reminderDelay ?? 'eve'
     const at = reminderTime(a.startDate, delay)
-    if (!(at <= now && now < a.startDate)) {
+    if (!(at <= now && now < sessionInstant(a.startDate))) {
       return []
     }
     return [
@@ -187,79 +185,135 @@ const reminderCandidatesOf = (
 class NotificationScheduler implements NotificationSchedulerInterface {
   private readonly notificationScheduleRepository: NotificationScheduleRepositoryInterface
   private readonly userRepository: UserRepositoryInterface
+  private readonly logger: Logger
 
   constructor({
     notificationScheduleRepository,
     userRepository,
+    logger,
   }: IocContainer) {
     this.notificationScheduleRepository = notificationScheduleRepository
     this.userRepository = userRepository
+    this.logger = logger
   }
 
   async runOnce(now: Date): Promise<{ created: number; purged: number }> {
-    const repo = this.notificationScheduleRepository
+    const steps: [string, () => Promise<number>][] = [
+      ['reminders', () => this.#reminders(now)],
+      ['diagnostics', () => this.#diagnostics(now)],
+      ['pathwayEnds', () => this.#pathwayEnds(now)],
+      ['tasksDue', () => this.#tasksDue(now)],
+    ]
+    let created = 0
+    for (const [name, step] of steps) {
+      created += await this.#guarded(name, step)
+    }
+    const purged = await this.#guarded('purge', () =>
+      this.notificationScheduleRepository.purgeOlderThan(
+        dayjs(now).subtract(30, 'day').toDate(),
+      ),
+    )
+    return { created, purged }
+  }
 
+  // 33 h : le stocke depasse l'instant reel d'1 a 2 h, la veille 18h d'une seance tardive reste couverte.
+  async #reminders(now: Date): Promise<number> {
+    const repo = this.notificationScheduleRepository
     const appointments = await repo.upcomingAppointments(
       now,
-      dayjs(now).add(31, 'hour').toDate(),
+      dayjs(now).add(33, 'hour').toDate(),
     )
-    const diagnostics = await repo.entryDatesWithoutDiagnostic(
+    if (appointments.length === 0) {
+      return 0
+    }
+    const members = await repo.membersBySoignant(
+      appointments.map((a) => a.serviceId),
+    )
+    const targets = reminderTargetsOf(appointments, members)
+    const prefs = await this.userRepository.findNotificationPrefsMany([
+      ...new Set(targets.map((r) => r.userId)),
+    ])
+    return this.#create(reminderCandidatesOf(targets, prefs, now), prefs)
+  }
+
+  async #diagnostics(now: Date): Promise<number> {
+    const repo = this.notificationScheduleRepository
+    const rows = await repo.entryDatesWithoutDiagnostic(
       dayjs(now).subtract(37, 'day').toDate(),
       dayjs(now).subtract(7, 'day').toDate(),
     )
-    const pathwayEnds = await repo.pathwaysEnded(
+    if (rows.length === 0) {
+      return 0
+    }
+    const serviceIds = rows.map((d) => d.serviceId)
+    const members = await repo.membersBySoignant(serviceIds)
+    const soignants = await repo.soignantsOfThematicRole(
+      serviceIds,
+      'DIAGNOSTIC_EDUCATIF',
+    )
+    return this.#create(diagnosticCandidates(rows, members, soignants))
+  }
+
+  async #pathwayEnds(now: Date): Promise<number> {
+    const repo = this.notificationScheduleRepository
+    const rows = await repo.pathwaysEnded(
       dayjs(now).subtract(30, 'day').toDate(),
       dayjs(now).tz(PARIS).subtract(1, 'day').endOf('day').toDate(),
     )
-    const parisHour = dayjs(now).tz(PARIS).hour()
-    const tasksDue = parisHour >= 7 ? await repo.tasksDue(parisDay(now)) : []
-
-    const serviceIds = [
-      ...new Set([
-        ...appointments.map((a) => a.serviceId),
-        ...diagnostics.map((d) => d.serviceId),
-        ...pathwayEnds.map((p) => p.serviceId),
-        ...tasksDue.map((t) => t.serviceId),
-      ]),
-    ]
+    if (rows.length === 0) {
+      return 0
+    }
+    const serviceIds = rows.map((p) => p.serviceId)
     const members = await repo.membersBySoignant(serviceIds)
-    const diagSoignants = diagnostics.length
-      ? await repo.soignantsOfThematicRole(serviceIds, 'DIAGNOSTIC_EDUCATIF')
-      : []
-    const endSoignants = pathwayEnds.length
-      ? await repo.soignantsOfThematicRole(serviceIds, 'BILAN_DE_FIN')
-      : []
+    const soignants = await repo.soignantsOfThematicRole(
+      serviceIds,
+      'BILAN_DE_FIN',
+    )
+    return this.#create(pathwayCandidates(rows, members, soignants))
+  }
 
-    const reminderTargets = reminderTargetsOf(appointments, members)
-    const candidates: Candidate[] = [
-      ...diagnosticCandidates(diagnostics, members, diagSoignants),
-      ...pathwayCandidates(pathwayEnds, members, endSoignants),
-      ...taskCandidates(tasksDue, members),
-    ]
+  async #tasksDue(now: Date): Promise<number> {
+    if (dayjs(now).tz(PARIS).hour() < 7) {
+      return 0
+    }
+    const repo = this.notificationScheduleRepository
+    const rows = await repo.tasksDue(parisDay(now))
+    if (rows.length === 0) {
+      return 0
+    }
+    const members = await repo.membersBySoignant(rows.map((t) => t.serviceId))
+    return this.#create(taskCandidates(rows, members))
+  }
 
-    const allUserIds = [
-      ...new Set([
-        ...reminderTargets.map((r) => r.userId),
-        ...candidates.map((c) => c.userId),
-      ]),
-    ]
+  async #create(
+    candidates: Candidate[],
+    known?: Map<string, NotificationPrefs>,
+  ): Promise<number> {
+    if (candidates.length === 0) {
+      return 0
+    }
     const prefs =
-      await this.userRepository.findNotificationPrefsMany(allUserIds)
-
-    const all: Candidate[] = [
-      ...candidates,
-      ...reminderCandidatesOf(reminderTargets, prefs, now),
-    ]
-    const kept: ScheduledNotificationRow[] = all.filter((c) => {
+      known ??
+      (await this.userRepository.findNotificationPrefsMany([
+        ...new Set(candidates.map((c) => c.userId)),
+      ]))
+    const kept: ScheduledNotificationRow[] = candidates.filter((c) => {
       const p = prefs.get(c.userId)
       return p ? allows(p, c.type, c.serviceId) : true
     })
+    return this.notificationScheduleRepository.createNotifications(kept)
+  }
 
-    const created = await repo.createNotifications(kept)
-    const purged = await repo.purgeOlderThan(
-      dayjs(now).subtract(30, 'day').toDate(),
-    )
-    return { created, purged }
+  // Une etape en echec n'arrete pas les suivantes ; seule la classe de l'erreur va au journal.
+  async #guarded(name: string, work: () => Promise<number>): Promise<number> {
+    try {
+      return await work()
+    } catch (err) {
+      const errorClass =
+        err instanceof Error ? err.constructor.name : typeof err
+      this.logger.error(`Notifications ${name} failed [${errorClass}]`)
+      return 0
+    }
   }
 }
 

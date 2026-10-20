@@ -397,6 +397,36 @@ describe('NotificationDispatcher, creneaux et inscriptions', () => {
     ).toBe(0)
   })
 
+  it('archivage d un creneau deja passe, avec patients : rien', async () => {
+    const { slot } = await creerCreneau(
+      '2026-10-01T09:00:00Z',
+      '2026-10-01T09:30:00Z',
+      S,
+    )
+    const patient = await creerPatient('Passe', 'PATIENT')
+    const apt = await creerRdv(
+      slot.id,
+      '2026-10-01T09:00:00Z',
+      '2026-10-01T09:30:00Z',
+    )
+    await testDb.appointmentPatient.create({
+      data: {
+        establishmentId: E,
+        serviceId: A,
+        appointmentId: apt.id,
+        patientId: patient.id,
+      },
+    })
+
+    const res = await patch(`/slot/${slot.id}`, {
+      archivedAt: new Date().toISOString(),
+    })
+    expect(res.statusCode).toBe(200)
+    expect(
+      await comptePourRdv('ide1@c.fr', 'APPOINTMENT_CANCELLED', apt.id, 0),
+    ).toBe(0)
+  })
+
   it('suppression d un creneau avec patients : APPOINTMENT_CANCELLED, avec thematique et patient', async () => {
     const thematic = await testDb.thematic.create({
       data: { name: 'Alimentation', establishmentId: E, serviceId: A },

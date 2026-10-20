@@ -3,8 +3,7 @@ import type {
   ThematicRole,
 } from '../../../../../generated/enums'
 
-// Lectures hors tenant (planificateur, Task 5) : chaque methode porte ses propres bornes
-// (dates, statut) plutot que de lire tenantContext.scope(), qui leverait sous runAsSystem.
+// Lectures hors tenant : chaque methode porte ses bornes, tenantContext.scope() leverait sous runAsSystem.
 
 export type UpcomingAppointmentRow = {
   establishmentId: string
@@ -82,7 +81,6 @@ export interface NotificationScheduleRepositoryInterface {
     role: ThematicRole,
   ) => Promise<SoignantOfRoleRow[]>
   purgeOlderThan: (date: Date) => Promise<number>
-  // skipDuplicates (meme forme que NotificationRepository.createMany) : rend le nombre reellement
-  // insere, pour que runOnce rapporte un compte exact plutot que la taille du lot propose.
+  // skipDuplicates : rend le nombre reellement insere, pas la taille du lot.
   createNotifications: (rows: ScheduledNotificationRow[]) => Promise<number>
 }

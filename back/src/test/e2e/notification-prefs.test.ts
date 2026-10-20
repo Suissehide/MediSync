@@ -1,5 +1,5 @@
 import { buildTestApp, type TestApp } from './setup/app'
-import { truncateAll } from './setup/db'
+import { testDb, truncateAll } from './setup/db'
 import {
   createEstablishment,
   createService,
@@ -107,6 +107,41 @@ describe('preferences de notification', () => {
       (await put({ ...base, services: ['cl_service_etranger_0000000'] }))
         .statusCode,
     ).toBe(400)
+  })
+
+  it('un service quitte depuis l enregistrement disparait de la relecture, qui reste enregistrable', async () => {
+    const prefs = {
+      level: 'essential',
+      services: [A, B],
+      reminderDelay: 'eve',
+      app: {
+        reminder: true,
+        added: true,
+        moved: true,
+        absent: true,
+        diag: true,
+        end: true,
+        full: true,
+        mention: true,
+        due: true,
+      },
+    }
+    expect((await put(prefs)).statusCode).toBe(200)
+    const quitte = (serviceId: string) =>
+      testDb.serviceMembership.deleteMany({
+        where: {
+          serviceId,
+          establishmentMembership: { user: { email: 'leo@t.fr' } },
+        },
+      })
+
+    await quitte(A)
+    const relu = await get()
+    expect(relu.json()).toEqual({ ...prefs, services: [B] })
+    expect((await put(relu.json())).statusCode).toBe(200)
+
+    await quitte(B)
+    expect((await get()).json()).toEqual({ ...prefs, services: null })
   })
 
   it('exige une session', async () => {

@@ -2318,10 +2318,7 @@ describe('UserRepository.findNotificationPrefsMany, sous contexte de tenant (Tas
     expect(prefs.get('u2')?.level).toBe('essential')
   })
 
-  // Le mecanisme, isole : la forme exacte que le repository construit ci-dessus est bien ce que
-  // le garde-fou juge, et sous CONTEXTE DE TENANT precisement (celui que Task 3 emploiera depuis
-  // les routes de service) — jamais sans contexte, ou `User.findMany` n'est pas declare dans
-  // NO_CONTEXT_GLOBAL_OPERATIONS et resterait refuse.
+  // La forme exacte construite ci-dessus, jugee par le garde-fou : permise sous tenant, refusee sans contexte.
   it('la forme de requete qu elle construit est permise sous tenant, refusee sans contexte', () => {
     const args = {
       where: { id: { in: ['u1', 'u2'] } },

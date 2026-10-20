@@ -212,8 +212,7 @@ class UserRepository implements UserRepositoryInterface {
     }
   }
 
-  // Sans contexte (`GET /me/notification-preferences`) : `User.findUnique`, déjà déclaré dans
-  // NO_CONTEXT_GLOBAL_OPERATIONS.
+  // Sans contexte (`GET /me/notification-preferences`) : `User.findUnique`, déjà déclaré.
   async findNotificationPrefs(userId: string): Promise<NotificationPrefs> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -233,8 +232,7 @@ class UserRepository implements UserRepositoryInterface {
     })
   }
 
-  // Sous contexte de tenant (dispatcher de notifications, Task 3) : lecture plate de `User`
-  // (modèle global), colonnes scalaires seulement — voir le commentaire sur l'interface.
+  // Lecture plate de `User`, colonnes scalaires seulement : jamais d'include d'appartenances.
   async findNotificationPrefsMany(
     userIds: string[],
   ): Promise<Map<string, NotificationPrefs>> {

@@ -220,10 +220,10 @@ describe('NotificationScheduler', () => {
         '2026-11-05T09:00:00Z',
         '2026-11-05T09:30:00Z',
       )
-      // Deja commence au moment du premier runOnce ci-dessous : jamais dans la fenetre [now, now+31h].
+      // 17h55 Paris stocke (16h55 UTC reel) : dans la fenetre a 18h Paris, mais deja commence.
       dejaCommenceId = await creerCreneau(
-        '2026-11-04T08:00:00Z',
-        '2026-11-04T08:30:00Z',
+        '2026-11-04T17:55:00Z',
+        '2026-11-04T18:25:00Z',
       )
       // Creneau annule (archive) : jamais de rappel, meme avec un patient.
       annuleId = await creerCreneau(
@@ -292,7 +292,8 @@ describe('NotificationScheduler', () => {
     })
 
     it('1h avant : REMINDER pour ide2', async () => {
-      await runOnceAt('2026-11-05T08:00:00.000Z')
+      // Seance a 09h Paris (08h UTC en novembre) : 1h avant = 08h Paris = 07h UTC.
+      await runOnceAt('2026-11-05T07:00:00.000Z')
       expect(await countFor(ide2, 'REMINDER')).toBe(1)
       // ide1 toujours a un seul rappel pour ce rendez-vous.
       expect(
@@ -307,7 +308,7 @@ describe('NotificationScheduler', () => {
     })
 
     it('cinq minutes plus tard : toujours un seul rappel par compte', async () => {
-      await runOnceAt('2026-11-05T08:05:00.000Z')
+      await runOnceAt('2026-11-05T07:05:00.000Z')
       expect(await countFor(ide2, 'REMINDER')).toBe(1)
     })
 
@@ -760,6 +761,33 @@ describe('NotificationScheduler', () => {
           },
         }),
       ).toBe(0)
+    })
+
+    it('taguee sur un compte LECTURE ou desactive : rien pour eux, meme regle que par metier', async () => {
+      const task = await testDb.task.create({
+        data: {
+          text: 'Comptes exclus',
+          establishmentId: E,
+          serviceId: A,
+          dueDate: new Date('2026-10-21T00:00:00Z'),
+          assignees: {
+            create: [
+              { userId: ide1, establishmentId: E },
+              { userId: ideLecture, establishmentId: E },
+              { userId: ideOff, establishmentId: E },
+            ],
+          },
+        },
+      })
+
+      await runOnceAt('2026-10-21T05:00:00.000Z')
+      const rows = await testDb.notification.findMany({
+        where: {
+          type: 'TASK_DUE',
+          payload: { path: ['taskId'], equals: task.id },
+        },
+      })
+      expect(rows.map((r) => r.userId)).toEqual([ide1])
     })
 
     it('taguee sur un metier : les comptes de ce metier', async () => {

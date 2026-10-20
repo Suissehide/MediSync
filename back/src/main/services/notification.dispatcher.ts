@@ -13,7 +13,11 @@ import type {
 import type { UserRepositoryInterface } from '../types/infra/orm/repositories/user.repository.interface'
 import type { Logger } from '../types/utils/logger'
 import type { TenantContextInterface } from '../types/utils/tenant-context'
+import { sessionInstant } from '../utils/date'
 import { allows } from '../utils/notification-prefs'
+
+// Une seance deja commencee (heure reelle de Paris) ne merite plus d'annonce d'annulation ni de deplacement.
+const isPast = (stored: Date): boolean => sessionInstant(stored) < new Date()
 
 type Row = {
   userId: string
@@ -117,8 +121,12 @@ class NotificationDispatcher implements NotificationDispatcherInterface {
       if (!s) {
         return
       }
+      const afterStart = after?.startDate ?? s.startDate
+      if (isPast(before.startDate) && isPast(afterStart)) {
+        return
+      }
       const resolvedAfter = {
-        startDate: after?.startDate ?? s.startDate,
+        startDate: afterStart,
         locationName: s.locationName,
       }
       await this.#toSession(actorId, s.soignantIds, [
@@ -137,7 +145,10 @@ class NotificationDispatcher implements NotificationDispatcherInterface {
 
   cancelled(actorId: string, snapshots: SessionSnapshot[]): void {
     this.#safe(async () => {
-      for (const s of snapshots.filter((x) => x.patients.length > 0)) {
+      const live = snapshots.filter(
+        (x) => x.patients.length > 0 && !isPast(x.startDate),
+      )
+      for (const s of live) {
         await this.#toSession(actorId, s.soignantIds, [
           {
             type: 'APPOINTMENT_CANCELLED',

@@ -174,6 +174,26 @@ class NotificationScheduleRepository
       where: { dueDate: day, doneAt: null },
       include: { assignees: true, soignants: true },
     })
+    // Personnes taguees : memes filtres que les destinataires par metier (actives, hors LECTURE, membres du service).
+    const eligibles = await this.prisma.serviceMembership.findMany({
+      where: {
+        serviceId: { in: [...new Set(rows.map((t) => t.serviceId))] },
+        role: { not: 'LECTURE' },
+        establishmentMembership: {
+          userId: { in: rows.flatMap((t) => t.assignees.map((a) => a.userId)) },
+          user: { deactivatedAt: null },
+        },
+      },
+      select: {
+        serviceId: true,
+        establishmentMembership: { select: { userId: true } },
+      },
+    })
+    const eligible = new Set(
+      eligibles.map(
+        (m) => `${m.serviceId}:${m.establishmentMembership.userId}`,
+      ),
+    )
     return rows
       .filter((t): t is typeof t & { dueDate: Date } => t.dueDate !== null)
       .map((t) => ({
@@ -182,7 +202,9 @@ class NotificationScheduleRepository
         taskId: t.id,
         text: t.text,
         dueDate: t.dueDate,
-        assigneeUserIds: t.assignees.map((a) => a.userId),
+        assigneeUserIds: t.assignees
+          .map((a) => a.userId)
+          .filter((u) => eligible.has(`${t.serviceId}:${u}`)),
         soignantIds: t.soignants.map((s) => s.soignantId),
       }))
   }

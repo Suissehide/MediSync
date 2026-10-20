@@ -44,8 +44,7 @@ const scheduleActivityLogCleanup = (instances: IocContainer): void => {
 //
 // SECOND APPEL du PREMIER emploi déclaré de `runAsSystem` — l'entrée
 // `application/starter.ts` de `runAsSystem-unicite.test.ts` porte
-// `appels: 3` depuis que `scheduleNotifications` (ci-dessous) y a ajouté un
-// troisième appel. La convention du fichier cité compte SIX emplois déclarés —
+// `appels: 3` (le troisième : `scheduleNotifications`). La convention du fichier cité compte SIX emplois déclarés —
 // un par fichier, avec sa raison — pour DIX appels au total ; ce site-ci
 // n'en ouvre aucun septième, il s'ajoute au premier.
 //
