@@ -1,5 +1,5 @@
 import { Bell, ListTodo } from 'lucide-react'
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 
 import {
   PopoverContent,
@@ -66,9 +66,13 @@ export function Inbox() {
   const toggle = (panel: Exclude<InboxPanel, null>) => (next: boolean) =>
     setOpen(next ? panel : null)
   const openTasksFor = (n: InboxNotification) => {
+    if (!n.service.canTasks) {
+      return
+    }
     setFocus({ serviceId: n.service.serviceId, taskId: n.payload.taskId })
     setOpen('tasks')
   }
+  const onFocusDone = useCallback(() => setFocus(null), [])
   const myOpenTasks = tasks.filter(
     (t) => !t.doneAt && me && t.assigneeIds.includes(me),
   ).length
@@ -90,7 +94,7 @@ export function Inbox() {
               services={services.filter((s) => s.canTasks)}
               tasks={tasks}
               focus={focus}
-              onFocusDone={() => setFocus(null)}
+              onFocusDone={onFocusDone}
             />
           </PopoverContent>
         </PopoverRoot>

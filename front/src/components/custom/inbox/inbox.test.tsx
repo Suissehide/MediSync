@@ -23,6 +23,10 @@ vi.mock('@/api/inbox.api.ts', () => ({
   },
 }))
 
+// Le panneau Taches lit l'echelle courante ; hors RouterProvider ici, et aucun test ne depend
+// du repli qu'elle influence (un seul service par compte dans ces scenarios).
+vi.mock('@/navigation/navigation.ts', () => ({ useCurrentScale: () => null }))
+
 const notif = (
   id: string,
   readAt: string | null,
@@ -201,5 +205,22 @@ describe('Inbox', () => {
     expect(screen.queryByText(/Deja lu/)).toBeNull()
     await u.click(screen.getByRole('button', { name: 'Toutes' }))
     expect(await screen.findByText(/Deja lu/)).toBeInTheDocument()
+  })
+
+  it('mention sur un service retombe en LECTURE : marque lue, sans ouvrir les taches ni lien', async () => {
+    const u = userEvent.setup()
+    vi.mocked(InboxApi.notifications).mockImplementation(async (s) =>
+      s.serviceId === 's2' ? [notif('n1', null)] : [],
+    )
+    render(<Inbox />, { wrapper })
+    await u.click(await screen.findByRole('button', { name: 'Notifications' }))
+    await screen.findByText(/Appeler le labo/)
+    expect(screen.queryByText('Ouvrir la tâche')).toBeNull()
+    await u.click(screen.getByText(/Appeler le labo/))
+    expect(InboxApi.markRead).toHaveBeenCalled()
+    expect(screen.queryByRole('heading', { name: /Tâches/ })).toBeNull()
+    expect(
+      screen.getByRole('heading', { name: /Notifications/ }),
+    ).toBeInTheDocument()
   })
 })

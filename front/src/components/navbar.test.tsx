@@ -35,9 +35,7 @@ vi.mock('@/api/inbox.api.ts', () => ({
   },
 }))
 
-// `main.tsx` enregistre ce greffon au demarrage de l'application ; le panneau
-// des taches appelle `dayjs.utc()` des son montage. Le harnais de test ne
-// passe pas par `main.tsx` et doit donc le reproduire.
+// Reproduit l'enregistrement fait par `main.tsx`, que ce harnais de test ne traverse pas.
 dayjs.extend(utc)
 
 beforeEach(() => {
@@ -45,13 +43,8 @@ beforeEach(() => {
   vi.mocked(InboxApi.notifications).mockReset().mockResolvedValue([])
 })
 
-// ---------------------------------------------------------------------------
-// Les icones Taches et Notifications (`Inbox`) sont montees sur `user`,
-// jamais sur la route ni sur le store : visibles partout sous `_authenticated`,
-// y compris `/user/settings`. Le bloc se remonte au changement de contexte
-// via `key={tenantKey(context)}`, pour relier ses observateurs au nouveau
-// client de requetes (`useTenantSwitch`).
-// ---------------------------------------------------------------------------
+// Les icones Taches et Notifications (`Inbox`) sont montees sur `user`, visibles partout sous
+// `_authenticated` ; le bloc se remonte au changement de contexte via `key={tenantKey(context)}`.
 
 const utilisateur: User = {
   id: 'u1',
@@ -221,7 +214,7 @@ describe('icones Taches et Notifications de la barre de navigation', () => {
     useAuthStore.setState({ isAuthenticated: false, user: null, context: null })
   })
 
-  it('affiche les icones Taches et Notifications hors des layouts de tenant, sans passer par tenantApiUrl', async () => {
+  it('affiche les icones Taches et Notifications hors des layouts de tenant', async () => {
     monterNavbar('/user/settings')
 
     expect(

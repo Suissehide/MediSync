@@ -45,9 +45,11 @@ function MentionRow({
         <span className="block text-xs text-text-light mt-0.5">
           Mention · {whenLabel(n.createdAt)}
         </span>
-        <span className="block text-[13px] text-primary font-medium mt-1">
-          Ouvrir la tâche
-        </span>
+        {n.service.canTasks && (
+          <span className="block text-[13px] text-primary font-medium mt-1">
+            Ouvrir la tâche
+          </span>
+        )}
       </span>
       {unread && (
         <>

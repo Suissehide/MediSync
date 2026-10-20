@@ -39,14 +39,6 @@ export const SERVICE_MEMBER = {
   REMOVE: 'remove_service_member',
 }
 
-export const TODO = {
-  GET_ALL: 'get_all_todos',
-  GET: 'get_todo',
-  CREATE: 'create_todo',
-  UPDATE: 'update_todo',
-  DELETE: 'delete_todo',
-}
-
 export const SOIGNANT = {
   GET_ALL: 'get_all_soignants',
   GET_ALL_OF_SERVICE: 'get_all_soignants_of_service',
