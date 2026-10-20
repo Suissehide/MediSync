@@ -12,6 +12,7 @@ import type { SlotDomainInterface } from '../types/domain/slot.domain.interface'
 import type {
   AppointmentRepositoryInterface,
   AppointmentWithPatientsRepo,
+  AppointmentWithSessionRepo,
 } from '../types/infra/orm/repositories/appointment.repository.interface'
 import type { ThematicRepositoryInterface } from '../types/infra/orm/repositories/thematic.repository.interface'
 import type { AppEventBus } from '../utils/app-event-bus'
@@ -68,6 +69,14 @@ class AppointmentDomain implements AppointmentDomainInterface {
       userID,
       appointmentId: appointment.id,
     })
+    if (appointmentCreateParams.patientIDs.length > 0) {
+      this.notificationDispatcher.patientsAdded(
+        userID,
+        appointment.id,
+        appointmentCreateParams.patientIDs,
+      )
+      this.notificationDispatcher.slotFilled(userID, appointment.slotID)
+    }
     return appointment
   }
 
@@ -90,10 +99,7 @@ class AppointmentDomain implements AppointmentDomainInterface {
     if (typeof appointmentUpdateParams.thematicId === 'string') {
       await this.thematicRepository.findByID(appointmentUpdateParams.thematicId)
     }
-    // Une liste de patients vide supprime le rendez-vous : dans ce cas on
-    // n'émet pas d'événement « updated » sur une entité qui n'existe plus,
-    // et l'instantané (pour la notification d'annulation) est pris AVANT
-    // l'écriture, pendant que le rendez-vous existe encore.
+    // Liste vide = suppression : instantané pris avant l'écriture, pas d'événement « updated ».
     const wasDeleted = appointmentUpdateParams.appointmentPatients?.length === 0
     const before = await this.appointmentRepository.findByID(appointmentID)
     const snapshots = wasDeleted
@@ -115,12 +121,10 @@ class AppointmentDomain implements AppointmentDomainInterface {
     return appointment
   }
 
-  // Compare l'etat avant/apres pour decider quelles notifications de seance
-  // partent : patients ajoutes, absences non justifiees, horaire deplace.
-  // Methode dediee pour garder `update()` sous le seuil de complexite cognitive.
+  // Compare avant/apres (patients ajoutes, absences, horaire) ; dediee pour la complexite de update().
   #notifyChanges(
     userID: string,
-    before: AppointmentWithPatientsRepo,
+    before: AppointmentWithSessionRepo,
     after: AppointmentWithPatientsRepo,
     params: AppointmentUpdateEntityDomain,
   ): void {
@@ -152,7 +156,7 @@ class AppointmentDomain implements AppointmentDomainInterface {
     ) {
       this.notificationDispatcher.moved(userID, after.id, {
         startDate: before.startDate,
-        locationName: null,
+        locationName: before.slot.slotTemplate.location?.name ?? null,
       })
     }
   }

@@ -223,6 +223,55 @@ describe('taches partagees et mentions', () => {
     expect(await testDb.notification.count()).toBe(avant)
   })
 
+  it('MENTION obeit a la preference : mention desactivee pour l un, l autre tague recoit toujours', async () => {
+    const paul = (
+      await createUser({
+        email: 'paul@t.fr',
+        memberships: [
+          {
+            establishmentId: E,
+            services: [{ serviceId: A, role: 'INTERVENANT' }],
+          },
+        ],
+      })
+    ).id
+    await testDb.user.update({
+      where: { id: claire },
+      data: { notificationPrefs: { app: { mention: false } } },
+    })
+
+    // Ecrite dans la meme transaction que la tache (taskRepository.createWithMentions) : pas de
+    // tache de fond ici, contrairement au dispatcher, donc aucune attente n'est necessaire.
+    const res = await call(leoC, 'POST', tenantUrl(E, A, '/taches'), {
+      text: 'Pour Claire et Paul',
+      assigneeIds: [claire, paul],
+    })
+    expect(res.statusCode).toBe(201)
+    const tache = res.json()
+
+    const dePaul = await testDb.notification.findMany({
+      where: { userId: paul, type: 'MENTION' },
+    })
+    expect(
+      dePaul.filter(
+        (n) => (n.payload as { taskId: string }).taskId === tache.id,
+      ),
+    ).toHaveLength(1)
+    const deClaire = await testDb.notification.findMany({
+      where: { userId: claire, type: 'MENTION' },
+    })
+    expect(
+      deClaire.filter(
+        (n) => (n.payload as { taskId: string }).taskId === tache.id,
+      ),
+    ).toHaveLength(0)
+
+    await testDb.user.update({
+      where: { id: claire },
+      data: { notificationPrefs: {} },
+    })
+  })
+
   it.each([
     ['un compte LECTURE', () => lecteur],
     ['un compte desactive', () => ancien],

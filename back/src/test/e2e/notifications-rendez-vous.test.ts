@@ -15,6 +15,7 @@ describe('NotificationDispatcher et rendez-vous', () => {
   let t: TestApp
   let E: string
   let A: string
+  let S: string
   let coordC: Cookies
 
   let appointmentId: string
@@ -26,6 +27,44 @@ describe('NotificationDispatcher et rendez-vous', () => {
   let troisiemeRdv: string
   let autreRdv: string
 
+  // Un modele de creneau de plus, lie a S, pour un test autonome (meme patron qu'au beforeAll).
+  const nouveauCreneau = async (
+    start: string,
+    end: string,
+    extra: { capacity?: number; thematicId?: string } = {},
+  ) => {
+    const slotTemplate = await testDb.slotTemplate.create({
+      data: {
+        startTime: new Date(start),
+        endTime: new Date(end),
+        offsetDays: 0,
+        isIndividual: true,
+        capacity: extra.capacity ?? 1,
+        thematicId: extra.thematicId,
+        color: '#fff',
+        establishmentId: E,
+        serviceId: A,
+      },
+    })
+    await testDb.slotTemplateSoignant.create({
+      data: {
+        slotTemplateId: slotTemplate.id,
+        soignantId: S,
+        serviceId: A,
+        establishmentId: E,
+      },
+    })
+    return testDb.slot.create({
+      data: {
+        startDate: new Date(start),
+        endDate: new Date(end),
+        establishmentId: E,
+        serviceId: A,
+        slotTemplateID: slotTemplate.id,
+      },
+    })
+  }
+
   const ids: Record<string, string> = {}
 
   const patchAppointment = (id: string, body: Payload) =>
@@ -36,8 +75,7 @@ describe('NotificationDispatcher et rendez-vous', () => {
       payload: body,
     })
 
-  // Les notifications s'ecrivent en tache de fond : on attend qu'elles apparaissent plutot que
-  // de les lire tout de suite.
+  // Les notifications s'ecrivent en tache de fond : on attend qu'elles apparaissent.
   const notifs = async (email: string, type: string, attendu = 1) => {
     for (let i = 0; i < 40; i += 1) {
       const rows = await testDb.notification.findMany({
@@ -58,9 +96,7 @@ describe('NotificationDispatcher et rendez-vous', () => {
     ).toBe(0)
   }
 
-  // Meme forme que `notifs`, mais ne compte que les lignes d'un rendez-vous donne : la
-  // preference decochee d'un compte ne doit pas se confondre avec le bruit des cas precedents,
-  // qui ont deja ecrit des PATIENT_ADDED pour d'autres rendez-vous.
+  // Meme forme que `notifs`, mais ne compte que les lignes d'un rendez-vous donne (le bruit des cas precedents ne doit pas fausser un compte).
   const comptePourRdv = async (
     email: string,
     type: string,
@@ -69,6 +105,14 @@ describe('NotificationDispatcher et rendez-vous', () => {
   ) => {
     const compte = (rows: { payload: unknown }[]) =>
       rows.filter((r) => (r.payload as Payload).appointmentId === rdv).length
+    // Attendu = 0 : meme delai que `aucune()`, jamais un retour anticipe sur un compte encore a zero.
+    if (attendu === 0) {
+      await new Promise((r) => setTimeout(r, 400))
+      const rows = await testDb.notification.findMany({
+        where: { userId: ids[email], type },
+      })
+      return compte(rows)
+    }
     for (let i = 0; i < 40; i += 1) {
       const rows = await testDb.notification.findMany({
         where: { userId: ids[email], type },
@@ -92,7 +136,7 @@ describe('NotificationDispatcher et rendez-vous', () => {
     E = est.id
     A = (await createService(E, 'S-NOTIF-RDV')).id
 
-    const S = (
+    S = (
       await testDb.soignant.create({
         data: { name: 'IDE', establishmentId: E, serviceId: A },
       })
@@ -167,9 +211,7 @@ describe('NotificationDispatcher et rendez-vous', () => {
 
     coordC = await signIn(t.app, 'coord@t.fr')
 
-    // Rendez-vous principal : modele de creneau lie a S seulement, capacite 3, salle et
-    // thematique poses sur le modele (le rendez-vous n'a pas de thematique propre : elle
-    // vient du modele).
+    // Rendez-vous principal : modele lie a S, capacite 3, salle et thematique sur le modele.
     const slotTemplate = await testDb.slotTemplate.create({
       data: {
         startTime: new Date('2026-11-01T09:00:00Z'),
@@ -238,35 +280,11 @@ describe('NotificationDispatcher et rendez-vous', () => {
     ).id
 
     // Troisieme rendez-vous : propre modele, meme soignant S, aucun patient au depart.
-    const slotTemplate3 = await testDb.slotTemplate.create({
-      data: {
-        startTime: new Date('2026-11-02T09:00:00Z'),
-        endTime: new Date('2026-11-02T09:30:00Z'),
-        offsetDays: 0,
-        isIndividual: false,
-        capacity: 5,
-        color: '#fff',
-        establishmentId: E,
-        serviceId: A,
-      },
-    })
-    await testDb.slotTemplateSoignant.create({
-      data: {
-        slotTemplateId: slotTemplate3.id,
-        soignantId: S,
-        serviceId: A,
-        establishmentId: E,
-      },
-    })
-    const slot3 = await testDb.slot.create({
-      data: {
-        startDate: new Date('2026-11-02T09:00:00Z'),
-        endDate: new Date('2026-11-02T09:30:00Z'),
-        establishmentId: E,
-        serviceId: A,
-        slotTemplateID: slotTemplate3.id,
-      },
-    })
+    const slot3 = await nouveauCreneau(
+      '2026-11-02T09:00:00Z',
+      '2026-11-02T09:30:00Z',
+      { capacity: 5 },
+    )
     troisiemeRdv = (
       await testDb.appointment.create({
         data: {
@@ -279,38 +297,12 @@ describe('NotificationDispatcher et rendez-vous', () => {
       })
     ).id
 
-    // Autre rendez-vous, voue a la suppression : meme soignant et meme thematique, un patient
-    // deja present des la creation.
-    const slotTemplate2 = await testDb.slotTemplate.create({
-      data: {
-        startTime: new Date('2026-11-04T09:00:00Z'),
-        endTime: new Date('2026-11-04T09:30:00Z'),
-        offsetDays: 0,
-        isIndividual: true,
-        capacity: 1,
-        color: '#fff',
-        establishmentId: E,
-        serviceId: A,
-        thematicId: thematic.id,
-      },
-    })
-    await testDb.slotTemplateSoignant.create({
-      data: {
-        slotTemplateId: slotTemplate2.id,
-        soignantId: S,
-        serviceId: A,
-        establishmentId: E,
-      },
-    })
-    const slot2 = await testDb.slot.create({
-      data: {
-        startDate: new Date('2026-11-04T09:00:00Z'),
-        endDate: new Date('2026-11-04T09:30:00Z'),
-        establishmentId: E,
-        serviceId: A,
-        slotTemplateID: slotTemplate2.id,
-      },
-    })
+    // Autre rendez-vous, voue a la suppression : meme soignant et meme thematique, un patient deja present.
+    const slot2 = await nouveauCreneau(
+      '2026-11-04T09:00:00Z',
+      '2026-11-04T09:30:00Z',
+      { thematicId: thematic.id },
+    )
     const P5 = (await patient('Marie', 'DUBOIS')).id
     autreRdv = (
       await testDb.appointment.create({
@@ -363,6 +355,44 @@ describe('NotificationDispatcher et rendez-vous', () => {
     }
   })
 
+  it('creation avec patientIDs : patients ajoutes au meme mouvement, l auteur non notifie', async () => {
+    const slot5 = await nouveauCreneau(
+      '2026-11-06T09:00:00Z',
+      '2026-11-06T09:30:00Z',
+    )
+    const patientCree = (
+      await testDb.patient.create({
+        data: {
+          firstName: 'Nina',
+          lastName: 'ROUX',
+          establishmentId: E,
+          createDate: new Date(),
+        },
+      })
+    ).id
+
+    const res = await t.app.inject({
+      method: 'POST',
+      url: tenantUrl(E, A, '/appointment'),
+      cookies: coordC,
+      payload: {
+        startDate: '2026-11-06T09:00:00.000Z',
+        endDate: '2026-11-06T09:30:00.000Z',
+        slotID: slot5.id,
+        patientIDs: [patientCree],
+      },
+    })
+    expect(res.statusCode).toBe(201)
+    const nouveauRdv = res.json().id as string
+
+    expect(
+      await comptePourRdv('ide1@t.fr', 'PATIENT_ADDED', nouveauRdv, 1),
+    ).toBeGreaterThanOrEqual(1)
+    expect(
+      await comptePourRdv('coord@t.fr', 'PATIENT_ADDED', nouveauRdv, 0),
+    ).toBe(0)
+  })
+
   it('absence sans raison : notifiee ; avec raison : rien', async () => {
     const after1 = (
       await testDb.appointment.findFirst({
@@ -383,6 +413,12 @@ describe('NotificationDispatcher et rendez-vous', () => {
     const rows = await notifs('ide1@t.fr', 'ABSENT')
     expect(rows).toHaveLength(1)
     expect(rows[0]?.payload).toMatchObject({ patientId: P1 })
+    await new Promise((r) => setTimeout(r, 400))
+    expect(
+      await testDb.notification.count({
+        where: { userId: ids['ide1@t.fr'], type: 'ABSENT' },
+      }),
+    ).toBe(1)
   })
 
   it('changement d horaire du rendez-vous : modifie, avec avant et apres', async () => {
@@ -394,7 +430,7 @@ describe('NotificationDispatcher et rendez-vous', () => {
 
     const [n] = await notifs('ide1@t.fr', 'APPOINTMENT_MOVED')
     expect(n?.payload).toMatchObject({
-      before: { startDate: expect.any(String) },
+      before: { startDate: expect.any(String), locationName: 'Bureau 2' },
       after: { startDate: '2026-11-03T10:00:00.000Z' },
     })
   })
@@ -432,18 +468,118 @@ describe('NotificationDispatcher et rendez-vous', () => {
     expect(
       await comptePourRdv('ide2@t.fr', 'PATIENT_ADDED', troisiemeRdv, 0),
     ).toBe(0)
+
+    // Service decoche : ide1 ne suit (en preference) qu'un autre service, rien ne doit partir.
+    const autreService = (await createService(E, 'Autre service')).id
+    await testDb.user.update({
+      where: { id: ids['ide1@t.fr'] },
+      data: { notificationPrefs: { services: [autreService] } },
+    })
+    const slot4 = await nouveauCreneau(
+      '2026-11-05T09:00:00Z',
+      '2026-11-05T09:30:00Z',
+    )
+    const quatriemeRdv = (
+      await testDb.appointment.create({
+        data: {
+          startDate: new Date('2026-11-05T09:00:00Z'),
+          endDate: new Date('2026-11-05T09:30:00Z'),
+          establishmentId: E,
+          serviceId: A,
+          slotID: slot4.id,
+        },
+      })
+    ).id
+    const P6 = (
+      await testDb.patient.create({
+        data: {
+          firstName: 'Lea',
+          lastName: 'PETIT',
+          establishmentId: E,
+          createDate: new Date(),
+        },
+      })
+    ).id
+    const res2 = await patchAppointment(quatriemeRdv, {
+      appointmentPatients: [{ patientID: P6 }],
+    })
+    expect(res2.statusCode).toBe(200)
+    expect(
+      await comptePourRdv('ide1@t.fr', 'PATIENT_ADDED', quatriemeRdv, 0),
+    ).toBe(0)
+
+    await testDb.user.update({
+      where: { id: ids['ide1@t.fr'] },
+      data: { notificationPrefs: {} },
+    })
   })
 
-  it('une erreur du dispatcher n echoue pas la mise a jour', async () => {
-    const ctx = t.instances.notificationContextRepository
-    const original = ctx.sessions.bind(ctx)
-    ctx.sessions = () => Promise.reject(new Error('panne'))
+  it('une erreur d ecriture du dispatcher n echoue pas la mise a jour, le changement persiste', async () => {
+    const repo = t.instances.notificationRepository
+    const original = repo.createMany.bind(repo)
+    repo.createMany = () => Promise.reject(new Error('panne'))
 
     const res = await patchAppointment(appointmentId, {
       appointmentPatients: [{ id: ap1, patientID: P1 }, { patientID: P4 }],
     })
 
-    ctx.sessions = original
+    repo.createMany = original
     expect(res.statusCode).toBe(200)
+    const persiste = await testDb.appointmentPatient.findFirst({
+      where: { appointmentId, patientId: P4 },
+    })
+    expect(persiste).not.toBeNull()
+  })
+
+  it('une erreur de lecture du contexte n echoue pas la suppression, le rendez-vous disparait', async () => {
+    const slot6 = await nouveauCreneau(
+      '2026-11-07T09:00:00Z',
+      '2026-11-07T09:30:00Z',
+    )
+    const cinquiemeRdv = (
+      await testDb.appointment.create({
+        data: {
+          startDate: new Date('2026-11-07T09:00:00Z'),
+          endDate: new Date('2026-11-07T09:30:00Z'),
+          establishmentId: E,
+          serviceId: A,
+          slotID: slot6.id,
+        },
+      })
+    ).id
+    const P7 = (
+      await testDb.patient.create({
+        data: {
+          firstName: 'Tom',
+          lastName: 'FABRE',
+          establishmentId: E,
+          createDate: new Date(),
+        },
+      })
+    ).id
+    await testDb.appointmentPatient.create({
+      data: {
+        establishmentId: E,
+        serviceId: A,
+        appointmentId: cinquiemeRdv,
+        patientId: P7,
+      },
+    })
+
+    const ctx = t.instances.notificationContextRepository
+    const original = ctx.sessions.bind(ctx)
+    ctx.sessions = () => Promise.reject(new Error('panne'))
+
+    const res = await t.app.inject({
+      method: 'DELETE',
+      url: tenantUrl(E, A, `/appointment/${cinquiemeRdv}`),
+      cookies: coordC,
+    })
+
+    ctx.sessions = original
+    expect(res.statusCode).toBe(204)
+    expect(
+      await testDb.appointment.findUnique({ where: { id: cinquiemeRdv } }),
+    ).toBeNull()
   })
 })

@@ -2,10 +2,7 @@ import type { SessionSnapshot } from '../infra/orm/repositories/notification-con
 
 export type { SessionSnapshot }
 
-// Appele directement par les domaines. Chaque methode (hors `snapshot`) rend la
-// main tout de suite : le travail se fait en tache de fond et attrape toute
-// erreur (voir NotificationDispatcher) — une notification ratee n'echoue jamais
-// l'action metier.
+// Appele par les domaines ; chaque methode hors `snapshot` est void, en tache de fond, sans echec.
 export interface NotificationDispatcherInterface {
   snapshot: (appointmentIds: string[]) => Promise<SessionSnapshot[]>
   patientsAdded: (

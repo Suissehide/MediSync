@@ -47,9 +47,7 @@ class NotificationDispatcher implements NotificationDispatcherInterface {
     this.logger = logger
   }
 
-  // Jamais d'exception : appelee aussi bien en tache de fond (via #safe) que
-  // directement par un domaine avant une suppression — une panne de lecture n'y
-  // echoue ni l'une ni l'autre, elle rend une liste vide.
+  // Jamais d'exception : appelee en tache de fond et directement par un domaine avant suppression.
   async snapshot(appointmentIds: string[]): Promise<SessionSnapshot[]> {
     try {
       return await this.notificationContextRepository.sessions(appointmentIds)
@@ -216,8 +214,7 @@ class NotificationDispatcher implements NotificationDispatcherInterface {
     return this.membershipRepository.findServiceMembers()
   }
 
-  // Soignants de la seance : comptes actifs, hors LECTURE, qui incarnent un des
-  // soignants donnes dans ce service — jamais l'auteur de l'action.
+  // Soignants de la seance : actifs, hors LECTURE, jamais l'auteur de l'action.
   #usersOf(
     members: ServiceMemberRow[],
     soignantIds: string[],
@@ -268,8 +265,7 @@ class NotificationDispatcher implements NotificationDispatcherInterface {
     work().catch((err) => this.#logError('dispatch', err))
   }
 
-  // Jamais la valeur brute de l'erreur : seule sa classe va au journal (meme
-  // regle que les purges planifiees, utils/app-event-bus.ts et starter.ts).
+  // Jamais la valeur brute de l'erreur : seule sa classe va au journal (meme regle que les purges).
   #logError(context: string, err: unknown): void {
     const errorClass = err instanceof Error ? err.constructor.name : typeof err
     this.logger.error(`Notification ${context} failed [${errorClass}]`)

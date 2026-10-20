@@ -3,8 +3,7 @@ import type { NotificationType } from '../../../../../generated/enums'
 
 export type NotificationEntityRepo = Notification
 
-// Pas de serviceId/establishmentId ici : le depot les pose lui-meme (meme
-// convention que les autres entrees de creation du repertoire).
+// Pas de serviceId/establishmentId ici : le depot les pose lui-meme (convention du repertoire).
 export type NotificationCreateEntityRepo = {
   userId: string
   type: NotificationType
@@ -16,8 +15,6 @@ export interface NotificationRepositoryInterface {
   findMine: (userId: string, since: Date) => Promise<NotificationEntityRepo[]>
   markRead: (userId: string, notificationId: string) => Promise<number>
   markAllRead: (userId: string) => Promise<void>
-  // `skipDuplicates` : une ligne dont (userId, dedupeKey) existe deja est silencieusement
-  // ignoree (clef d'unicite `@@unique([userId, dedupeKey])`) ; sans dedupeKey (undefined),
-  // jamais de collision (NULL != NULL dans une contrainte d'unicite Postgres).
+  // `skipDuplicates` ignore un (userId, dedupeKey) deja pris ; sans dedupeKey, jamais de collision.
   createMany: (rows: NotificationCreateEntityRepo[]) => Promise<void>
 }

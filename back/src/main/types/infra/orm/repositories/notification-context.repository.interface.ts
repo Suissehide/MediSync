@@ -1,6 +1,4 @@
-// Donnees de rendu figees a la creation d'une notification de seance : lues
-// AVANT une suppression pour que la notification reste lisible si le
-// rendez-vous, le creneau ou ses patients disparaissent ensuite.
+// Donnees de rendu figees a la creation, lues avant suppression pour rester lisibles ensuite.
 export type SessionSnapshot = {
   appointmentId: string
   slotId: string

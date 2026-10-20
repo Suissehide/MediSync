@@ -8,8 +8,7 @@ import type { TenantContextInterface } from '../../../types/utils/tenant-context
 import { soignantLinksInclude } from '../includes/slot-template.include'
 import type { PostgresPrismaClient } from '../postgres-client'
 
-// Meme forme que `appointmentWithSlotInclude` (appointment.repository.ts) : deja
-// autorisee par le garde-fou de tenant, reprise telle quelle.
+// Meme forme que `appointmentWithSlotInclude` (appointment.repository.ts), deja autorisee.
 const sessionInclude = {
   thematic: true,
   appointmentPatients: { include: { patient: true } },

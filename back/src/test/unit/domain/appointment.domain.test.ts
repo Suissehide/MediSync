@@ -30,6 +30,7 @@ const buildDomain = (known: { thematics: string[] }) => {
           startDate: base.startDate,
           slotID: 'slot-1',
           appointmentPatients: [],
+          slot: { slotTemplate: { location: null } },
         }),
     },
     slotDomain: {
