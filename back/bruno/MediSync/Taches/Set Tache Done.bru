@@ -1,0 +1,17 @@
+meta {
+  name: Set Tache Done
+  type: http
+  seq: 3
+}
+
+patch {
+  url: {{BASE_URL}}/e/{{establishmentId}}/s/{{serviceId}}/taches/{{taskId}}
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "done": true
+  }
+}

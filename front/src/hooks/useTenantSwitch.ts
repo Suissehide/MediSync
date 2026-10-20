@@ -10,7 +10,6 @@ import { useDiagnosticTemplateStore } from '@/store/useDiagnosticTemplateStore.t
 import { usePathwayTemplateEditStore } from '@/store/usePathwayTemplateEditStore.ts'
 import { usePlanningStore } from '@/store/usePlanningStore.ts'
 import { useSoignantStore } from '@/store/useSoignantStore.ts'
-import { useTodoStore } from '@/store/useTodoStore.ts'
 import type { TenantContext } from '@/types/auth.ts'
 
 // Le client de requetes est construit ici, et non dans `main.tsx`, parce
@@ -110,22 +109,21 @@ export const restoreForTenant = (
   snapshot?.reposer(client)
 }
 
-// Les cinq stores qui tiennent en memoire vive de la donnee du service : deux
-// selections, une edition en cours, et surtout deux MIROIRS de donnees du
-// service (`soignants`, `todos`). Ces deux-la sont exclus de leur
-// `partialize`, donc hors de portee d'une rehydratation de stores persistes,
-// et six composants les affichent : sans cette remise a zero, les noms des
-// soignants et les taches du service precedent restent a l'ecran, sans limite
-// de temps sur un ecran qui ne remonte pas sa requete.
+// Les quatre stores qui tiennent en memoire vive de la donnee du service :
+// deux selections, une edition en cours, et surtout un MIROIR de donnees du
+// service (`soignants`). Il est exclu de son `partialize`, donc hors de
+// portee d'une rehydratation de stores persistes, et plusieurs composants
+// l'affichent : sans cette remise a zero, les noms des soignants du service
+// precedent restent a l'ecran, sans limite de temps sur un ecran qui ne
+// remonte pas sa requete.
 export const resetTenantStores = (): void => {
   useDiagnosticStore.getState().reset()
   useDiagnosticTemplateStore.getState().reset()
   usePathwayTemplateEditStore.getState().reset()
   useSoignantStore.getState().reset()
-  useTodoStore.getState().reset()
 }
 
-// Les quatre stores persistes indexes par service (`scoped-storage.ts`) :
+// Les trois stores persistes indexes par service (`scoped-storage.ts`) :
 // leur tiroir change de nom avec le contexte, mais `zustand/persist` ne relit
 // le disque qu'au chargement du module. Sans cet appel explicite, un store
 // continuerait d'ecrire dans le nouveau tiroir tout en gardant en memoire les
@@ -146,7 +144,6 @@ export const rehydratePersistedStores = (): void => {
   switchScopedStorageContext()
   useSoignantStore.persist.rehydrate()
   useDashboardFilterStore.persist.rehydrate()
-  useTodoStore.persist.rehydrate()
   usePlanningStore.persist.rehydrate()
 }
 
@@ -160,9 +157,9 @@ export const resetOnTenantChange = async (
   // La rehydratation AVANT la reinitialisation, et les deux avant toute
   // attente, de facon synchrone.
   //
-  // L'ordre n'est pas arbitraire. `useSoignantStore` et `useTodoStore` sont a
-  // la fois reinitialises (leur miroir) et persistes (une autre part de leur
-  // etat) : leur `reset()` passe par le `set` enveloppe par `persist`, qui
+  // L'ordre n'est pas arbitraire. `useSoignantStore` est a la fois
+  // reinitialise (son miroir) et persiste (une autre part de son etat) : son
+  // `reset()` passe par le `set` enveloppe par `persist`, qui
   // persiste l'INTEGRALITE de l'etat courant apres chaque ecriture — y
   // compris la part persistee, inchangee par `reset()`. Reinitialiser
   // d'abord ecrirait donc, sous la cle du NOUVEAU service, la valeur encore

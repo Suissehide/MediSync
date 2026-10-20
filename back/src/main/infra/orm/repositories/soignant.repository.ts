@@ -100,7 +100,6 @@ class SoignantRepository implements SoignantRepositoryInterface {
       this.prisma.slotTemplateSoignant.count({
         where: { soignantId: soignantID, ...this.scope },
       }),
-      this.prisma.todo.count({ where: { soignantID, ...this.scope } }),
       this.prisma.serviceMembership.count({
         where: { soignantId: soignantID, ...this.scope },
       }),
@@ -111,8 +110,7 @@ class SoignantRepository implements SoignantRepositoryInterface {
         singulier: 'créneau modèle',
         pluriel: 'créneaux modèles',
       },
-      { count: comptes[1] as number, singulier: 'tâche', pluriel: 'tâches' },
-      { count: comptes[2] as number, singulier: 'membre', pluriel: 'membres' },
+      { count: comptes[1] as number, singulier: 'membre', pluriel: 'membres' },
     ])
     if (bloquant) {
       throw Boom.conflict(

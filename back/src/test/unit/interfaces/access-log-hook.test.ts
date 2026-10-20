@@ -86,7 +86,7 @@ describe('assertPatientReadLogged', () => {
       `${PREFIX}/patient/export`,
       `${PREFIX}/patient/search`,
       `${PREFIX}/patient/with-tags`,
-      `${PREFIX}/todo/:todoID`,
+      `${PREFIX}/location/:locationID`,
     ]) {
       expect(patientIdParamOf(url)).toBeNull()
       expect(() =>
@@ -106,7 +106,10 @@ describe('assertPatientReadLogged', () => {
 
   it('laisse passer une route sans identifiant de patient, et une ecriture', () => {
     expect(() =>
-      assertPatientReadLogged({ method: 'GET', url: `${PREFIX}/todo/:todoID` }),
+      assertPatientReadLogged({
+        method: 'GET',
+        url: `${PREFIX}/location/:locationID`,
+      }),
     ).not.toThrow()
     // Les ecritures sont deja tracees par ActivityLog : ce journal-ci ne couvre que la lecture.
     for (const method of ['POST', 'PATCH', 'PUT', 'DELETE']) {
@@ -775,14 +778,14 @@ describe('recordPatientAccess', () => {
     })
     for (const url of [
       `${DOSSIER}/pathways`,
-      `${PREFIX}/todo/:todoID`,
+      `${PREFIX}/location/:locationID`,
       undefined,
     ]) {
       await call({
         request: {
           tenant: tenantOf(),
           routeOptions: { url },
-          params: { patientID: 'p1', todoID: 't1' },
+          params: { patientID: 'p1', locationID: 't1' },
           currentUser: { firstName: null, lastName: null },
         },
         reply: { statusCode: 200 },

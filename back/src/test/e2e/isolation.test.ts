@@ -33,11 +33,13 @@ type IsolationCase = {
   name: string
   create: (serviceId: string, establishmentId: string) => Promise<string>
   path: (id: string) => string
-  methods?: ('GET' | 'DELETE')[]
+  methods?: ('GET' | 'DELETE' | 'PATCH')[]
   // Code attendu du contrepoint, pour la methode `methods[0]` : un seul est
   // correct selon la methode (200 pour un GET, 204 pour un DELETE) — on ne
   // se contente pas d'accepter les deux.
   ownerStatus: 200 | 204
+  // Corps envoye avec chaque methode, pour les cas en PATCH.
+  payload?: object
 }
 
 const cases: IsolationCase[] = [
@@ -122,23 +124,6 @@ const cases: IsolationCase[] = [
         })
         .then((r) => r.id),
     path: (id) => `/slot-template/${id}`,
-    ownerStatus: 200,
-  },
-  {
-    name: 'todo',
-    create: (s, e) =>
-      testDb.todo
-        .create({
-          data: {
-            title: 't',
-            createDate: new Date(),
-            completed: false,
-            serviceId: s,
-            establishmentId: e,
-          },
-        })
-        .then((r) => r.id),
-    path: (id) => `/todo/${id}`,
     ownerStatus: 200,
   },
   {
@@ -241,6 +226,17 @@ const cases: IsolationCase[] = [
       return appointment.id
     },
     path: (id) => `/appointment/${id}`,
+    ownerStatus: 200,
+  },
+  {
+    name: 'tache',
+    create: (s, e) =>
+      testDb.task
+        .create({ data: { text: 't', serviceId: s, establishmentId: e } })
+        .then((r) => r.id),
+    path: (id) => `/taches/${id}`,
+    methods: ['PATCH'],
+    payload: { done: true },
     ownerStatus: 200,
   },
 ]
@@ -387,7 +383,7 @@ describe('isolation par tenant', () => {
 
     describe.each(cases)(
       '$name',
-      ({ create, path, methods = ['GET', 'DELETE'], ownerStatus }) => {
+      ({ create, path, methods = ['GET', 'DELETE'], ownerStatus, payload }) => {
         it('404 depuis le service A sur une ressource du service B, succes depuis B', async () => {
           const { est, serviceA, serviceB, cookiesA, cookiesB } = scenario
           const id = await create(serviceB.id, est.id)
@@ -397,6 +393,7 @@ describe('isolation par tenant', () => {
               method,
               url: tenantUrl(est.id, serviceA.id, path(id)),
               cookies: cookiesA,
+              ...(payload ? { payload } : {}),
             })
             expect(fromA.statusCode).toBe(404)
           }
@@ -405,11 +402,12 @@ describe('isolation par tenant', () => {
           // doit réussir avec le code attendu pour cette méthode. Sinon le
           // 404 ci-dessus prouverait juste un identifiant invalide ou une
           // route cassée, pas un cloisonnement.
-          const ownerMethod = methods[0] as 'GET' | 'DELETE'
+          const ownerMethod = methods[0] as 'GET' | 'DELETE' | 'PATCH'
           const fromB = await t.app.inject({
             method: ownerMethod,
             url: tenantUrl(est.id, serviceB.id, path(id)),
             cookies: cookiesB,
+            ...(payload ? { payload } : {}),
           })
           expect(fromB.statusCode).toBe(ownerStatus)
         })

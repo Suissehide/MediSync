@@ -11,16 +11,16 @@ import seedPathwayTemplates from './seed/pathwayTemplate'
 import seedPatients, { seedEtpFields } from './seed/patient'
 import seedPdfDesignPresets from './seed/pdfDesignPreset'
 import seedSoignants from './seed/soignant'
+import type { TaskData } from './seed/task'
+import seedTasks from './seed/task'
 import seedTenant from './seed/tenant'
 import seedThematics from './seed/thematic'
-import type { TodoData } from './seed/todo'
-import seedTodos from './seed/todo'
 import seedUsers from './seed/user'
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
 const prisma = new PrismaClient({ adapter })
 
-type ServiceContent = { patients: PatientData[]; todos: TodoData[] }
+type ServiceContent = { patients: PatientData[]; tasks: TaskData[] }
 
 // Un établissement, deux services : les fonctions de peuplement service par
 // service prennent toutes le même couple (establishmentId, serviceId) en
@@ -30,34 +30,17 @@ type ServiceContent = { patients: PatientData[]; todos: TodoData[] }
 // défaut de cloisonnement ne se verrait pas à l'œil.
 const CARDIOLOGIE: ServiceContent = {
   patients: PATIENTS_CARDIOLOGIE,
-  todos: [
-    {
-      title: 'Vérifier le dossier médical de Claire',
-      description: 'S’assurer que les derniers résultats sont à jour.',
-      completed: false,
-    },
-    {
-      title: 'Préparer atelier nutrition',
-      description:
-        'Réviser la présentation PowerPoint et les supports imprimés.',
-      completed: true,
-    },
+  tasks: [
+    { text: 'Vérifier le dossier médical de Claire', done: false },
+    { text: 'Préparer atelier nutrition', done: true },
   ],
 }
 
 const PNEUMOLOGIE: ServiceContent = {
   patients: PATIENTS_PNEUMOLOGIE,
-  todos: [
-    {
-      title: 'Vérifier le dossier médical de Nadia',
-      description: 'S’assurer que la dernière spirométrie est à jour.',
-      completed: false,
-    },
-    {
-      title: 'Préparer atelier souffle',
-      description: 'Réviser les supports de réhabilitation respiratoire.',
-      completed: true,
-    },
+  tasks: [
+    { text: 'Vérifier le dossier médical de Nadia', done: false },
+    { text: 'Préparer atelier souffle', done: true },
   ],
 }
 
@@ -78,7 +61,6 @@ async function seedService(
   await seedArsIndicatorSet(prisma, tenant)
   await seedPatients(prisma, tenant, content.patients)
   await seedPathwayTemplates(prisma, soignants, locations, thematics, tenant)
-  await seedTodos(prisma, tenant, content.todos)
   return soignants
 }
 
@@ -103,7 +85,7 @@ async function main() {
     PNEUMOLOGIE,
   )
 
-  await seedUsers(
+  const users = await seedUsers(
     prisma,
     establishment.id,
     { serviceA, serviceB },
@@ -111,6 +93,29 @@ async function main() {
       [serviceA.id, soignantsA],
       [serviceB.id, soignantsB],
     ]),
+  )
+
+  // Tâches après les comptes : le compte de dev (tagué) et l'auteur sabrina en dépendent.
+  const devUser = users.find((u) => u.email === 'admin@qwetle.fr')
+  const author = users.find((u) => u.email === 'sabrina.bernadet@cepta.fr')
+  if (!devUser || !author) {
+    throw new Error('Comptes de seed introuvables pour les tâches')
+  }
+
+  await seedTasks(
+    prisma,
+    { establishmentId: establishment.id, serviceId: serviceA.id },
+    CARDIOLOGIE.tasks,
+    author.id,
+    devUser.id,
+  )
+  // Sabrina n'est pas membre de Pneumologie : le compte de dev y est aussi l'auteur, sans se notifier lui-même.
+  await seedTasks(
+    prisma,
+    { establishmentId: establishment.id, serviceId: serviceB.id },
+    PNEUMOLOGIE.tasks,
+    devUser.id,
+    devUser.id,
   )
 
   console.log('✅ Seeding completed successfully!')

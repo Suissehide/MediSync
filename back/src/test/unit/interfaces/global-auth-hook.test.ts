@@ -62,7 +62,7 @@ describe('hook onRequest global des routes', () => {
 
   it('referme la portee du tenant avant de verifier la session', async () => {
     const { onRequest, order } = await load()
-    await onRequest(request('/e/:establishmentId/s/:serviceId/todo'), {})
+    await onRequest(request('/e/:establishmentId/s/:serviceId/taches'), {})
     expect(order).toEqual(['clear', 'verifySessionCookie'])
   })
 })
