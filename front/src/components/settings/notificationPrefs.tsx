@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { Bell, BellRing, SlidersHorizontal } from 'lucide-react'
+import { Bell, BellRing, Mail, SlidersHorizontal } from 'lucide-react'
 import { Checkbox, RadioGroup } from 'radix-ui'
 import { useRef } from 'react'
 
@@ -10,7 +10,9 @@ import {
   useNotificationPrefsQuery,
   useUpdateNotificationPrefs,
 } from '@/queries/useNotificationPrefs.ts'
+import { useAuthStore } from '@/store/useAuthStore.ts'
 import type {
+  Digest,
   NotificationLevel,
   NotificationPrefKey,
   NotificationPrefs as Prefs,
@@ -27,19 +29,34 @@ const LEVELS: {
     level: 'all',
     icon: BellRing,
     label: 'Tout',
-    description: "Toutes les notifications, dans l'app.",
+    description: "Toutes les notifications, dans l'app et par e-mail.",
   },
   {
     level: 'essential',
     icon: Bell,
     label: 'Essentiel',
-    description: "Les notifications utiles, dans l'app.",
+    description:
+      "Tout dans l'app ; par e-mail, seulement les rappels, les RDV modifiés et les mentions.",
   },
   {
     level: 'custom',
     icon: SlidersHorizontal,
     label: 'Personnalisé',
     description: 'Votre propre réglage, ligne par ligne.',
+  },
+]
+
+const DIGESTS: { digest: Digest; label: string; description: string }[] = [
+  {
+    digest: 'now',
+    label: "Dès l'événement",
+    description: 'Un e-mail par notification.',
+  },
+  {
+    digest: 'daily',
+    label: 'Résumé quotidien à 7 h',
+    description:
+      "Un seul e-mail par jour. Les rappels restent envoyés à l'heure.",
   },
 ]
 
@@ -119,9 +136,21 @@ const allOn = () =>
     boolean
   >
 
+// Preset e-mail du niveau Essentiel : rappels, RDV modifiés et mentions seulement.
+const ESSENTIAL_MAIL_KEYS: NotificationPrefKey[] = [
+  'reminder',
+  'moved',
+  'mention',
+]
+const essentialMail = () =>
+  Object.fromEntries(
+    EVENTS.map((e) => [e.key, ESSENTIAL_MAIL_KEYS.includes(e.key)]),
+  ) as Record<NotificationPrefKey, boolean>
+
 export function NotificationPrefs() {
   const { data } = useNotificationPrefsQuery()
   const services = useAccountServices()
+  const email = useAuthStore((state) => state.user?.email)
   const update = useUpdateNotificationPrefs()
   const queryClient = useQueryClient()
   // Dernière valeur confirmée par le serveur : un retour arrière n'écrase pas un PUT suivant déjà réussi.
@@ -158,18 +187,25 @@ export function NotificationPrefs() {
     save(
       level === 'custom'
         ? { ...data, level }
-        : { ...data, level, app: allOn() },
+        : {
+            ...data,
+            level,
+            app: allOn(),
+            mail: level === 'all' ? allOn() : essentialMail(),
+          },
     )
 
-  const toggleEvent = (key: NotificationPrefKey) =>
+  const toggleEvent = (key: NotificationPrefKey, channel: 'app' | 'mail') =>
     save({
       ...data,
       level: 'custom',
-      app: { ...data.app, [key]: !data.app[key] },
+      [channel]: { ...data[channel], [key]: !data[channel][key] },
     })
 
   const setDelay = (delay: ReminderDelay) =>
     save({ ...data, reminderDelay: delay })
+
+  const setDigest = (digest: Digest) => save({ ...data, digest })
 
   const checkedServices = live(data.services) ?? shown
   const toggleService = (id: string) => {
@@ -236,6 +272,15 @@ export function NotificationPrefs() {
       </div>
 
       <div className="border-t border-border pt-[18px] flex flex-col gap-1">
+        <div className="grid grid-cols-[minmax(0,1fr)_110px_110px] gap-4 pb-1">
+          <div />
+          <div className="flex items-center justify-center gap-1.5 text-xs text-text-light">
+            <Bell className="w-3.5 h-3.5" /> Dans l'app
+          </div>
+          <div className="flex items-center justify-center gap-1.5 text-xs text-text-light">
+            <Mail className="w-3.5 h-3.5" /> E-mail
+          </div>
+        </div>
         {GROUPS.map((group) => (
           <div key={group}>
             <h4 className="text-xs uppercase text-text-light mt-3 mb-1">
@@ -244,7 +289,7 @@ export function NotificationPrefs() {
             {EVENTS.filter((e) => e.group === group).map((e) => (
               <div
                 key={e.key}
-                className="flex items-center justify-between gap-4 py-2 border-t border-border first:border-t-0"
+                className="grid grid-cols-[minmax(0,1fr)_110px_110px] items-center gap-4 py-2 border-t border-border first:border-t-0"
               >
                 <div className="min-w-0">
                   <div className="text-[15px] font-medium text-foreground">
@@ -273,14 +318,49 @@ export function NotificationPrefs() {
                   )}
                 </div>
                 <Switch
-                  aria-label={e.label}
+                  aria-label={`${e.label} dans l'app`}
                   checked={data.app[e.key]}
-                  onCheckedChange={() => toggleEvent(e.key)}
+                  onCheckedChange={() => toggleEvent(e.key, 'app')}
+                  className="justify-self-center"
+                />
+                <Switch
+                  aria-label={`${e.label} par e-mail`}
+                  checked={data.mail[e.key]}
+                  onCheckedChange={() => toggleEvent(e.key, 'mail')}
+                  className="justify-self-center"
                 />
               </div>
             ))}
           </div>
         ))}
+      </div>
+
+      <div className="border-t border-border pt-4">
+        <p className="text-sm text-text-dark mb-2">
+          À {email}, sans données de santé : un lien ouvre MediSync.
+        </p>
+        <RadioGroup.Root
+          value={data.digest}
+          onValueChange={(digest) => setDigest(digest as Digest)}
+          aria-label="Envoi des e-mails"
+          className="grid grid-cols-2 gap-2.5"
+        >
+          {DIGESTS.map(({ digest, label, description }) => {
+            const active = data.digest === digest
+            return (
+              <RadioGroup.Item
+                key={digest}
+                value={digest}
+                className={`cursor-pointer text-left p-3.5 rounded-[10px] border-[1.5px] ${active ? 'border-primary bg-blue-50' : 'border-border bg-white'}`}
+              >
+                <div className="text-sm font-medium text-foreground">
+                  {label}
+                </div>
+                <div className="text-xs text-text-light">{description}</div>
+              </RadioGroup.Item>
+            )
+          })}
+        </RadioGroup.Root>
       </div>
     </div>
   )

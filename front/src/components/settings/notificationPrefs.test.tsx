@@ -81,23 +81,127 @@ describe('NotificationPrefs', () => {
     put.mockReset().mockImplementation(async (p) => p)
   })
 
-  it('choisir Tout coche tout ; modifier une ligne passe en Personnalise', async () => {
+  it('choisir Tout coche tout (app et e-mail) ; modifier une ligne passe en Personnalise', async () => {
     const u = userEvent.setup()
     render(<NotificationPrefs />, { wrapper })
-    await u.click(await screen.findByRole('radio', { name: /Tout/ }))
+    await u.click(await screen.findByRole('radio', { name: /^Tout/ }))
     expect(put).toHaveBeenLastCalledWith(
       expect.objectContaining({
         level: 'all',
         app: expect.objectContaining({ absent: true }),
+        mail: expect.objectContaining({ absent: true }),
       }),
     )
-    await u.click(screen.getByRole('switch', { name: /Absence non justifiée/ }))
+    await u.click(
+      screen.getByRole('switch', { name: /Absence non justifiée dans l'app/ }),
+    )
     expect(put).toHaveBeenLastCalledWith(
       expect.objectContaining({
         level: 'custom',
         app: expect.objectContaining({ absent: false }),
       }),
     )
+  })
+
+  it('choisir Essentiel ne coche les e-mails que pour rappel, modifie et mention', async () => {
+    get
+      .mockReset()
+      .mockResolvedValue({ ...essentialSaufAbsent, level: 'custom' })
+    const u = userEvent.setup()
+    render(<NotificationPrefs />, { wrapper })
+    await u.click(await screen.findByRole('radio', { name: /Essentiel/ }))
+    expect(put).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        level: 'essential',
+        app: expect.objectContaining({ absent: true, reminder: true }),
+        mail: {
+          reminder: true,
+          added: false,
+          moved: true,
+          absent: false,
+          diag: false,
+          end: false,
+          full: false,
+          mention: true,
+          due: false,
+        },
+      }),
+    )
+  })
+
+  it('interrupteur E-mail d une ligne : PUT en Personnalise, seule la case changee', async () => {
+    const u = userEvent.setup()
+    render(<NotificationPrefs />, { wrapper })
+    await u.click(
+      await screen.findByRole('switch', {
+        name: /Rappel avant mes rendez-vous par e-mail/,
+      }),
+    )
+    expect(put).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        level: 'custom',
+        mail: expect.objectContaining({ reminder: true }),
+        app: expect.objectContaining({ reminder: true }),
+      }),
+    )
+  })
+
+  it('carte Resume quotidien a 7 h : PUT digest daily, sans changer le niveau', async () => {
+    const u = userEvent.setup()
+    render(<NotificationPrefs />, { wrapper })
+    await u.click(
+      await screen.findByRole('radio', { name: /Résumé quotidien à 7 h/ }),
+    )
+    expect(put).toHaveBeenLastCalledWith(
+      expect.objectContaining({ digest: 'daily', level: 'essential' }),
+    )
+  })
+
+  it('affiche l adresse e-mail du compte, sans donnees de sante', async () => {
+    render(<NotificationPrefs />, { wrapper })
+    expect(
+      await screen.findByText(/À a@b\.fr, sans données de santé/),
+    ).toBeInTheDocument()
+  })
+
+  it('defaut sans e-mail : carte Personnalise active, aucun interrupteur e-mail coche', async () => {
+    get.mockReset().mockResolvedValue({
+      level: 'custom',
+      services: null,
+      reminderDelay: 'eve',
+      digest: 'now',
+      app: {
+        reminder: true,
+        added: true,
+        moved: true,
+        absent: true,
+        diag: true,
+        end: true,
+        full: true,
+        mention: true,
+        due: true,
+      },
+      mail: {
+        reminder: false,
+        added: false,
+        moved: false,
+        absent: false,
+        diag: false,
+        end: false,
+        full: false,
+        mention: false,
+        due: false,
+      },
+    })
+    render(<NotificationPrefs />, { wrapper })
+    expect(
+      await screen.findByRole('radio', { name: /Personnalisé/ }),
+    ).toHaveAttribute('aria-checked', 'true')
+    for (const switchEl of screen.getAllByRole('switch', {
+      name: /par e-mail/,
+    })) {
+      expect(switchEl).toHaveAttribute('aria-checked', 'false')
+    }
   })
 
   it('le dernier service coche ne se decoche pas', async () => {
@@ -143,11 +247,13 @@ describe('NotificationPrefs', () => {
     render(<NotificationPrefs />, { wrapper })
     await u.click(
       await screen.findByRole('switch', {
-        name: /Diagnostic éducatif à réaliser/,
+        name: /Diagnostic éducatif à réaliser dans l'app/,
       }),
     )
     await u.click(
-      screen.getByRole('switch', { name: /Fin de parcours : bilan à faire/ }),
+      screen.getByRole('switch', {
+        name: /Fin de parcours : bilan à faire dans l'app/,
+      }),
     )
 
     // Le second PUT (la bascule la plus recente) reussit en premier.
@@ -162,11 +268,13 @@ describe('NotificationPrefs', () => {
     })
 
     expect(
-      screen.getByRole('switch', { name: /Fin de parcours : bilan à faire/ }),
+      screen.getByRole('switch', {
+        name: /Fin de parcours : bilan à faire dans l'app/,
+      }),
     ).toHaveAttribute('aria-checked', 'false')
     expect(
       screen.getByRole('switch', {
-        name: /Diagnostic éducatif à réaliser/,
+        name: /Diagnostic éducatif à réaliser dans l'app/,
       }),
     ).toHaveAttribute('aria-checked', 'false')
   })
