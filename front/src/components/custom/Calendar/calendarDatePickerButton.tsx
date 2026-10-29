@@ -5,8 +5,8 @@ import { createPortal } from 'react-dom'
 
 // Aujourd'hui reste bien visible à côté de la date sélectionnée.
 export const DATE_CALENDAR_SX = {
-  '& .MuiPickersDay-today:not(.Mui-selected)': {
-    borderColor: 'var(--primary)',
+  '& .MuiPickerDay-today': {
+    outlineColor: 'var(--primary)',
     color: 'var(--primary)',
     fontWeight: 600,
   },

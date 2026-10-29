@@ -46,12 +46,14 @@ export const DatePicker = ({
               color: 'inherit',
             },
           },
-          InputProps: {
-            className: clsx(
-              'h-[36px] text-sm bg-background border border-border rounded-md shadow-none',
-              className,
-            ),
-            classes: { notchedOutline: 'border-none' },
+          slotProps: {
+            input: {
+              className: clsx(
+                'h-[36px] text-sm bg-background border border-border rounded-md shadow-none',
+                className,
+              ),
+              classes: { notchedOutline: 'border-none' },
+            },
           },
         },
         popper: {

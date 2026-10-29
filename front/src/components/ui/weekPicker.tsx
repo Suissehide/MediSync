@@ -1,7 +1,7 @@
 import {
   DateCalendar,
-  PickersDay,
-  type PickersDayProps,
+  PickerDay,
+  type PickerDayProps,
 } from '@mui/x-date-pickers'
 import dayjs, { type Dayjs } from 'dayjs'
 import isoWeek from 'dayjs/plugin/isoWeek'
@@ -41,7 +41,7 @@ interface WeekDayExtraProps {
   isForbidden: boolean
 }
 
-function WeekDay(props: PickersDayProps & WeekDayExtraProps) {
+function WeekDay(props: PickerDayProps & WeekDayExtraProps) {
   const { day, selectedWeekStart, hoveredWeekStart, isForbidden, ...other } =
     props
 
@@ -58,12 +58,12 @@ function WeekDay(props: PickersDayProps & WeekDayExtraProps) {
   const isWeekend = day.isoWeekday() > 5
 
   return (
-    <PickersDay
+    <PickerDay
       {...other}
       day={day}
-      disableMargin
       selected={false}
       sx={{
+        '--PickerDay-horizontalMargin': '0px',
         borderRadius: 0,
         transition: 'background-color 0.15s ease, color 0.15s ease',
         ...(isWeekStart && {
@@ -154,9 +154,9 @@ export function WeekPicker({
         onMonthChange={setVisibleMonth}
         showDaysOutsideCurrentMonth
         shouldDisableDate={isForbiddenDay}
-        slots={{ day: WeekDay as React.ComponentType<PickersDayProps> }}
+        slots={{ day: WeekDay as React.ComponentType<PickerDayProps> }}
         slotProps={{
-          day: ((ownerState: PickersDayProps) => ({
+          day: ((ownerState: PickerDayProps) => ({
             selectedWeekStart,
             hoveredWeekStart,
             isForbidden: isForbiddenDay(ownerState.day),
