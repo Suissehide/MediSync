@@ -29,7 +29,9 @@ DO $$
 DECLARE hors_import int;
 BEGIN
   SELECT count(*) INTO hors_import FROM "Appointment" a
-  WHERE a.id NOT LIKE 'clgx_%'
+  -- `\_` : un underscore litteral, sinon LIKE le prend pour un joker et un
+  -- identifiant applicatif commencant par « clgx » passerait pour un import.
+  WHERE a.id NOT LIKE 'clgx\_%'
     AND NOT EXISTS (SELECT 1 FROM "AppointmentPatient" ap WHERE ap."appointmentId" = a.id);
   IF hors_import > 0 THEN
     RAISE EXCEPTION 'Rendez-vous sans patient hors import : %. Regarder avant d''effacer.', hors_import;
