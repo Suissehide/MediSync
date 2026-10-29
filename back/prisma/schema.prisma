@@ -998,8 +998,14 @@ enum NotificationType {
   TASK_DUE
 }
 
+enum NotificationMailState {
+  PENDING
+  SENT
+  SKIPPED
+}
+
 model Notification {
-  id              String           @id @default(cuid())
+  id              String                 @id @default(cuid())
   establishmentId String
   serviceId       String
   userId          String
@@ -1007,10 +1013,12 @@ model Notification {
   payload         Json
   dedupeKey       String?
   readAt          DateTime?
-  createdAt       DateTime         @default(now())
+  mailState       NotificationMailState  @default(PENDING)
+  createdAt       DateTime               @default(now())
 
   @@unique([id, serviceId])
   @@unique([userId, dedupeKey])
   @@index([serviceId])
+  @@index([mailState, createdAt])
   @@index([userId, createdAt])
 }

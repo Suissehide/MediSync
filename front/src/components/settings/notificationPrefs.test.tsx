@@ -38,6 +38,7 @@ const essentialSaufAbsent: Prefs = {
   level: 'essential',
   services: null,
   reminderDelay: 'eve',
+  digest: 'now',
   app: {
     reminder: true,
     added: true,
@@ -48,6 +49,17 @@ const essentialSaufAbsent: Prefs = {
     full: true,
     mention: true,
     due: true,
+  },
+  mail: {
+    reminder: false,
+    added: false,
+    moved: false,
+    absent: false,
+    diag: false,
+    end: false,
+    full: false,
+    mention: false,
+    due: false,
   },
 }
 

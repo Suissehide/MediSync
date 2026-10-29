@@ -1,7 +1,9 @@
 import {
   allows,
   DEFAULT_PREFS,
+  mailAllows,
   normalizePrefs,
+  presetMail,
   withLiveServices,
 } from '../../../main/utils/notification-prefs'
 
@@ -32,11 +34,13 @@ describe('notification-prefs', () => {
     expect(normalizePrefs({})).toEqual(DEFAULT_PREFS)
     expect(normalizePrefs(null)).toEqual(DEFAULT_PREFS)
     expect(DEFAULT_PREFS).toMatchObject({
-      level: 'essential',
+      level: 'custom',
       services: null,
       reminderDelay: 'eve',
+      digest: 'now',
     })
     expect(Object.values(DEFAULT_PREFS.app).every(Boolean)).toBe(true)
+    expect(Object.values(DEFAULT_PREFS.mail).some(Boolean)).toBe(false)
   })
 
   it('garde les cles connues et ignore le reste', () => {
@@ -61,7 +65,7 @@ describe('notification-prefs', () => {
       services: 'x',
       app: { added: 'oui' },
     })
-    expect(p.level).toBe('essential')
+    expect(p.level).toBe('custom')
     expect(p.reminderDelay).toBe('eve')
     expect(p.services).toBeNull()
     expect(p.app.added).toBe(true)
@@ -74,5 +78,58 @@ describe('notification-prefs', () => {
     expect(allows(p, 'PATIENT_ADDED', 's1')).toBe(true)
     expect(allows(p, 'PATIENT_ADDED', 's2')).toBe(false)
     expect(allows(DEFAULT_PREFS, 'MENTION', 'nimporte')).toBe(true)
+  })
+
+  it('aucun e-mail par defaut, niveau personnalise', () => {
+    expect(DEFAULT_PREFS).toMatchObject({ level: 'custom', digest: 'now' })
+    expect(Object.values(DEFAULT_PREFS.mail).some(Boolean)).toBe(false)
+    expect(Object.values(DEFAULT_PREFS.app).every(Boolean)).toBe(true)
+  })
+
+  it('une preference de l etape 2 (sans mail) passe en personnalise sans e-mail', () => {
+    const p = normalizePrefs({
+      level: 'essential',
+      services: null,
+      reminderDelay: '1h',
+      app: { absent: false },
+    })
+    expect(p.level).toBe('custom')
+    expect(Object.values(p.mail).some(Boolean)).toBe(false)
+    expect(p.app.absent).toBe(false)
+    expect(p.reminderDelay).toBe('1h')
+  })
+
+  it('garde le niveau quand mail est present', () => {
+    const p = normalizePrefs({
+      level: 'essential',
+      mail: presetMail('essential'),
+      digest: 'daily',
+    })
+    expect(p.level).toBe('essential')
+    expect(p.digest).toBe('daily')
+  })
+
+  it('presets e-mail', () => {
+    expect(Object.values(presetMail('all')).every(Boolean)).toBe(true)
+    const e = presetMail('essential')
+    expect(
+      Object.entries(e)
+        .filter(([, v]) => v)
+        .map(([k]) => k)
+        .sort(),
+    ).toEqual(['mention', 'moved', 'reminder'])
+  })
+
+  it('mailAllows : case e-mail et services', () => {
+    const p = normalizePrefs({
+      level: 'custom',
+      mail: { ...presetMail('essential') },
+      services: ['s1'],
+    })
+    expect(mailAllows(p, 'REMINDER', 's1')).toBe(true)
+    expect(mailAllows(p, 'APPOINTMENT_CANCELLED', 's1')).toBe(true)
+    expect(mailAllows(p, 'ABSENT', 's1')).toBe(false)
+    expect(mailAllows(p, 'REMINDER', 's2')).toBe(false)
+    expect(mailAllows(DEFAULT_PREFS, 'MENTION', 's1')).toBe(false)
   })
 })
