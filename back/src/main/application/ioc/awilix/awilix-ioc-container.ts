@@ -55,6 +55,7 @@ import { LocationRepository } from '../../../infra/orm/repositories/location.rep
 import { MembershipRepository } from '../../../infra/orm/repositories/membership.repository'
 import { NotificationRepository } from '../../../infra/orm/repositories/notification.repository'
 import { NotificationContextRepository } from '../../../infra/orm/repositories/notification-context.repository'
+import { NotificationMailRepository } from '../../../infra/orm/repositories/notification-mail.repository'
 import { NotificationScheduleRepository } from '../../../infra/orm/repositories/notification-schedule.repository'
 import { PathwayRepository } from '../../../infra/orm/repositories/pathway.repository'
 import { PathwayTemplateRepository } from '../../../infra/orm/repositories/pathwayTemplate.repository'
@@ -77,6 +78,7 @@ import { UserRepository } from '../../../infra/orm/repositories/user.repository'
 import { FastifyHttpServer } from '../../../interfaces/http/fastify/fastify-http-server'
 import { ActivityLogSubscriber } from '../../../services/activity-log.subscriber'
 import { NotificationDispatcher } from '../../../services/notification.dispatcher'
+import { NotificationMailer } from '../../../services/notification.mailer'
 import { NotificationScheduler } from '../../../services/notification.scheduler'
 import type { Config } from '../../../types/application/config'
 import type { IocContainer } from '../../../types/application/ioc'
@@ -616,6 +618,11 @@ class AwilixIocContainer {
       'notificationScheduler',
       asClass(NotificationScheduler).singleton(),
     )
+    this.register(
+      'notificationMailRepository',
+      asClass(NotificationMailRepository).singleton(),
+    )
+    this.register('notificationMailer', asClass(NotificationMailer).singleton())
   }
 
   // Establishment
