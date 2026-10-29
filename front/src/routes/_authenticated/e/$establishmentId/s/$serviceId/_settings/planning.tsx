@@ -25,6 +25,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Calendar, {
   type CalendarEvent,
 } from '@/components/custom/Calendar/calendar.tsx'
+import LocationFilter, {
+  NO_LOCATION_KEY,
+} from '@/components/custom/planning/locationFilter.tsx'
 import PathwayFilter, {
   NO_PATHWAY_KEY,
 } from '@/components/custom/planning/pathwayFilter.tsx'
@@ -64,6 +67,7 @@ import {
   useForbiddenWeekMutations,
   useForbiddenWeekQueries,
 } from '@/queries/useForbiddenWeek.ts'
+import { useLocationQueries } from '@/queries/useLocation.ts'
 import { usePathwayMutations, usePathwayQueries } from '@/queries/usePathway.ts'
 import { usePathwayTemplateQueries } from '@/queries/usePathwayTemplate.ts'
 import {
@@ -208,6 +212,38 @@ function Planning() {
       ]),
     )
   }, [pathwayTemplates])
+  const { locations } = useLocationQueries()
+  const [hiddenLocationIds, setHiddenLocationIds] = useState<Set<string>>(
+    new Set(),
+  )
+
+  const handleToggleLocationFilter = useCallback(
+    (id: string, checked: boolean) => {
+      setHiddenLocationIds((prev) => {
+        const next = new Set(prev)
+        if (checked) {
+          next.delete(id)
+        } else {
+          next.add(id)
+        }
+        return next
+      })
+    },
+    [],
+  )
+
+  const handleResetLocationFilter = useCallback(() => {
+    setHiddenLocationIds(new Set())
+  }, [])
+
+  const handleHideAllLocations = useCallback(() => {
+    setHiddenLocationIds(
+      new Set([
+        NO_LOCATION_KEY,
+        ...(locations ?? []).map((location) => location.id),
+      ]),
+    )
+  }, [locations])
   const [bulkAction, setBulkAction] = useState('')
   const [duplicateWeekDate, setDuplicateWeekDate] =
     useState<dayjs.Dayjs | null>(null)
@@ -242,9 +278,14 @@ function Planning() {
     return slots.filter(
       (slot) =>
         !slot.archivedAt &&
-        !hiddenPathwayIds.has(slot.pathway?.template?.id ?? NO_PATHWAY_KEY),
+        !hiddenPathwayIds.has(slot.pathway?.template?.id ?? NO_PATHWAY_KEY) &&
+        !hiddenLocationIds.has(
+          slot.slotTemplate?.location?.id ??
+            slot.slotTemplate?.locationID ??
+            NO_LOCATION_KEY,
+        ),
     )
-  }, [slots, hiddenPathwayIds])
+  }, [slots, hiddenPathwayIds, hiddenLocationIds])
 
   useEffect(() => {
     setEvents(
@@ -782,6 +823,16 @@ function Planning() {
                 onToggle={handleTogglePathwayFilter}
                 onReset={handleResetPathwayFilter}
                 onHideAll={handleHideAllPathways}
+              />
+            )}
+
+            {!editMode && (
+              <LocationFilter
+                locations={locations ?? []}
+                hiddenIds={hiddenLocationIds}
+                onToggle={handleToggleLocationFilter}
+                onReset={handleResetLocationFilter}
+                onHideAll={handleHideAllLocations}
               />
             )}
 
