@@ -16,6 +16,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { AuthState, User } from '@/types/auth.ts'
+import { redirection } from '../../../../../test/redirection.ts'
 import { Route as adminRoute } from '../admin.tsx'
 import { Route as servicesRoute } from './services.tsx'
 
@@ -494,8 +495,6 @@ describe('beforeLoad de l ecran des services — garde services:manage', () => {
   })
 
   it('refuse un simple membre (role MEMBER)', () => {
-    expect(() => runBeforeLoad(member)).toThrow(
-      expect.objectContaining({ isRedirect: true, to: '/' }),
-    )
+    expect(() => runBeforeLoad(member)).toThrow(redirection({ to: '/' }))
   })
 })

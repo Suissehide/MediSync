@@ -5,7 +5,7 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 
@@ -34,7 +34,8 @@ const superAdmin: User = {
   isSuperAdmin: true,
 }
 
-const monterSidebar = (user: User) => {
+// Le routeur rend apres son premier chargement : sans l'attendre, une absence serait vraie a vide.
+const monterSidebar = async (user: User) => {
   const rootRoute = createRootRouteWithContext<{ authState: AuthState }>()({
     component: () => <Sidebar components={[]} isVisible={true} />,
   })
@@ -43,11 +44,13 @@ const monterSidebar = (user: User) => {
     history: createMemoryHistory({ initialEntries: ['/'] }),
     context: { authState: { isAuthenticated: true, user } },
   })
-  return render(
+  const rendu = render(
     <QueryClientProvider client={new QueryClient()}>
       <RouterProvider router={router} />
     </QueryClientProvider>,
   )
+  await act(() => router.load())
+  return rendu
 }
 
 describe('menu du compte', () => {
@@ -55,7 +58,7 @@ describe('menu du compte', () => {
     ['un compte ordinaire', compteOrdinaire],
     ['un super-admin', superAdmin],
   ])("ne porte plus d'entree Super-administration pour %s", async (_, user) => {
-    monterSidebar(user)
+    await monterSidebar(user)
 
     await userEvent.click(
       screen.getByRole('button', { name: 'Menu du compte' }),

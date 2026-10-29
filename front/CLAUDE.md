@@ -22,7 +22,7 @@ src/
 ├── utils/                     # permissions.ts (mirrors back/src/main/utils/permissions.ts, tested equal), tenant-context.ts, …
 ├── constants/                 # config.constant.ts (API URL factories, see below)
 ├── types/                     # shared TS types (auth.ts: User, TenantContext, …)
-└── test/                      # setup.ts (vitest/jsdom), shared test harnesses
+└── test/                      # setup.ts (charge setup-dom.ts sous jsdom), shared test harnesses
 ```
 
 ## Commands
@@ -316,12 +316,15 @@ because they look like real tests:
 
 - asserting that something **disappears** when Radix unmounts the whole content on close — the
   assertion passes whether or not the code resets state. Assert on **reopening** instead.
+- asserting an absence right after mounting a `RouterProvider` — since TanStack Router 1.17x
+  the route renders after its first load, so the DOM is still empty. Mount helpers
+  `await act(() => router.load())` before returning.
 - asserting two numbers without binding each to its label — swapping the two labels left nine
   tests green while the screen announced the wrong figure next to the wrong sentence. One
-  assertion was even tautological (`getByText('5') !== getByText('2')`). `src/test/setup.ts` reassigns `globalThis.localStorage`/`sessionStorage` to jsdom's real implementations — this works around Node's own global Web Storage (active by default since Node 25) shadowing jsdom's; don't "simplify" this by reading `window.localStorage` instead, `window === globalThis` in this test environment so it's the same shadowed property.
+  assertion was even tautological (`getByText('5') !== getByText('2')`). `src/test/setup-dom.ts` reassigns `globalThis.localStorage`/`sessionStorage` to jsdom's real implementations — this works around Node's own global Web Storage (active by default since Node 25) shadowing jsdom's; don't "simplify" this by reading `window.localStorage` instead, `window === globalThis` in this test environment so it's the same shadowed property.
 
 **Le budget d'attente asynchrone est a 5 s, pas au defaut de 1 s** (`configure({ asyncUtilTimeout })`
-dans `src/test/setup.ts`, avec `testTimeout: 20000` dans `vitest.config.ts` pour lui laisser la
+dans `src/test/setup-dom.ts`, avec `testTimeout: 20000` dans `vitest.config.ts` pour lui laisser la
 place). Ce n'est pas du confort : la suite monte 93 fichiers en parallele, et l'horloge dit ~37 s la
 ou le temps-test cumule en dit ~237. Sur une machine ainsi saturee, des tests dont l'assertion est
 JUSTE echouaient — des tests **differents a chaque execution**, jamais les memes, et tous verts en

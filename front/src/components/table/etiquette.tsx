@@ -1,4 +1,4 @@
-import { Slot } from '@radix-ui/react-slot'
+import { Slot } from 'radix-ui'
 import type React from 'react'
 import { useState } from 'react'
 
@@ -45,7 +45,7 @@ export function Etiquette({
   style,
   ...props
 }: EtiquetteProps) {
-  const Comp = asChild ? Slot : 'span'
+  const Comp = asChild ? Slot.Root : 'span'
   return (
     <Comp
       className={cn(

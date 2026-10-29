@@ -91,6 +91,7 @@ describe('NotificationPrefs', () => {
         app: expect.objectContaining({ absent: true }),
         mail: expect.objectContaining({ absent: true }),
       }),
+      expect.anything(),
     )
     await u.click(
       screen.getByRole('switch', { name: /Absence non justifiée dans l'app/ }),
@@ -100,6 +101,7 @@ describe('NotificationPrefs', () => {
         level: 'custom',
         app: expect.objectContaining({ absent: false }),
       }),
+      expect.anything(),
     )
   })
 
@@ -126,6 +128,7 @@ describe('NotificationPrefs', () => {
           due: false,
         },
       }),
+      expect.anything(),
     )
   })
 
@@ -143,6 +146,7 @@ describe('NotificationPrefs', () => {
         mail: expect.objectContaining({ reminder: true }),
         app: expect.objectContaining({ reminder: true }),
       }),
+      expect.anything(),
     )
   })
 
@@ -164,6 +168,7 @@ describe('NotificationPrefs', () => {
         app: expect.objectContaining({ reminder: false }),
         mail: expect.objectContaining({ reminder: false }),
       }),
+      expect.anything(),
     )
   })
 
@@ -189,6 +194,7 @@ describe('NotificationPrefs', () => {
     )
     expect(put).toHaveBeenLastCalledWith(
       expect.objectContaining({ digest: 'daily', level: 'essential' }),
+      expect.anything(),
     )
   })
 
@@ -250,6 +256,7 @@ describe('NotificationPrefs', () => {
     await u.click(cardio)
     expect(put).toHaveBeenLastCalledWith(
       expect.objectContaining({ services: ['s2'] }),
+      expect.anything(),
     )
     expect(diabeto).toBeDisabled()
   })
@@ -260,6 +267,7 @@ describe('NotificationPrefs', () => {
     await u.click(await screen.findByRole('button', { name: '1 h avant' }))
     expect(put).toHaveBeenLastCalledWith(
       expect.objectContaining({ reminderDelay: '1h', level: 'essential' }),
+      expect.anything(),
     )
   })
 
@@ -329,10 +337,12 @@ describe('NotificationPrefs', () => {
     await u.click(screen.getByRole('button', { name: '1 h avant' }))
     expect(put).toHaveBeenLastCalledWith(
       expect.objectContaining({ services: ['s1'] }),
+      expect.anything(),
     )
     await u.click(screen.getByRole('checkbox', { name: /Diabeto/ }))
     expect(put).toHaveBeenLastCalledWith(
       expect.objectContaining({ services: ['s1', 's2'] }),
+      expect.anything(),
     )
   })
 
@@ -349,6 +359,7 @@ describe('NotificationPrefs', () => {
     await u.click(screen.getByRole('button', { name: '2 h avant' }))
     expect(put).toHaveBeenLastCalledWith(
       expect.objectContaining({ services: null }),
+      expect.anything(),
     )
   })
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { User } from '@/types/auth.ts'
 import { redirectToDefaultService } from '@/utils/legacy-redirect.ts'
+import { redirection } from '../test/redirection.ts'
 
 const user: User = {
   id: 'u1',
@@ -33,8 +34,7 @@ describe('redirectToDefaultService', () => {
     expect(() =>
       redirectToDefaultService(user, '/e/$establishmentId/s/$serviceId/agenda'),
     ).toThrow(
-      expect.objectContaining({
-        isRedirect: true,
+      redirection({
         to: '/e/$establishmentId/s/$serviceId/agenda',
         params: { establishmentId: 'e1', serviceId: 's1' },
       }),
@@ -50,7 +50,7 @@ describe('redirectToDefaultService', () => {
   it('conserve les parametres de recherche entrants (search: true)', () => {
     expect(() =>
       redirectToDefaultService(user, '/e/$establishmentId/s/$serviceId/agenda'),
-    ).toThrow(expect.objectContaining({ search: true }))
+    ).toThrow(redirection({ search: true }))
   })
 
   it('transmet les parametres additionnels (ex. patientID) en plus du contexte', () => {
@@ -61,7 +61,7 @@ describe('redirectToDefaultService', () => {
         { patientID: 'p1' },
       ),
     ).toThrow(
-      expect.objectContaining({
+      redirection({
         params: { establishmentId: 'e1', serviceId: 's1', patientID: 'p1' },
         search: true,
       }),
@@ -74,6 +74,6 @@ describe('redirectToDefaultService', () => {
         userSansContexte,
         '/e/$establishmentId/s/$serviceId/agenda',
       ),
-    ).toThrow(expect.objectContaining({ isRedirect: true, to: '/pending' }))
+    ).toThrow(redirection({ to: '/pending' }))
   })
 })

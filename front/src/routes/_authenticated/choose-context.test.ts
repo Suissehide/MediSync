@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { User } from '@/types/auth.ts'
+import { redirection } from '../../test/redirection.ts'
 import { Route } from './choose-context.tsx'
 
 const adminSansService: User = {
@@ -41,7 +42,7 @@ describe('beforeLoad de la page de choix de contexte', () => {
 
   it('redirige vers /pending qui n a ni couple ni etablissement administre', () => {
     expect(() => runBeforeLoad(sansAcces)).toThrow(
-      expect.objectContaining({ isRedirect: true, to: '/pending' }),
+      redirection({ to: '/pending' }),
     )
   })
 

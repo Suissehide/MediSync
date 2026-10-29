@@ -7,7 +7,7 @@ import {
   Outlet,
   RouterProvider,
 } from '@tanstack/react-router'
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -47,7 +47,7 @@ const notif = (
 })
 
 // Le lien « Préférences » exige un `RouterProvider` ; la page de reglages prouve la navigation et son ancre.
-const renderPanel = (ui: ReactNode) => {
+const renderPanel = async (ui: ReactNode) => {
   const rootRoute = createRootRoute({ component: Outlet })
   const indexRoute = createRoute({
     getParentRoute: () => rootRoute,
@@ -72,6 +72,7 @@ const renderPanel = (ui: ReactNode) => {
       <RouterProvider router={router} />
     </QueryClientProvider>,
   )
+  await act(() => router.load())
   return router
 }
 
@@ -87,7 +88,7 @@ describe('NotificationsPanel', () => {
       notif('n1', 'INCONNU' as NotificationType, { foo: 'bar' }),
       notif('n2', 'TASK_DUE', { taskId: 't1', text: 'Appeler le labo' }),
     ]
-    renderPanel(
+    await renderPanel(
       <NotificationsPanel
         services={[service]}
         notifications={notifications}
@@ -102,7 +103,7 @@ describe('NotificationsPanel', () => {
   it('le lien Preferences navigue vers /user/settings#notifications et ferme le panneau', async () => {
     const u = userEvent.setup()
     const onClose = vi.fn()
-    const router = renderPanel(
+    const router = await renderPanel(
       <NotificationsPanel
         services={[service]}
         notifications={[]}

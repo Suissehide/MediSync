@@ -140,7 +140,7 @@ export function renderElement(
             style={{
               fontSize: element.fontSize,
               fontFamily: fontOf(element.bold),
-              color: element.color,
+              color: resolveFill(element.color, ctx),
               textAlign: element.align,
               ...(element.italic ? { fontStyle: 'italic' } : {}),
               ...(element.lineHeight ? { lineHeight: element.lineHeight } : {}),

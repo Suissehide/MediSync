@@ -1,6 +1,6 @@
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import type { Column, Table } from '@tanstack/react-table'
 import { Check, Columns3 } from 'lucide-react'
+import { DropdownMenu } from 'radix-ui'
 import { Fragment } from 'react'
 
 import { Button } from '../ui/button.tsx'

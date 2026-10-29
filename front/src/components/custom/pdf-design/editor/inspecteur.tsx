@@ -238,9 +238,11 @@ const Segmente = <T extends string>({
 // Le remplissage est soit une couleur fixe, soit la couleur du parcours avec son repli : ce
 // second cas est le seul moyen d'obtenir le rond colore de la couverture.
 const Remplissage = ({
+  label = 'Remplissage',
   fill,
   onChange,
 }: {
+  label?: string
   fill: PdfFill
   onChange: (fill: PdfFill) => void
 }) => {
@@ -249,7 +251,7 @@ const Remplissage = ({
   return (
     <>
       <Segmente
-        label="Remplissage"
+        label={label}
         pleineLargeur
         valeur={parcours ? COULEUR_PARCOURS : 'fixe'}
         options={[
@@ -436,19 +438,12 @@ const Texte = ({
           max={400}
           onChange={(fontSize) => onModifier({ fontSize })}
         />
-        <label className="min-w-0 h-[34px] border border-border rounded-[7px] flex items-center gap-2 px-2.5">
-          <input
-            type="color"
-            aria-label="Couleur du texte"
-            value={element.color}
-            onChange={(e) => onModifier({ color: e.target.value })}
-            className="w-[18px] h-[18px] shrink-0 cursor-pointer border-none bg-transparent p-0"
-          />
-          <span className="text-[13px] tabular-nums truncate">
-            {element.color}
-          </span>
-        </label>
       </div>
+      <Remplissage
+        label="Couleur du texte"
+        fill={element.color}
+        onChange={(color) => onModifier({ color })}
+      />
 
       <div className="flex gap-2">
         {/* Gras et italique ne s'excluent pas : deux interrupteurs, pas un segmente. */}

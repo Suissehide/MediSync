@@ -173,7 +173,7 @@ export function VirtualizedBodyTable<TData>({
         </tr>
       )}
 
-      {visibleRows.map((row: Row<TData>) => {
+      {visibleRows.map((row: Row<TData>, position) => {
         const disabled = isRowDisabled?.(row.original)
         const isSelected = row.getIsSelected()
         const isChild = row.depth > 0
@@ -182,7 +182,8 @@ export function VirtualizedBodyTable<TData>({
         return (
           <tr
             id={rowIdPrefix && rowDomId(rowIdPrefix, row.id)}
-            data-index={row.index}
+            // Pas row.index : une sous-ligne y reprend son rang dans son parent.
+            data-index={virtualize ? virtualRows[position].index : position}
             ref={(node) => {
               if (node && virtualize) {
                 rowVirtualizer.measureElement(node)

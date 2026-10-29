@@ -6,7 +6,6 @@ import interactionPlugin, {
 } from '@fullcalendar/interaction'
 import multiMonthPlugin from '@fullcalendar/multimonth'
 import FullCalendar from '@fullcalendar/react'
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import dayjs from 'dayjs'
 import {
@@ -20,6 +19,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react'
+import { DropdownMenu } from 'radix-ui'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import Calendar, {

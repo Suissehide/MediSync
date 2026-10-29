@@ -45,7 +45,7 @@ const textElement = z.object({
   fontSize: z.number().positive(),
   bold: z.boolean().default(false),
   italic: z.boolean().default(false),
-  color: hex,
+  color: fill,
   align: z.enum(['left', 'center', 'right']).default('left'),
   vAlign: z.enum(['top', 'middle', 'bottom']).default('top'),
   lineHeight: z.number().positive().optional(),

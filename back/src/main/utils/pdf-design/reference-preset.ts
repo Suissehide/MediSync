@@ -195,7 +195,7 @@ export const REFERENCE_PRESET_CONTENT: PdfDesignContentInput = {
           runs: [{ field: 'pathway.name' }],
           fontSize: 28,
           bold: true,
-          color: '#7c3aed',
+          color: { token: 'pathway.color', fallback: '#7c3aed' },
           align: 'center',
         },
         {

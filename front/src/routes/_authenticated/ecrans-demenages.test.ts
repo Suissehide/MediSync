@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { User } from '@/types/auth.ts'
+import { redirection } from '../../test/redirection.ts'
 import { Route as ancienJournal } from './settings/activity-log.tsx'
 
 // Navigation par echelle (2026-09-28) : l'ancienne adresse sans tenant du journal d'activite mene
@@ -48,8 +49,7 @@ describe('anciennes adresses sans tenant des ecrans demenages', () => {
           context: { authState: { isAuthenticated: true, user: admin } },
         }),
       ).toThrow(
-        expect.objectContaining({
-          isRedirect: true,
+        redirection({
           to: cible,
           params: { establishmentId: 'e2' },
           search: true,
@@ -69,8 +69,6 @@ describe('anciennes adresses sans tenant des ecrans demenages', () => {
           authState: { isAuthenticated: true, user: sansAdministration },
         },
       }),
-    ).toThrow(
-      expect.objectContaining({ isRedirect: true, to: '/choose-context' }),
-    )
+    ).toThrow(redirection({ to: '/choose-context' }))
   })
 })

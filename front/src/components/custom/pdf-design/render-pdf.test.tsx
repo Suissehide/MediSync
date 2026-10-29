@@ -192,6 +192,20 @@ describe('renderElement', () => {
     )
   })
 
+  it('colore un texte par jeton avec la couleur du parcours', () => {
+    const nom: PdfElement = {
+      ...texte,
+      color: { token: 'pathway.color', fallback: '#7c3aed' },
+    }
+    const avecParcours = ctx({
+      pathways: [pathway({ templateColor: '#123456' })],
+    })
+    expect(JSON.stringify(renderElement(nom, avecParcours))).toContain(
+      '#123456',
+    )
+    expect(JSON.stringify(renderElement(nom, ctx()))).toContain('#7c3aed')
+  })
+
   // Review Focus 2 : sans parcours, le repli du preset.
   it('se replie sur la couleur par defaut quand le patient n a pas de parcours', () => {
     const rond = ellipse({ token: 'pathway.color', fallback: '#e6aff6' })

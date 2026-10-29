@@ -32,7 +32,7 @@ export type PdfTextElement = Geometry & {
   fontSize: number
   bold: boolean
   italic: boolean
-  color: string
+  color: PdfFill
   align: 'left' | 'center' | 'right'
   vAlign: 'top' | 'middle' | 'bottom'
   lineHeight?: number

@@ -94,7 +94,7 @@ describe('useLogout vide le cache de requetes actif', () => {
     monter(queryClient)
 
     await userEvent.click(
-      screen.getByRole('button', { name: /deconnecter|déconnecter/i }),
+      await screen.findByRole('button', { name: /deconnecter|déconnecter/i }),
     )
 
     await waitFor(() => {

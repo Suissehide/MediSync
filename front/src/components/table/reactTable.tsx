@@ -162,7 +162,7 @@ export function ReactTable<TData extends { id: string }>({
   const rowIdPrefix = useId()
   const [paginationState, setPaginationState] = useState<PaginationState>({
     pageIndex: 0,
-    pageSize: 25,
+    pageSize: safeParse(localStorage.getItem(`page-size/${filterId}`), 25),
   })
 
   const table = useReactTable({
@@ -241,6 +241,13 @@ export function ReactTable<TData extends { id: string }>({
   useEffect(() => {
     localStorage.setItem(`sorting/${filterId}`, JSON.stringify(sorting))
   }, [sorting, filterId])
+
+  useEffect(() => {
+    localStorage.setItem(
+      `page-size/${filterId}`,
+      JSON.stringify(paginationState.pageSize),
+    )
+  }, [paginationState.pageSize, filterId])
 
   useEffect(() => {
     localStorage.setItem(`filters/${filterId}`, JSON.stringify(columnFilters))

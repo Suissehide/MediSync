@@ -61,7 +61,7 @@ export function elementStyle(
         fontFamily: 'Helvetica, Arial, sans-serif',
         fontWeight: element.bold ? 700 : 400,
         fontStyle: element.italic ? 'italic' : 'normal',
-        color: element.color,
+        color: remplissage(element.color),
         textAlign: element.align,
         lineHeight: element.lineHeight ?? 'normal',
         // La hauteur est un MINIMUM, comme le `grow` de render-pdf : un texte trop long
