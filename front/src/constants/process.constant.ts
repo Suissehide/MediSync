@@ -83,6 +83,7 @@ export const SLOT = {
   GET_ALL: 'get_all_slots',
   GET_BY_ID: 'get_by_id_slot',
   GET: 'get_slot',
+  CONFLICTS: 'get_slot_conflicts',
   CREATE: 'create_slot',
   UPDATE: 'update_slot',
   DELETE: 'delete_slot',

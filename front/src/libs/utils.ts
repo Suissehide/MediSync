@@ -54,6 +54,7 @@ export function getLabel<T extends Record<string, string>>(
 export const buildCalendarEventsFromSlots = (
   slots: Slot[],
   states: string[],
+  conflictLabels?: Map<string, string[]>,
 ): CalendarEvent[] => {
   if (!slots) {
     return []
@@ -95,6 +96,7 @@ export const buildCalendarEventsFromSlots = (
         capacity: slot.slotTemplate?.capacity,
         appointments: slot.appointments,
         locked: slot.locked,
+        conflicts: conflictLabels?.get(slot.id) ?? [],
       },
     }
   })

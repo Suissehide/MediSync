@@ -2,7 +2,7 @@ import type {
   AppointmentPatient,
   UpdateAppointmentPatientParams,
 } from './appointmentPatient.ts'
-import type { Slot } from './slot.ts'
+import type { PlanningConflict, Slot } from './slot.ts'
 
 export type Appointment = {
   id: string
@@ -15,6 +15,7 @@ export type Appointment = {
   /** Motif du rendez-vous — saisi sur un créneau individuel uniquement. */
   motif?: string | null
   appointmentPatients: AppointmentPatient[]
+  conflicts?: PlanningConflict[]
 }
 
 export type CreateAppointmentParams = Pick<

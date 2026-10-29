@@ -3,6 +3,11 @@ import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod/v4'
 
 import {
+  type GetPlanningConflictsQuery,
+  getPlanningConflictsQuerySchema,
+  planningConflictsSchema,
+} from '../schemas/planningConflict.schema'
+import {
   type CreateSlotBody,
   createSlotWithTemplateSchema,
   type DeleteSlotByIdParams,
@@ -13,6 +18,7 @@ import {
   getSlotsQuerySchema,
   slotResponseSchema,
   slotsResponseSchema,
+  slotWithConflictsResponseSchema,
   type UpdateSlotBody,
   type UpdateSlotParams,
   updateSlotByIdSchema,
@@ -39,6 +45,23 @@ const slotRouter: FastifyPluginAsync = (fastify) => {
       const { from, to, patientID } = request.query
       return await slotDomain.findAll({ from, to, patientID })
     },
+  )
+
+  // Conflits de la fenêtre : alimente les badges du planning.
+  fastify.get<{ Querystring: GetPlanningConflictsQuery }>(
+    '/conflicts',
+    {
+      schema: {
+        querystring: getPlanningConflictsQuerySchema,
+        response: {
+          200: z.object({ conflicts: planningConflictsSchema }),
+        },
+      },
+      config: { permission: 'planning:read' },
+    },
+    async (request) => ({
+      conflicts: await slotDomain.findConflicts(request.query),
+    }),
   )
 
   // Read by ID
@@ -71,7 +94,7 @@ const slotRouter: FastifyPluginAsync = (fastify) => {
       schema: {
         body: createSlotWithTemplateSchema,
         response: {
-          201: slotResponseSchema,
+          201: slotWithConflictsResponseSchema,
         },
       },
       config: { permission: 'planning:write' },
@@ -93,7 +116,7 @@ const slotRouter: FastifyPluginAsync = (fastify) => {
 
       const slot = await slotDomain.create(createSlotInput)
       reply.code(201)
-      return slot
+      return { ...slot, conflicts: await slotDomain.conflictsOf(slot.id) }
     },
   )
 
@@ -104,7 +127,7 @@ const slotRouter: FastifyPluginAsync = (fastify) => {
       schema: {
         ...updateSlotByIdSchema,
         response: {
-          200: slotResponseSchema,
+          200: slotWithConflictsResponseSchema,
           404: z.object({ message: z.string() }),
         },
       },
@@ -116,7 +139,7 @@ const slotRouter: FastifyPluginAsync = (fastify) => {
       if (!updated) {
         throw Boom.notFound('Slot not found')
       }
-      return updated
+      return { ...updated, conflicts: await slotDomain.conflictsOf(slotID) }
     },
   )
 

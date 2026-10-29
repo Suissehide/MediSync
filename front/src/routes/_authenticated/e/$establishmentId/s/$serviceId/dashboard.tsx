@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import dayjs from 'dayjs'
 import { CalendarRange, DoorOpen, Route as RouteIcon, X } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import Calendar, {
   type CalendarEvent,
@@ -14,12 +14,16 @@ import AddPatientToSlotForm from '@/components/custom/popup/addPatientToSlotForm
 import AppointmentSheet from '@/components/custom/sheet/appointmentSheet.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
 import { SLOT } from '@/constants/process.constant.ts'
+import { labelConflicts } from '@/libs/planningConflicts.ts'
 import { buildCalendarEventsFromSlots, containsKeyword } from '@/libs/utils.ts'
 import { useAppointmentMutations } from '@/queries/useAppointment.ts'
 import { useLocationQueries } from '@/queries/useLocation.ts'
 import { usePathwayTemplateQueries } from '@/queries/usePathwayTemplate.ts'
 import { usePlanningCycleQueries } from '@/queries/usePlanningCycle.ts'
-import { useSlotsInRangeQuery } from '@/queries/useSlot.ts'
+import {
+  useSlotConflictsQuery,
+  useSlotsInRangeQuery,
+} from '@/queries/useSlot.ts'
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import { useDashboardFilterStore } from '@/store/useDashboardFilterStore.ts'
 import { usePlanningStore } from '@/store/usePlanningStore.ts'
@@ -138,7 +142,12 @@ function Dashboard() {
       prev && prev.from === next.from && prev.to === next.to ? prev : next,
     )
   }, [])
-  const { slots } = useSlotsInRangeQuery(visibleRange)
+  const { slots, dataUpdatedAt } = useSlotsInRangeQuery(visibleRange)
+  const conflicts = useSlotConflictsQuery(visibleRange, dataUpdatedAt)
+  const conflictLabels = useMemo(
+    () => labelConflicts(conflicts, slots ?? []),
+    [conflicts, slots],
+  )
   const { planningCycle } = usePlanningCycleQueries()
   const { createAppointment } = useAppointmentMutations()
   const [events, setEvents] = useState<CalendarEvent[]>([])
@@ -160,7 +169,11 @@ function Dashboard() {
         location: () => filterSlotsByLocations(slots, selectedLocationIDs),
       }[mode]()
 
-      const slotEvents = buildCalendarEventsFromSlots(filtered, ['fillable'])
+      const slotEvents = buildCalendarEventsFromSlots(
+        filtered,
+        ['fillable'],
+        conflictLabels,
+      )
 
       setEvents(
         [...slotEvents].sort(
@@ -174,6 +187,7 @@ function Dashboard() {
     mode,
     selectedPathwayTemplateIDs,
     selectedLocationIDs,
+    conflictLabels,
   ])
 
   const handleSelectAppointment = (dateSelectArg: DateSelectArg) => {
