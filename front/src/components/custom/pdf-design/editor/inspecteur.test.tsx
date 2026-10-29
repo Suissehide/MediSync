@@ -20,7 +20,7 @@ const texte: PdfElement = {
   w: 100,
   h: 30,
   rotation: 0,
-  runs: [{ text: 'Bonjour', bold: false, italic: false }],
+  runs: [{ id: 'r1', text: 'Bonjour', bold: false, italic: false }],
   fontSize: 12,
   bold: false,
   italic: false,
@@ -111,7 +111,7 @@ describe('Inspecteur', () => {
           {
             ...texte,
             id: 'e2',
-            runs: [{ text: 'Devant', bold: false, italic: false }],
+            runs: [{ id: 'r1', text: 'Devant', bold: false, italic: false }],
           },
         ])}
         element={null}
@@ -376,12 +376,21 @@ describe('Inspecteur', () => {
       screen.getByRole('button', { name: 'Nom du patient' }),
     )
 
-    const dernier = vus.at(-1) as { runs?: { text?: string; field?: string }[] }
+    const dernier = vus.at(-1) as {
+      runs?: { id: string; text?: string; field?: string }[]
+    }
     expect(dernier.runs).toEqual([
-      { text: 'Bon', bold: false, italic: false },
-      { field: 'patient.name', bold: false, italic: false },
-      { text: 'jour', bold: false, italic: false },
+      { id: 'r1', text: 'Bon', bold: false, italic: false },
+      {
+        id: expect.any(String),
+        field: 'patient.name',
+        bold: false,
+        italic: false,
+      },
+      { id: expect.any(String), text: 'jour', bold: false, italic: false },
     ])
+    // Couper un run en deux ne doit pas dupliquer son id : il sert de cle de rendu.
+    expect(new Set(dernier.runs?.map((run) => run.id)).size).toBe(3)
   })
 
   // Le schema exige au moins un run : retirer le dernier produirait un contenu que
@@ -389,7 +398,7 @@ describe('Inspecteur', () => {
   it('ne vide jamais completement le contenu en retirant une donnee', async () => {
     const vus = monter({
       ...texte,
-      runs: [{ field: 'patient.name', bold: false, italic: false }],
+      runs: [{ id: 'r1', field: 'patient.name', bold: false, italic: false }],
     })
 
     await userEvent.click(
@@ -397,6 +406,8 @@ describe('Inspecteur', () => {
     )
 
     const dernier = vus.at(-1) as { runs?: { text?: string }[] }
-    expect(dernier.runs).toEqual([{ text: '', bold: false, italic: false }])
+    expect(dernier.runs).toEqual([
+      { id: expect.any(String), text: '', bold: false, italic: false },
+    ])
   })
 })

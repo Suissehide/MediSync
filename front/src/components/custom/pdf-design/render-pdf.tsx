@@ -146,10 +146,9 @@ export function renderElement(
               ...(element.lineHeight ? { lineHeight: element.lineHeight } : {}),
             }}
           >
-            {element.runs.map((run, index) => (
+            {element.runs.map((run) => (
               <Text
-                // Les runs n'ont pas d'identite propre : leur rang est leur cle.
-                key={`${element.id}-${index}`}
+                key={run.id}
                 style={{
                   fontFamily: fontOf(element.bold || run.bold),
                   ...(element.italic || run.italic

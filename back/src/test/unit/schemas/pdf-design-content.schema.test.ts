@@ -14,7 +14,7 @@ const texte = {
   y: 0,
   w: 100,
   h: 20,
-  runs: [{ text: 'Bonjour' }],
+  runs: [{ id: 'r1', text: 'Bonjour' }],
   fontSize: 12,
   color: '#221755',
 }
@@ -97,7 +97,7 @@ describe('pdfDesignContentSchema', () => {
       pdfDesignContentSchema.parse(
         pageAvecUnTexte({
           ...texte,
-          runs: [{ text: 'a', field: 'patient.name' }],
+          runs: [{ id: 'r1', text: 'a', field: 'patient.name' }],
         }),
       ),
     ).toThrow()
@@ -107,23 +107,35 @@ describe('pdfDesignContentSchema', () => {
     const element = premierElement(
       pageAvecUnTexte({
         ...texte,
-        runs: [{ field: 'patient.name', bold: true }],
+        runs: [{ id: 'r1', field: 'patient.name', bold: true }],
       }),
     )
     if (element.kind !== 'text') {
       throw new Error('forme inattendue')
     }
     expect(element.runs[0]).toEqual({
+      id: 'r1',
       field: 'patient.name',
       bold: true,
       italic: false,
     })
   })
 
+  it('refuse un run sans id', () => {
+    expect(() =>
+      pdfDesignContentSchema.parse(
+        pageAvecUnTexte({ ...texte, runs: [{ text: 'Bonjour' }] }),
+      ),
+    ).toThrow()
+  })
+
   it('refuse une donnee inconnue', () => {
     expect(() =>
       pdfDesignContentSchema.parse(
-        pageAvecUnTexte({ ...texte, runs: [{ field: 'patient.ssn' }] }),
+        pageAvecUnTexte({
+          ...texte,
+          runs: [{ id: 'r1', field: 'patient.ssn' }],
+        }),
       ),
     ).toThrow()
   })
