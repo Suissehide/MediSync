@@ -53,6 +53,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group.tsx'
 import { TOAST_SEVERITY } from '@/constants/ui.constant.ts'
 import { can } from '@/hooks/useCan.ts'
 import { useToast } from '@/hooks/useToast.ts'
+import { labelConflicts } from '@/libs/planningConflicts.ts'
 import {
   buildCalendarEventsFromSlots,
   buildCalendarEventsFromSlotTemplates,
@@ -68,7 +69,11 @@ import {
   usePlanningCycleMutations,
   usePlanningCycleQueries,
 } from '@/queries/usePlanningCycle.ts'
-import { useSlotMutations, useSlotsInRangeQuery } from '@/queries/useSlot.ts'
+import {
+  useSlotConflictsQuery,
+  useSlotMutations,
+  useSlotsInRangeQuery,
+} from '@/queries/useSlot.ts'
 import { useSlotTemplateMutations } from '@/queries/useSlotTemplate.ts'
 import { usePathwayTemplateEditStore } from '@/store/usePathwayTemplateEditStore.ts'
 import { usePlanningStore } from '@/store/usePlanningStore.ts'
@@ -107,7 +112,12 @@ function Planning() {
       prev && prev.from === next.from && prev.to === next.to ? prev : next,
     )
   }, [])
-  const { slots } = useSlotsInRangeQuery(visibleRange)
+  const { slots, dataUpdatedAt } = useSlotsInRangeQuery(visibleRange)
+  const conflicts = useSlotConflictsQuery(visibleRange, dataUpdatedAt)
+  const conflictLabels = useMemo(
+    () => labelConflicts(conflicts, slots ?? []),
+    [conflicts, slots],
+  )
   const { pathways } = usePathwayQueries()
   const { pathwayTemplates } = usePathwayTemplateQueries()
   const { createSlot, updateSlot, deleteSlot, archiveSlots } =
@@ -240,9 +250,10 @@ function Planning() {
       buildCalendarEventsFromSlots(
         visibleSlots,
         editMode ? ['editable'] : ['default'],
+        conflictLabels,
       ),
     )
-  }, [visibleSlots, editMode])
+  }, [visibleSlots, editMode, conflictLabels])
 
   useEffect(() => {
     if (currentPathwayTemplate?.slotTemplates) {

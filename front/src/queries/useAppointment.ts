@@ -9,6 +9,7 @@ import {
   snapshotForTenant,
 } from '../hooks/useTenantSwitch.ts'
 import { useToast } from '../hooks/useToast.ts'
+import { conflictWarning } from '../libs/planningConflicts.ts'
 import type {
   Appointment,
   CreateAppointmentParams,
@@ -91,11 +92,15 @@ export const useAppointmentMutations = () => {
 
       return { previousAppointments }
     },
-    onSuccess: () => {
-      toast({
-        title: 'Rendez-vous créé avec succès',
-        severity: TOAST_SEVERITY.SUCCESS,
-      })
+    onSuccess: (appointment) => {
+      toast(
+        appointment.conflicts?.length
+          ? conflictWarning(appointment.conflicts)
+          : {
+              title: 'Rendez-vous créé avec succès',
+              severity: TOAST_SEVERITY.SUCCESS,
+            },
+      )
     },
     onError: (error, __, context) => {
       restoreForTenant(queryClient, context?.previousAppointments)
@@ -173,11 +178,15 @@ export const useAppointmentMutations = () => {
 
       return { previousAppointments }
     },
-    onSuccess: () => {
-      toast({
-        title: 'Rendez-vous modifié avec succès',
-        severity: TOAST_SEVERITY.SUCCESS,
-      })
+    onSuccess: (appointment) => {
+      toast(
+        appointment.conflicts?.length
+          ? conflictWarning(appointment.conflicts)
+          : {
+              title: 'Rendez-vous modifié avec succès',
+              severity: TOAST_SEVERITY.SUCCESS,
+            },
+      )
     },
     onError: (error, __, context) => {
       restoreForTenant(queryClient, context?.previousAppointments)

@@ -11,6 +11,9 @@ export const pdfDesignPresetSummarySchema = z.object({
   name: z.string(),
   content: pdfDesignContentSchema,
   sortOrder: z.number().int(),
+  // Un brouillon n'est propose a aucun service : l'ecran super-admin le montre, la liste du
+  // service non.
+  isDraft: z.boolean(),
 })
 
 export const pdfDesignPresetListResponseSchema = z.array(
@@ -35,6 +38,8 @@ export const updatePdfDesignPresetSchema = z.object({
   content: pdfDesignContentSchema.optional(),
   // `false` restaure un modele supprime ; la suppression passe par DELETE.
   archived: z.literal(false).optional(),
+  // `false` termine le brouillon, `true` l'y remet.
+  isDraft: z.boolean().optional(),
 })
 
 // La liste ENTIERE, dans le nouvel ordre : envoyer deux identifiants ou un delta laisserait

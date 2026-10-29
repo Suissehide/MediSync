@@ -26,4 +26,18 @@ describe('buildCalendarEventsFromSlots', () => {
     const [event] = buildCalendarEventsFromSlots([slot()], ['fillable'])
     expect(event.extendedProps?.location).toBeUndefined()
   })
+
+  it('porte les libelles de conflit du creneau', () => {
+    const [event] = buildCalendarEventsFromSlots(
+      [slot()],
+      ['default'],
+      new Map([['slot-1', ['Salle Bleue déjà occupée']]]),
+    )
+    expect(event.extendedProps?.conflicts).toEqual(['Salle Bleue déjà occupée'])
+  })
+
+  it('laisse la liste de conflits vide sans libelles', () => {
+    const [event] = buildCalendarEventsFromSlots([slot()], ['default'])
+    expect(event.extendedProps?.conflicts).toEqual([])
+  })
 })

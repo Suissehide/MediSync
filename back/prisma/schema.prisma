@@ -846,13 +846,16 @@ model IndicatorAnswer {
 // Design livre en lecture seule, visible par tous les services, gere par le super-admin.
 // Modele GLOBAL : ni dans SERVICE_MODELS ni dans ESTABLISHMENT_MODELS.
 model PdfDesignPreset {
-  id         String    @id @default(cuid())
-  name       String
-  content    Json
-  sortOrder  Int       @default(0)
-  archivedAt DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  id          String    @id @default(cuid())
+  name        String
+  content     Json
+  // Null = BROUILLON : le modele se compose cote super-admin, mais n'est propose a aucun
+  // service tant qu'il n'est pas termine. Meme regle que PdfDesign.publishedAt.
+  publishedAt DateTime?
+  sortOrder   Int       @default(0)
+  archivedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 // La copie modifiable d'un service. Le nom n'est pas unique, comme IndicatorSet et

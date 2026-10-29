@@ -101,6 +101,7 @@ describe('routes super-admin des modeles livres', () => {
       'name',
       'content',
       'sortOrder',
+      'isDraft',
     ])
   })
 
@@ -155,6 +156,44 @@ describe('routes super-admin des modeles livres', () => {
     const res = await creer({})
 
     expect(res.json().name).toBe('Nouveau modèle 2')
+  })
+
+  // Un modele NEUF est un brouillon : il se compose ici, et n'est propose a aucun service
+  // tant qu'il n'est pas termine. La preuve cote service vit dans pdf-design.test.ts.
+  it('cree un modele en brouillon, vierge ou duplique', async () => {
+    await creerPreset('p-a-copier', 'A copier', 5)
+
+    const vierge = await creer({})
+    const copie = await creer({ sourcePresetId: 'p-a-copier' })
+
+    expect(vierge.json().isDraft).toBe(true)
+    expect(copie.json().isDraft).toBe(true)
+  })
+
+  it('termine un modele, et le remet en brouillon', async () => {
+    const res = await creer({})
+    const id = res.json().id
+
+    const termine = await modifier(id, { isDraft: false })
+    expect(termine.json().isDraft).toBe(false)
+    const enBase = await testDb.pdfDesignPreset.findFirstOrThrow({
+      where: { id },
+    })
+    expect(enBase.publishedAt).not.toBeNull()
+
+    const remis = await modifier(id, { isDraft: true })
+    expect(remis.json().isDraft).toBe(true)
+  })
+
+  // L'ecran super-admin, lui, montre les brouillons : c'est la qu'on les compose.
+  it('liste les brouillons a cote des modeles termines', async () => {
+    const brouillon = await creer({})
+
+    const liste = await lister()
+
+    expect(liste.json().map((p: { id: string }) => p.id)).toContain(
+      brouillon.json().id,
+    )
   })
 
   it('duplique un modele existant en suffixant son nom', async () => {

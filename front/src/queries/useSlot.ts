@@ -15,9 +15,12 @@ import {
   snapshotForTenant,
 } from '../hooks/useTenantSwitch.ts'
 import { useToast } from '../hooks/useToast.ts'
+import { conflictWarning } from '../libs/planningConflicts.ts'
 import type {
   CreateSlotParams,
+  PlanningConflict,
   Slot,
+  SlotDateRange,
   SlotQuery,
   UpdateSlotParams,
 } from '../types/slot.ts'
@@ -54,6 +57,7 @@ export const usePatientSlotsQuery = (patientID?: string) => {
 export const useSlotsInRangeQuery = (range: SlotQuery | null) => {
   const {
     data: slots,
+    dataUpdatedAt,
     isPending,
     isFetching,
     isError,
@@ -72,7 +76,27 @@ export const useSlotsInRangeQuery = (range: SlotQuery | null) => {
     error,
   })
 
-  return { slots, isPending, isFetching, isError, error }
+  return { slots, dataUpdatedAt, isPending, isFetching, isError, error }
+}
+
+const NO_CONFLICTS: PlanningConflict[] = []
+
+// Clé hors de SLOT.GET_ALL, que les mises à jour optimistes réécrivent ; `slotsUpdatedAt` la rafraîchit avec les créneaux.
+export const useSlotConflictsQuery = (
+  range: SlotDateRange | null,
+  slotsUpdatedAt: number,
+): PlanningConflict[] => {
+  const { data, isPending, isError, error } = useQuery({
+    queryKey: [SLOT.CONFLICTS, range?.from, range?.to, slotsUpdatedAt],
+    queryFn: () => SlotApi.getConflicts(range as SlotDateRange),
+    enabled: !!range && slotsUpdatedAt > 0,
+    placeholderData: keepPreviousData,
+    retry: 0,
+  })
+
+  useDataFetching({ isPending, isError, error })
+
+  return data ?? NO_CONFLICTS
 }
 
 export const useSlotByIDQuery = (slotID: string, options = {}) => {
@@ -139,11 +163,15 @@ export const useSlotMutations = () => {
 
       return { previousSlots }
     },
-    onSuccess: () => {
-      toast({
-        title: 'Créneau créé avec succès',
-        severity: TOAST_SEVERITY.SUCCESS,
-      })
+    onSuccess: (slot) => {
+      toast(
+        slot.conflicts?.length
+          ? conflictWarning(slot.conflicts)
+          : {
+              title: 'Créneau créé avec succès',
+              severity: TOAST_SEVERITY.SUCCESS,
+            },
+      )
     },
     onError: (error, __, context) => {
       restoreForTenant(queryClient, context?.previousSlots)
@@ -240,11 +268,15 @@ export const useSlotMutations = () => {
 
       return { previousSlots, previousSlot }
     },
-    onSuccess: () => {
-      toast({
-        title: 'Créneau modifié avec succès',
-        severity: TOAST_SEVERITY.SUCCESS,
-      })
+    onSuccess: (slot) => {
+      toast(
+        slot.conflicts?.length
+          ? conflictWarning(slot.conflicts)
+          : {
+              title: 'Créneau modifié avec succès',
+              severity: TOAST_SEVERITY.SUCCESS,
+            },
+      )
     },
     onError: (error, __, context) => {
       restoreForTenant(queryClient, context?.previousSlots)

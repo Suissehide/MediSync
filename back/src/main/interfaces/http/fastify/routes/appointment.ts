@@ -12,6 +12,7 @@ import type {
 import {
   appointmentResponseSchema,
   appointmentsResponseSchema,
+  appointmentWithConflictsResponseSchema,
   createAppointmentSchema,
   deleteAppointmentByIdParamsSchema,
   getAppointmentByIdParamsSchema,
@@ -25,7 +26,7 @@ import {
 
 const appointmentRouter: FastifyPluginAsync = (fastify) => {
   const { iocContainer } = fastify
-  const { appointmentDomain, logger } = iocContainer
+  const { appointmentDomain, slotDomain, logger } = iocContainer
 
   // Get all
   fastify.get(
@@ -74,7 +75,7 @@ const appointmentRouter: FastifyPluginAsync = (fastify) => {
       schema: {
         body: createAppointmentSchema,
         response: {
-          201: appointmentResponseSchema,
+          201: appointmentWithConflictsResponseSchema,
         },
       },
       config: { permission: 'appointment:write' },
@@ -85,7 +86,10 @@ const appointmentRouter: FastifyPluginAsync = (fastify) => {
         request.user.userID,
       )
       reply.code(201)
-      return appointment
+      return {
+        ...appointment,
+        conflicts: await slotDomain.conflictsOf(appointment.slotID),
+      }
     },
   )
 
@@ -99,7 +103,7 @@ const appointmentRouter: FastifyPluginAsync = (fastify) => {
       schema: {
         ...updateAppointmentByIdSchema,
         response: {
-          200: appointmentResponseSchema,
+          200: appointmentWithConflictsResponseSchema,
           404: z.object({ message: z.string() }),
         },
       },
@@ -116,7 +120,12 @@ const appointmentRouter: FastifyPluginAsync = (fastify) => {
       if (!updated) {
         throw Boom.notFound('Appointment not found')
       }
-      return updated
+      // Une liste de patients vide a supprimé le rendez-vous : plus rien à signaler.
+      const deleted = request.body.appointmentPatients?.length === 0
+      return {
+        ...updated,
+        conflicts: deleted ? [] : await slotDomain.conflictsOf(updated.slotID),
+      }
     },
   )
 

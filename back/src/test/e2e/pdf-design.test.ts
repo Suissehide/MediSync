@@ -39,7 +39,14 @@ describe('routes des designs de PDF', () => {
 
   it('rend les presets globaux a un membre du service', async () => {
     const preset = await testDb.pdfDesignPreset.create({
-      data: { name: 'Programme de reference', content: CONTENT, sortOrder: 0 },
+      data: {
+        name: 'Programme de reference',
+        content: CONTENT,
+        sortOrder: 0,
+        // TERMINE : un brouillon n'est propose a aucun service, et ces tests-la parlent de
+        // la liste, pas de l'etat du modele.
+        publishedAt: new Date(),
+      },
     })
 
     const res = await lire(scenario.serviceA.id, scenario.cookiesA)
@@ -111,6 +118,7 @@ describe('routes des designs de PDF', () => {
   it('ecarte un design au contenu invalide sans faire tomber la liste', async () => {
     await testDb.pdfDesignPreset.create({
       data: {
+        publishedAt: new Date(),
         name: 'Preset casse',
         content: {
           version: 1,
@@ -250,6 +258,7 @@ describe('routes des designs de PDF', () => {
         name: 'Preset retire',
         content: CONTENT,
         sortOrder: 50,
+        publishedAt: new Date(),
         archivedAt: new Date(),
       },
     })
@@ -330,6 +339,24 @@ describe('routes des designs de PDF', () => {
     })
 
     expect(res.statusCode).toBe(404)
+  })
+
+  // Un modele livre en BROUILLON se compose cote super-admin : aucun service ne le voit, et
+  // il ne se duplique pas davantage par qui connaitrait son identifiant.
+  it('ne propose pas un modele livre en brouillon, ni ne le laisse dupliquer', async () => {
+    const brouillon = await testDb.pdfDesignPreset.create({
+      data: { name: 'Modele en chantier', content: CONTENT, sortOrder: 90 },
+    })
+
+    const liste = await lire(scenario.serviceA.id, scenario.cookiesA)
+    expect(liste.json().presets.map((p: { id: string }) => p.id)).not.toContain(
+      brouillon.id,
+    )
+
+    const copie = await creer(scenario.serviceA.id, scenario.cookiesA, {
+      sourcePresetId: brouillon.id,
+    })
+    expect(copie.statusCode).toBe(404)
   })
 
   // Un design NEUF est un brouillon : il se compose dans les reglages, et n'est pas propose

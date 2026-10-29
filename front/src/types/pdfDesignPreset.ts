@@ -6,6 +6,9 @@ export type PdfDesignPreset = {
   name: string
   content: PdfDesignContent
   sortOrder: number
+  // Un BROUILLON : il se compose ici, mais n'est propose a aucun service tant qu'il n'est pas
+  // termine.
+  isDraft: boolean
 }
 
 export type CreatePdfDesignPresetParams = {
@@ -18,4 +21,5 @@ export type UpdatePdfDesignPresetParams = {
   name?: string
   content?: PdfDesignContent
   archived?: false
+  isDraft?: boolean
 }

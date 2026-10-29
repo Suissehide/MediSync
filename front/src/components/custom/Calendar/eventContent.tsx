@@ -23,6 +23,7 @@ import {
   TooltipRoot,
   TooltipTrigger,
 } from '../../ui/tooltip.tsx'
+import { ConflictBadge } from '../conflictBadge.tsx'
 
 type Props = {
   setOpenEventId?: (eventId: string) => void
@@ -56,6 +57,7 @@ export const EventContent = ({
     location,
     type,
     locked,
+    conflicts = [],
     capacity,
     isIndividual: isIndividualTemplate,
     secondaryTags = [],
@@ -152,6 +154,13 @@ export const EventContent = ({
             <Check className="w-3 h-3" strokeWidth={3} />
           </button>
         )}
+
+      {type === 'slot' && (
+        <ConflictBadge
+          labels={conflicts}
+          className="absolute bottom-0.5 right-0.5 z-20"
+        />
+      )}
 
       {locked && type === 'slot' && (
         <>

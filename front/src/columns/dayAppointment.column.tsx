@@ -14,6 +14,7 @@ import {
   SlotTimeline,
 } from '../components/custom/agenda/slotRange.tsx'
 import { Tronque } from '../components/custom/agenda/tronque.tsx'
+import { ConflictBadge } from '../components/custom/conflictBadge.tsx'
 import { Etiquette } from '../components/table/etiquette.tsx'
 import { Button } from '../components/ui/button.tsx'
 import { APPOINTMENT_TYPE } from '../constants/appointment.constant.ts'
@@ -48,6 +49,7 @@ type DayAppointmentActions = {
   onDelete: (row: DaySlotRow) => void
   onAddPatient: (row: DaySlotRow) => void
   soignantIDs: string[]
+  conflictLabels: Map<string, string[]>
 }
 
 export const getDayAppointmentColumns = ({
@@ -55,6 +57,7 @@ export const getDayAppointmentColumns = ({
   onDelete,
   onAddPatient,
   soignantIDs,
+  conflictLabels,
 }: DayAppointmentActions) => {
   return [
     columnHelper.accessor('startDate', {
@@ -66,7 +69,20 @@ export const getDayAppointmentColumns = ({
         if (row.depth > 0) {
           return <SlotTimeline row={row} />
         }
-        return formatRange(row.original)
+        // Une plage regroupe plusieurs créneaux : on cumule leurs conflits.
+        const slotIds = new Set([
+          row.original.slotId,
+          ...(row.original.subRows ?? []).map((sub) => sub.slotId),
+        ])
+        const labels = [...slotIds].flatMap(
+          (slotId) => conflictLabels.get(slotId) ?? [],
+        )
+        return (
+          <span className="inline-flex items-center gap-1.5">
+            {formatRange(row.original)}
+            <ConflictBadge labels={labels} />
+          </span>
+        )
       },
     }),
     columnHelper.accessor('thematic', {

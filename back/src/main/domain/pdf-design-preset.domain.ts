@@ -18,6 +18,8 @@ type LigneDePreset = {
   name: string
   content: unknown
   sortOrder: number
+  // Null = brouillon, comme en base. Le resume le traduit en `isDraft`.
+  publishedAt: Date | null
 }
 
 // « Nouveau modèle », puis « Nouveau modèle 2 ». Meme regle que `nomVierge` cote service, sur
@@ -55,6 +57,7 @@ class PdfDesignPresetDomain implements PdfDesignPresetDomainInterface {
         name: ligne.name,
         content: analyse.data,
         sortOrder: ligne.sortOrder,
+        isDraft: !ligne.publishedAt,
       })
     }
     return retenus
@@ -142,10 +145,12 @@ class PdfDesignPresetDomain implements PdfDesignPresetDomainInterface {
     const rang =
       params.archived === false ? { sortOrder: await this.#rangSuivant() } : {}
 
+    const { isDraft, ...reste } = params
     return this.#resume(
       await this.pdfDesignPresetRepository.update(presetID, {
-        ...params,
+        ...reste,
         ...rang,
+        ...(isDraft === undefined ? {} : { published: !isDraft }),
       }),
     )
   }

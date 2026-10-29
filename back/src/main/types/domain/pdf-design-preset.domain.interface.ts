@@ -8,6 +8,8 @@ export type PdfDesignPresetSummaryDomain = {
   // serialiseur — qui en ferait un 500 sur la liste entiere.
   content: PdfDesignContent
   sortOrder: number
+  // Un BROUILLON : il se compose cote super-admin, mais n'est propose a aucun service.
+  isDraft: boolean
 }
 
 export type PdfDesignPresetCreateDomain = {
@@ -19,6 +21,7 @@ export type PdfDesignPresetUpdateDomain = {
   name?: string
   content?: PdfDesignContent
   archived?: boolean
+  isDraft?: boolean
 }
 
 export interface PdfDesignPresetDomainInterface {

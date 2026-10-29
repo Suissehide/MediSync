@@ -14,6 +14,8 @@ export type PdfDesignPresetUpdateEntityRepo = {
   sortOrder?: number
   // `true` archive, `false` restaure.
   archived?: boolean
+  // `true` termine le brouillon (les services peuvent alors le dupliquer), `false` l'y remet.
+  published?: boolean
 }
 
 export interface PdfDesignPresetRepositoryInterface {

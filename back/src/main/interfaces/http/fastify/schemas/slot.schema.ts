@@ -3,6 +3,7 @@ import { z } from 'zod/v4'
 import { appointmentResponseSchema } from './appointment.schema'
 import { slotSchema } from './index'
 import { pathwayResponseSchema } from './pathway.schema'
+import { planningConflictsSchema } from './planningConflict.schema'
 import {
   createSlotTemplateSchema,
   slotTemplateResponseSchema,
@@ -28,6 +29,10 @@ export const slotResponseSchema = slotSchema.extend({
 })
 
 export const slotsResponseSchema = z.array(slotResponseSchema)
+
+export const slotWithConflictsResponseSchema = slotResponseSchema.extend({
+  conflicts: planningConflictsSchema,
+})
 
 export const getSlotByIdParamsSchema = z.object({
   slotID: z.cuid(),
