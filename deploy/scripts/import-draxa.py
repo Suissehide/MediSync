@@ -353,6 +353,13 @@ JOIN "SlotTemplateSoignant" sts ON sts."slotTemplateId" = s."slotTemplateID"
 WHERE a."serviceId" = :'svc' AND a."thematicId" IS NOT NULL
   AND NOT EXISTS (SELECT 1 FROM "SoignantThematic" x WHERE x."thematicId" = a."thematicId")
 ON CONFLICT DO NOTHING;""")
+    # Rejeu : un créneau passé d'individuel à collectif laisse son ancien rendez-vous
+    # sans patient (la ligne AppointmentPatient, de même id, est reprise par le nouveau).
+    # Un rendez-vous sans patient n'en est pas un : il fausse la suppression de créneau
+    # et bloque les intervalles libres.
+    out.append("""DELETE FROM "Appointment" a
+WHERE a."serviceId" = :'svc'
+  AND NOT EXISTS (SELECT 1 FROM "AppointmentPatient" ap WHERE ap."appointmentId" = a.id);""")
     out.append("COMMIT;")
     print("\n".join(out))
 
