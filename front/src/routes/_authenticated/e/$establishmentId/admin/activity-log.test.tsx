@@ -150,6 +150,9 @@ describe('journal d activite : pagination et recherche cote serveur', () => {
     await waitFor(() => {
       expect(derniereRequete()?.get('page')).toBe('3')
     })
+    // Passe le delai de saisie : la recherche, inchangee, ne ramene pas a la page 1.
+    await new Promise((fin) => setTimeout(fin, 400))
+    expect(derniereRequete()?.get('page')).toBe('3')
   })
 
   it('envoie la recherche d auteur au serveur, et revient a la premiere page', async () => {

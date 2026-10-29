@@ -892,6 +892,11 @@ describe("pagination de l'ecran plateforme", () => {
         '3',
       )
     })
+    // Passe le delai de saisie : la recherche, inchangee, ne ramene pas a la page 1.
+    await new Promise((fin) => setTimeout(fin, 400))
+    expect(requetesJournal(fetchMock).at(-1)?.searchParams.get('page')).toBe(
+      '3',
+    )
   })
 
   // CHANGER DE FILTRE RAMENE A LA PREMIERE PAGE, ET LA MEME REQUETE PORTE LES DEUX. La page 7 d'un

@@ -78,20 +78,24 @@ function SuperAdminAccessLogPage() {
   // local, et sans dépendance nouvelle.
   const [compteApplique, setCompteApplique] = useState('')
   useEffect(() => {
+    // Sans cette garde, le minuteur du montage ramenait à la page 1 une page choisie entre-temps.
+    const saisie = filtres.compte.trim()
+    if (saisie === compteApplique) {
+      return
+    }
     const minuteur = setTimeout(() => {
-      // Les deux mises à jour partent ensemble : une seule requête, sur la première page. Cet effet
-      // ne tourne que si la saisie a changé ; au montage, la page est déjà la première.
+      // Les deux mises à jour partent ensemble : une seule requête, sur la première page.
       //
       // `setPagination` EN CLAIR ICI, et non l'appel à `revenirAuDebut` : cette fonction est
       // recréée à chaque rendu, donc la déclarer en dépendance relancerait ce minuteur à chaque
       // rendu. Même forme, pour la même raison, que `admin/activity-log.tsx`.
-      setCompteApplique(filtres.compte.trim())
+      setCompteApplique(saisie)
       setPagination((courant) =>
         courant.pageIndex === 0 ? courant : { ...courant, pageIndex: 0 },
       )
     }, DELAI_SAISIE_MS)
     return () => clearTimeout(minuteur)
-  }, [filtres.compte])
+  }, [filtres.compte, compteApplique])
 
   const { establishments } = useSuperAdminEstablishmentsQuery()
   // LES TROIS FILTRES SONT SERVEUR. Le filtre « compte »
