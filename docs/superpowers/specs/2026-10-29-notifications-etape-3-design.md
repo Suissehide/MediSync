@@ -7,12 +7,13 @@ Handoff : `docs/superpowers/specs/handoffs/notifications-15/` (15b : colonne « 
 - **Contenu sans données de santé** : un e-mail ne contient que le type d'événement, la date, l'heure et la salle d'une séance, le nom d'un collègue auteur d'une mention, et un lien vers MediSync. **Jamais** de nom de patient, de thématique de séance, ni de texte de tâche (texte libre qui peut citer un patient).
 - **Résumé quotidien** : à partir de 7 h (Europe/Paris), un e-mail par personne avec les notifications « à envoyer par e-mail » créées avant 7 h ce jour-là et **pas encore lues** dans l'app. Rien à envoyer : pas d'e-mail. Les rappels partent toujours à l'heure, même en mode résumé.
 - **Approche** : une file d'envoi en base. Chaque notification porte un état d'e-mail ; une tâche planifiée, chaque minute, envoie ce qui est dû. Un seul point d'envoi quel que soit l'auteur de la notification (dispatcher, planificateur, mentions), rien de perdu au redémarrage.
-- **Niveaux** (15b) : **Tout** = tout dans l'app et par e-mail ; **Essentiel** (défaut) = tout dans l'app, par e-mail seulement les rappels, les RDV modifiés ou annulés et les mentions. Modifier une ligne passe en Personnalisé.
+- **Niveaux** (15b) : **Tout** = tout dans l'app et par e-mail ; **Essentiel** = tout dans l'app, par e-mail seulement les rappels, les RDV modifiés ou annulés et les mentions. Modifier une ligne passe en Personnalisé.
+- **Aucun e-mail par défaut** (demande de l'utilisateur) : un compte qui n'a jamais réglé ses e-mails n'en reçoit aucun. Le niveau affiché par défaut est donc **Personnalisé** (tout dans l'app, aucun e-mail), puisque Essentiel promet des e-mails.
 
 ## Données
 
 - `enum NotificationMailState { PENDING SENT SKIPPED }` ; `Notification.mailState NotificationMailState @default(PENDING)`. La migration passe toutes les notifications existantes à `SKIPPED` (l'historique ne part jamais par e-mail).
-- `NotificationPrefs` gagne `mail: Record<NotificationPrefKey, boolean>` et `digest: 'now' | 'daily'`. Défaut : `essential`, `mail` = `{ reminder, moved, mention }` à `true`, le reste à `false`, `digest: 'now'`. `normalizePrefs` complète les préférences existantes avec ces défauts. Choisir Tout met `mail` entier à `true` ; Essentiel le remet au défaut ci-dessus ; `app` reste tout à `true` dans les deux cas.
+- `NotificationPrefs` gagne `mail: Record<NotificationPrefKey, boolean>` et `digest: 'now' | 'daily'`. Défaut : `level: 'custom'`, `app` tout à `true`, `mail` tout à `false`, `digest: 'now'`. `normalizePrefs` : une préférence enregistrée sans `mail` (toutes celles de l'étape 2) reçoit `mail` tout à `false` et passe en `level: 'custom'`. Choisir Tout met `mail` entier à `true` ; Essentiel met `mail` à `true` pour `reminder`, `moved`, `mention` et `false` ailleurs ; `app` reste tout à `true` dans les deux cas.
 - Règle d'envoi : `mailAllows(prefs, type, serviceId)` = `prefs.mail[clé du type]` et le service passe le filtre `services` (même règle que `allows`, liste périmée comprise).
 
 ## Tâche d'envoi
@@ -61,7 +62,7 @@ Section « Notifications » de Mon compte :
 Back (e2e, faux transport du `Mailer` déjà utilisé par les tests d'invitation) :
 
 - `digest: 'now'` : un e-mail par notification autorisée, état `SENT` ; préférence `mail` coupée ou service non suivi → `SKIPPED`, aucun e-mail ;
-- Essentiel par défaut : rappel et mention envoyés, absence non ;
+- défaut (aucune préférence) : aucun e-mail ; niveau Essentiel choisi : rappel et mention envoyés, absence non ;
 - `daily` : rien avant 7:00 ; à 7:00 un seul e-mail groupé ; une notification lue → exclue et `SKIPPED` ; un rappel part tout de suite même en `daily` ;
 - second passage : aucun e-mail rejoué ; notifications existantes à la migration : jamais envoyées ;
 - **aucun e-mail ne contient un nom de patient, une thématique ni un texte de tâche** (vérifié sur le contenu texte et HTML de chaque type, avec des données qui en portent) ;
