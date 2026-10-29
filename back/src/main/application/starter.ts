@@ -108,6 +108,34 @@ const scheduleNotifications = (instances: IocContainer): void => {
   run()
 }
 
+const ONE_MINUTE_MS = 60 * 1000
+
+// Envoi des e-mails de notification (immediat ou resume quotidien a 7h Paris) — quatrieme appel de runAsSystem de ce fichier.
+const scheduleNotificationMails = (instances: IocContainer): void => {
+  const { notificationMailer, logger, tenantContext } = instances
+  const run = (): void => {
+    tenantContext
+      .runAsSystem(async () => {
+        return await notificationMailer.runOnce(new Date())
+      })
+      .then(({ sent, digests, skipped }) => {
+        if (sent + digests + skipped > 0) {
+          logger.info(
+            `Notification mails: ${sent} envoyés, ${digests} résumés, ${skipped} ignorés`,
+          )
+        }
+      })
+      .catch((err) => {
+        const errorClass =
+          err instanceof Error ? err.constructor.name : typeof err
+        logger.error(`Notification mails schedule failed [${errorClass}]`)
+      })
+  }
+  const timer = setInterval(run, ONE_MINUTE_MS)
+  timer.unref?.()
+  run()
+}
+
 const startApp = async (): Promise<IocContainer> => {
   const config = loadConfig()
   const iocContainer = startIocContainer(config)
@@ -119,6 +147,7 @@ const startApp = async (): Promise<IocContainer> => {
   scheduleActivityLogCleanup(iocContainer.instances)
   schedulePatientAccessLogCleanup(iocContainer.instances)
   scheduleNotifications(iocContainer.instances)
+  scheduleNotificationMails(iocContainer.instances)
 
   return iocContainer.instances
 }
@@ -129,4 +158,5 @@ export {
   scheduleActivityLogCleanup,
   schedulePatientAccessLogCleanup,
   scheduleNotifications,
+  scheduleNotificationMails,
 }

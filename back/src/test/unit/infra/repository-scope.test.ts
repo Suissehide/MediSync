@@ -2314,8 +2314,8 @@ describe('UserRepository.findNotificationPrefsMany, sous contexte de tenant (Tas
         },
       },
     ])
-    expect(prefs.get('u1')?.level).toBe('all')
-    expect(prefs.get('u2')?.level).toBe('essential')
+    expect(prefs.get('u1')?.level).toBe('custom')
+    expect(prefs.get('u2')?.level).toBe('custom')
   })
 
   it('liste de services filtree : services actuels relus sous systeme, bornes aux seuls comptes filtres', async () => {

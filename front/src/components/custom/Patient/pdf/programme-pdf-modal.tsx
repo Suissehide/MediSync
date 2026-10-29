@@ -9,10 +9,12 @@ import { useSourcesImages } from '../../../../queries/usePdfAsset.ts'
 import { usePdfDesignQueries } from '../../../../queries/usePdfDesign.ts'
 import { usePatientSlotsQuery } from '../../../../queries/useSlot.ts'
 import { useThematicQueries } from '../../../../queries/useThematic.ts'
+import { scopedStorageName } from '../../../../store/scoped-storage.ts'
 import { useAuthStore } from '../../../../store/useAuthStore.ts'
 import type { Patient } from '../../../../types/patient.ts'
 import type { PdfDesignSummary } from '../../../../types/pdfDesignList.ts'
 import { Button } from '../../../ui/button.tsx'
+import { Select } from '../../../ui/select.tsx'
 import { assetIdsDe } from '../../pdf-design/assets.ts'
 import ProgrammePDF from './programme.pdf.tsx'
 
@@ -41,6 +43,18 @@ export const chooseDesign = (
   disponibles.find((design) => design.isDefault) ??
   disponibles[0]
 
+// Le dernier design choisi, par service : ses identifiants n'ont pas de sens ailleurs.
+const designMemoKey = () =>
+  scopedStorageName('programme-pdf-design', useAuthStore.getState().context)
+
+const lireDernierDesign = (): string | null => {
+  try {
+    return localStorage.getItem(designMemoKey())
+  } catch {
+    return null
+  }
+}
+
 interface ProgrammePDFModalProps {
   patient: Patient
   onClose: () => void
@@ -61,7 +75,9 @@ export default function ProgrammePDFModal({
   // Le nom du service vient du contexte de tenant, pose par le layout de route.
   const serviceName = useAuthStore((state) => state.context?.serviceName) ?? ''
 
-  const [selectedDesignId, setSelectedDesignId] = useState<string | null>(null)
+  const [selectedDesignId, setSelectedDesignId] = useState<string | null>(
+    lireDernierDesign,
+  )
 
   const availableDesigns = useMemo<PdfDesignSummary[]>(
     () => designsProposables(designs, presets),
@@ -153,18 +169,28 @@ export default function ProgrammePDFModal({
           </h2>
           <div className="flex items-center gap-4">
             {availableDesigns.length > 1 && (
-              <select
-                className="border border-border rounded-md px-2 py-1 text-sm bg-background text-foreground"
-                value={selectedDesign?.id ?? ''}
-                onChange={(event) => setSelectedDesignId(event.target.value)}
-                aria-label="Design du document"
-              >
-                {availableDesigns.map((design) => (
-                  <option key={design.id} value={design.id}>
-                    {design.name}
-                  </option>
-                ))}
-              </select>
+              <div className="w-56">
+                <label htmlFor="programme-design" className="sr-only">
+                  Design du document
+                </label>
+                <Select
+                  id="programme-design"
+                  clearable={false}
+                  value={selectedDesign?.id ?? ''}
+                  onValueChange={(value) => {
+                    setSelectedDesignId(value)
+                    try {
+                      localStorage.setItem(designMemoKey(), value)
+                    } catch {
+                      // Stockage indisponible : le choix vaut pour cette ouverture seulement.
+                    }
+                  }}
+                  options={availableDesigns.map((design) => ({
+                    value: design.id,
+                    label: design.name,
+                  }))}
+                />
+              </div>
             )}
             {pdfDocument && (
               <PDFDownloadLink document={pdfDocument} fileName={fileName}>
