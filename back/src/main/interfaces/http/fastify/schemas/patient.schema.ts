@@ -114,6 +114,8 @@ export const patientIdentityMatchSchema = z.object({
   firstName: z.string(),
   lastName: z.string(),
   birthDate: z.coerce.date().nullable(),
+  // Le service courant a-t-il deja un sous-dossier ? Faux = identite venue d'un autre service.
+  inCurrentService: z.boolean(),
 })
 
 // `results` + `hasMore` : la

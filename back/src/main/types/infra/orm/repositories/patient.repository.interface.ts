@@ -75,7 +75,7 @@ export type PatientIdentitySearchResultRepo = {
 // `IDENTITY_SEARCH_LIMIT` correspondances — jamais le nombre exact, voir le commentaire de
 // `PatientRepository.searchByIdentity`.
 export type PatientIdentitySearchRepoResult = {
-  results: PatientIdentitySearchResultRepo[]
+  results: (PatientIdentitySearchResultRepo & { inCurrentService: boolean })[]
   hasMore: boolean
 }
 

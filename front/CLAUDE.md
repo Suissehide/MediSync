@@ -131,8 +131,9 @@ already has a sub-record for this patient (see `back/CLAUDE.md`), so an `undefin
 patient this service hasn't taken in yet, not a loading state to fill in later.
 
 The "add patient" popup (`components/custom/popup/addPatientForm.tsx`) searches existing establishment identities
-before creating a new one (`Rechercher un patient existant`) — results show only name and birth date, never
-anything about where else a match is followed. Choosing a match (`attachExistingPatient`) creates an **empty**
+before creating a new one, automatically as the name is typed (300 ms debounce) — results show only name, birth
+date and an « Autre service » badge when the current service has no sub-record for that identity (`inCurrentService`,
+never which service). Creating, or choosing a match, redirects to the patient's page. Choosing a match (`attachExistingPatient`) creates an **empty**
 sub-record in the current service and never touches the shared identity; picking the wrong homonym is
 **irreversible from the UI** — no screen removes a sub-record once created (see `back/CLAUDE.md`). "Créer sans
 parcours" also creates a sub-record immediately (`PatientDomain.create` → `ensureExists` on the back), so a

@@ -1,14 +1,7 @@
 import { useStore } from '@tanstack/react-form'
+import { useNavigate } from '@tanstack/react-router'
 import dayjs from 'dayjs'
-import {
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  Save,
-  Search,
-  UserCheck,
-  X,
-} from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, Save, UserCheck, X } from 'lucide-react'
 import type React from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
@@ -19,10 +12,11 @@ import {
   usePatientMutations,
 } from '../../../queries/usePatient.tsx'
 import { usePatientServiceFileMutations } from '../../../queries/usePatientServiceFile.ts'
+import { useAuthStore } from '../../../store/useAuthStore.ts'
 import type {
   CreatePatientParams,
   PatientIdentityMatch,
-  PatientIdentitySearchResult,
+  SearchPatientIdentityParams,
 } from '../../../types/patient.ts'
 import { Button } from '../../ui/button.tsx'
 import {
@@ -43,18 +37,15 @@ interface AddPatientFormProps {
 function AddPatientForm({ trigger }: AddPatientFormProps) {
   const [open, setOpen] = useState(false)
   const [step, setStep] = useState(1)
+  const navigate = useNavigate()
   const { enrollPatient, createPatient } = usePatientMutations()
-  const identitySearch = usePatientIdentitySearch()
   const { attachExistingPatient } = usePatientServiceFileMutations()
-  // `null` : aucune recherche encore lancée. `[]` : recherche faite, aucune identité trouvée —
-  // les deux sont affichés différemment (spec §6).
-  const [identityMatches, setIdentityMatches] = useState<
-    PatientIdentityMatch[] | null
-  >(null)
-  // `hasMore` : vingt résultats affichés au plus, sans
-  // dire le total — voir `PatientIdentitySearchResult`. Affiché seulement quand une recherche a
-  // été faite, comme `identityMatches`.
-  const [identityMatchesHasMore, setIdentityMatchesHasMore] = useState(false)
+  const [searchParams, setSearchParams] =
+    useState<SearchPatientIdentityParams | null>(null)
+  const identitySearch = usePatientIdentitySearch(searchParams)
+  // `undefined` : aucune recherche encore faite ; `[]` : aucune identité trouvée.
+  const identityMatches = identitySearch.data?.results
+  const identityMatchesHasMore = identitySearch.data?.hasMore ?? false
   const pathwayState = usePathwaySelector()
   const { reset: resetPathways } = pathwayState
 
@@ -66,7 +57,7 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
       birthDate: '',
     },
     onSubmit: async ({ value }) => {
-      await enrollPatient.mutateAsync({
+      const { patient } = await enrollPatient.mutateAsync({
         patientData: {
           firstName: value.firstName,
           lastName: value.lastName,
@@ -77,6 +68,7 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
       })
 
       setOpen(false)
+      await goToPatient(patient.id)
     },
   })
 
@@ -87,8 +79,7 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
     formResetRef.current()
     setStep(1)
     resetPathways()
-    setIdentityMatches(null)
-    setIdentityMatchesHasMore(false)
+    setSearchParams(null)
   }, [resetPathways])
 
   useEffect(() => {
@@ -103,7 +94,7 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
   const saveWithoutPathway = async () => {
     const { firstName, lastName, gender, birthDate } = form.state.values
 
-    await createPatient.mutateAsync({
+    const patient = await createPatient.mutateAsync({
       firstName,
       lastName,
       gender,
@@ -111,32 +102,44 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
     } satisfies CreatePatientParams)
 
     setOpen(false)
+    await goToPatient(patient.id)
   }
 
-  // Recherche d'identité existante avant création (spec §6) : cherche dans tout
-  // l'établissement, sur le prénom/nom déjà saisis dans le formulaire — jamais automatique, un
-  // clic explicite. Le résultat ne porte jamais que l'identité (id, prénom, nom, date de
-  // naissance) : rien de plus à afficher, rien de plus à masquer.
-  // `useStore`, pas une lecture directe de `form.state.values` : TanStack Form ne rend ce
-  // composant reactif a un champ que via `useStore`/`form.Subscribe` (voir addSlotForm.tsx) —
-  // une lecture directe ici resterait figee sur les valeurs du premier rendu, laissant le
-  // bouton "desactive" alors que les champs ont ete remplis.
+  const goToPatient = async (patientID: string) => {
+    const { establishmentId, serviceId } = useAuthStore.getState().context ?? {}
+    if (!establishmentId || !serviceId) {
+      return
+    }
+    await navigate({
+      to: '/e/$establishmentId/s/$serviceId/patient/$patientID',
+      params: { establishmentId, serviceId, patientID },
+    })
+  }
+
+  // Recherche d'identité existante dans l'établissement, lancée d'elle-même 300 ms après la
+  // dernière frappe. `useStore` : seule lecture réactive des champs avec TanStack Form.
   const firstNameValue = useStore(form.store, (state) => state.values.firstName)
   const lastNameValue = useStore(form.store, (state) => state.values.lastName)
-  const canSearchIdentity =
-    firstNameValue.trim().length > 0 || lastNameValue.trim().length > 0
+  const birthDateValue = useStore(form.store, (state) => state.values.birthDate)
 
-  const searchIdentity = async () => {
-    const { firstName, lastName, birthDate } = form.state.values
-    const { results, hasMore }: PatientIdentitySearchResult =
-      await identitySearch.mutateAsync({
-        firstName: firstName.trim() || undefined,
-        lastName: lastName.trim() || undefined,
-        birthDate: birthDate || undefined,
-      })
-    setIdentityMatches(results)
-    setIdentityMatchesHasMore(hasMore)
-  }
+  useEffect(() => {
+    const firstName = firstNameValue.trim()
+    const lastName = lastNameValue.trim()
+    const timer = setTimeout(
+      () =>
+        setSearchParams(
+          firstName || lastName
+            ? {
+                firstName: firstName || undefined,
+                lastName: lastName || undefined,
+                birthDate: birthDateValue || undefined,
+              }
+            : null,
+        ),
+      300,
+    )
+    return () => clearTimeout(timer)
+  }, [firstNameValue, lastNameValue, birthDateValue])
 
   // Choisir une identité existante crée le sous-dossier dans le service courant, sans jamais
   // toucher à l'identité : ce chemin n'appelle jamais `createPatient` ni
@@ -153,6 +156,7 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
   const chooseExistingIdentity = async (match: PatientIdentityMatch) => {
     await attachExistingPatient.mutateAsync(match.id)
     setOpen(false)
+    await goToPatient(match.id)
   }
 
   return (
@@ -212,25 +216,21 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
                 </form.AppField>
 
                 <div className="flex flex-col gap-2 mt-2 border-t border-border pt-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="self-start"
-                    disabled={!canSearchIdentity}
-                    isLoading={identitySearch.isPending}
-                    onClick={searchIdentity}
-                  >
-                    <Search className="w-4 h-4" /> Rechercher un patient
-                    existant
-                  </Button>
+                  {!identityMatches && (
+                    <em className="text-sm text-neutral-400">
+                      {identitySearch.isFetching
+                        ? 'Recherche en cours…'
+                        : "Saisissez un nom ou un prénom : les patients existants de l'établissement s'affichent ici."}
+                    </em>
+                  )}
 
-                  {identityMatches !== null && identityMatches.length === 0 && (
+                  {identityMatches && identityMatches.length === 0 && (
                     <em className="text-sm text-neutral-400">
                       Aucune identité existante trouvée dans l'établissement.
                     </em>
                   )}
 
-                  {identityMatches !== null && identityMatches.length > 0 && (
+                  {identityMatches && identityMatches.length > 0 && (
                     <ul className="flex flex-col gap-1">
                       {identityMatches.map((match) => (
                         <li
@@ -244,6 +244,11 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
                                 {' '}
                                 — né(e) le{' '}
                                 {dayjs(match.birthDate).format('DD/MM/YYYY')}
+                              </span>
+                            )}
+                            {!match.inCurrentService && (
+                              <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                                Autre service
                               </span>
                             )}
                           </span>
@@ -268,7 +273,7 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
                       pour éviter les doublons — ne pas dire qu'il y a plus de résultats ferait
                       croire à tort qu'une identité n'existe pas. Jamais un total exact, voir
                       `PatientIdentitySearchResult`. */}
-                  {identityMatches !== null && identityMatchesHasMore && (
+                  {identityMatches && identityMatchesHasMore && (
                     <em className="text-sm text-neutral-400">
                       Plus de {identityMatches.length} résultats : affinez la
                       recherche (prénom, nom, date de naissance) pour voir les

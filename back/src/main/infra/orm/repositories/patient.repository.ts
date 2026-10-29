@@ -347,8 +347,15 @@ class PatientRepository implements PatientRepositoryInterface {
       take: IDENTITY_SEARCH_LIMIT + 1,
     })
     const hasMore = matches.length > IDENTITY_SEARCH_LIMIT
+    const page = hasMore ? matches.slice(0, IDENTITY_SEARCH_LIMIT) : matches
+    // Sous-dossiers du seul service courant : dit « deja chez moi », jamais lequel des autres.
+    const here = await this.prisma.patientServiceFile.findMany({
+      where: { ...this.scope, patientId: { in: page.map((m) => m.id) } },
+      select: { patientId: true },
+    })
+    const hereIds = new Set(here.map((f) => f.patientId))
     return {
-      results: hasMore ? matches.slice(0, IDENTITY_SEARCH_LIMIT) : matches,
+      results: page.map((m) => ({ ...m, inCurrentService: hereIds.has(m.id) })),
       hasMore,
     }
   }

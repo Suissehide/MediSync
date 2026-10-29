@@ -72,6 +72,8 @@ export type PatientIdentityMatch = {
   firstName: string
   lastName: string
   birthDate?: string | null
+  // Faux : l'identité vient d'un autre service de l'établissement.
+  inCurrentService: boolean
 }
 
 // `hasMore` : la recherche s'arrête à vingt résultats (back, `IDENTITY_SEARCH_LIMIT`) — sur une

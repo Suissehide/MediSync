@@ -14,7 +14,9 @@ import type { EnrollmentIssueEntityDomain } from './enrollmentIssue.domain.inter
 
 export type PatientEntityDomain = PatientEntityRepo
 export type PatientWithTagsDomain = PatientWithTagsEntityRepo
-export type PatientIdentityMatchDomain = PatientIdentitySearchResultRepo
+export type PatientIdentityMatchDomain = PatientIdentitySearchResultRepo & {
+  inCurrentService: boolean
+}
 // Recherche d'identite : `hasMore` dit qu'il y a plus de vingt resultats, jamais combien —
 // voir le commentaire de `patientIdentitySearchResponseSchema`.
 export type PatientIdentitySearchResultDomain = {

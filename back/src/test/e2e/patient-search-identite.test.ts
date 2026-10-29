@@ -216,14 +216,26 @@ describe('recherche d identite existante avant creation de patient', () => {
       expect(body.hasMore).toBe(false)
       const match = body.results[0] as Record<string, unknown>
 
-      // L'assertion la plus importante de ce fichier : EXACTEMENT ces quatre cles, ni plus ni
+      // L'assertion la plus importante de ce fichier : EXACTEMENT ces cinq cles, ni plus ni
       // moins. Une seule cle de trop (gender, phone1, followedElsewhere, un nom de service...)
       // fait rougir cette ligne.
       expect(Object.keys(match).sort()).toEqual([
         'birthDate',
         'firstName',
         'id',
+        'inCurrentService',
         'lastName',
+      ])
+      expect(match.inCurrentService).toBe(false)
+
+      // Casse ignoree, et le service qui suit le patient le voit comme le sien.
+      const fromA = await searchFrom(
+        serviceAId,
+        coordoCookies,
+        '?firstName=iSABELLE&lastName=FONTAINE',
+      )
+      expect(fromA.json().results).toEqual([
+        expect.objectContaining({ id: patientId, inCurrentService: true }),
       ])
 
       expect(match.id).toBe(patientId)

@@ -115,26 +115,21 @@ export const usePatientWithTagsQuery = () => {
   return { patients, isPending }
 }
 
-// Recherche d'identite existante avant creation : une
-// `useMutation`, pas une `useQuery` — la recherche est declenchee a la demande (un clic, une
-// saisie validee), jamais automatiquement au montage ni tenue a jour en arriere-plan comme le
-// reste des donnees de ce fichier. Rien a invalider en retour : le resultat ne modifie aucun
-// cache existant, il ne fait que proposer des identites a choisir.
-export const usePatientIdentitySearch = () => {
-  const { toast } = useToast()
-
-  return useMutation({
-    mutationKey: [PATIENT.SEARCH_IDENTITY],
-    mutationFn: (params: SearchPatientIdentityParams) =>
-      PatientApi.searchIdentity(params),
-    onError: (error) => {
-      toast({
-        title: "Erreur lors de la recherche d'une identité existante",
-        message: error.message,
-        severity: TOAST_SEVERITY.ERROR,
-      })
-    },
+// Recherche d'identite existante avant creation, lancee automatiquement par la saisie (deja
+// temporisee par l'appelant) : `null` = rien a chercher.
+export const usePatientIdentitySearch = (
+  params: SearchPatientIdentityParams | null,
+) => {
+  const { data, isFetching, isError, error } = useQuery({
+    queryKey: [PATIENT.SEARCH_IDENTITY, params],
+    queryFn: () => PatientApi.searchIdentity(params ?? {}),
+    enabled: params !== null,
+    retry: 0,
   })
+
+  useDataFetching({ isPending: false, isError, error })
+
+  return { data: params ? data : undefined, isFetching }
 }
 
 // * MUTATIONS

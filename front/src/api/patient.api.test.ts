@@ -35,6 +35,7 @@ describe('PatientApi.searchIdentity', () => {
           firstName: 'Isabelle',
           lastName: 'Fontaine',
           birthDate: '1980-05-12T00:00:00.000Z',
+          inCurrentService: true,
         },
       ],
       hasMore: false,

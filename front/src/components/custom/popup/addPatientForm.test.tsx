@@ -11,6 +11,9 @@ import { useAuthStore } from '@/store/useAuthStore.ts'
 import { useToastStore } from '@/store/useToastStore.ts'
 import AddPatientForm from './addPatientForm.tsx'
 
+const navigate = vi.fn()
+vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navigate }))
+
 // `main.tsx` enregistre ce greffon au démarrage ; le `DatePicker` de date de naissance en dépend
 // via `AdapterDayjs` (même convention que `edit.patient.test.tsx`).
 dayjs.extend(utc)
@@ -77,6 +80,7 @@ const openPopupAndFillIdentity = async (
 beforeEach(() => {
   useAuthStore.setState({ context })
   useToastStore.setState({ toasts: [] })
+  navigate.mockReset()
 })
 
 afterEach(() => {
@@ -84,18 +88,21 @@ afterEach(() => {
 })
 
 describe('AddPatientForm — recherche d’identité existante', () => {
-  it('le bouton de recherche est désactivé tant qu aucun prénom ni nom n est saisi', async () => {
-    vi.stubGlobal('fetch', buildFetchMock([]))
+  it('ne cherche rien tant qu aucun prénom ni nom n est saisi', async () => {
+    const fetchMock = buildFetchMock([])
+    vi.stubGlobal('fetch', fetchMock)
     renderForm()
 
     await userEvent.click(
       screen.getByRole('button', { name: /Ajouter un patient/i }),
     )
 
-    const searchButton = await screen.findByRole('button', {
-      name: /Rechercher un patient existant/i,
-    })
-    expect(searchButton).toBeDisabled()
+    expect(await screen.findByText(/Saisissez un nom/i)).toBeInTheDocument()
+    expect(
+      fetchMock.mock.calls.some(([url]) =>
+        url.toString().includes('/patient/search'),
+      ),
+    ).toBe(false)
   })
 
   it('cherche par GET /patient/search avec le prénom et le nom saisis, et affiche uniquement l identité rendue', async () => {
@@ -113,6 +120,7 @@ describe('AddPatientForm — recherche d’identité existante', () => {
                 firstName: 'Isabelle',
                 lastName: 'Fontaine',
                 birthDate: '1980-05-12T00:00:00.000Z',
+                inCurrentService: false,
               },
             ],
             hasMore: false,
@@ -125,12 +133,9 @@ describe('AddPatientForm — recherche d’identité existante', () => {
     renderForm()
     await openPopupAndFillIdentity('Isabelle', 'Fontaine')
 
-    await userEvent.click(
-      screen.getByRole('button', { name: /Rechercher un patient existant/i }),
-    )
-
     expect(await screen.findByText(/Fontaine Isabelle/)).toBeInTheDocument()
     expect(screen.getByText(/12\/05\/1980/)).toBeInTheDocument()
+    expect(screen.getByText('Autre service')).toBeInTheDocument()
 
     const searchCall = fetchMock.mock.calls.find(([url]) =>
       url.toString().includes('/patient/search'),
@@ -158,9 +163,6 @@ describe('AddPatientForm — recherche d’identité existante', () => {
 
     renderForm()
     await openPopupAndFillIdentity('Inconnu', 'Personne')
-    await userEvent.click(
-      screen.getByRole('button', { name: /Rechercher un patient existant/i }),
-    )
 
     expect(
       await screen.findByText(/Aucune identité existante trouvée/i),
@@ -185,6 +187,7 @@ describe('AddPatientForm — recherche d’identité existante', () => {
                   firstName: 'Robert',
                   lastName: 'Girard',
                   birthDate: null,
+                  inCurrentService: true,
                 },
               ],
               hasMore: false,
@@ -209,9 +212,6 @@ describe('AddPatientForm — recherche d’identité existante', () => {
 
       renderForm()
       await openPopupAndFillIdentity('Robert', 'Girard')
-      await userEvent.click(
-        screen.getByRole('button', { name: /Rechercher un patient existant/i }),
-      )
 
       const chooseButton = await screen.findByRole('button', {
         name: /Choisir/i,
@@ -244,6 +244,14 @@ describe('AddPatientForm — recherche d’identité existante', () => {
         expect(useToastStore.getState().toasts.length).toBeGreaterThan(0),
       )
       expect(useToastStore.getState().toasts[0].title).toMatch(/rattaché/i)
+      await waitFor(() =>
+        expect(navigate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            to: '/e/$establishmentId/s/$serviceId/patient/$patientID',
+          }),
+        ),
+      )
+      expect(screen.queryByText('Autre service')).not.toBeInTheDocument()
     },
   )
 
@@ -262,6 +270,7 @@ describe('AddPatientForm — recherche d’identité existante', () => {
                 firstName: 'Nadia',
                 lastName: 'Roche',
                 birthDate: null,
+                inCurrentService: true,
               },
             ],
             hasMore: false,
@@ -285,9 +294,6 @@ describe('AddPatientForm — recherche d’identité existante', () => {
 
     renderForm()
     await openPopupAndFillIdentity('Nadia', 'Roche')
-    await userEvent.click(
-      screen.getByRole('button', { name: /Rechercher un patient existant/i }),
-    )
 
     const chooseButton = await screen.findByRole('button', { name: /Choisir/i })
     await userEvent.click(chooseButton)
@@ -318,6 +324,7 @@ describe('AddPatientForm — recherche d’identité existante', () => {
                 firstName: 'Martin',
                 lastName: 'Un',
                 birthDate: null,
+                inCurrentService: true,
               },
             ],
             hasMore: true,
@@ -329,9 +336,6 @@ describe('AddPatientForm — recherche d’identité existante', () => {
 
     renderForm()
     await openPopupAndFillIdentity('Martin', 'X')
-    await userEvent.click(
-      screen.getByRole('button', { name: /Rechercher un patient existant/i }),
-    )
 
     expect(await screen.findByText(/Un Martin/)).toBeInTheDocument()
     expect(screen.getByText(/plus de.*résultats/i)).toBeInTheDocument()
@@ -352,6 +356,7 @@ describe('AddPatientForm — recherche d’identité existante', () => {
                 firstName: 'Martin',
                 lastName: 'Deux',
                 birthDate: null,
+                inCurrentService: true,
               },
             ],
             hasMore: false,
@@ -363,11 +368,46 @@ describe('AddPatientForm — recherche d’identité existante', () => {
 
     renderForm()
     await openPopupAndFillIdentity('Martin', 'Y')
-    await userEvent.click(
-      screen.getByRole('button', { name: /Rechercher un patient existant/i }),
-    )
 
     expect(await screen.findByText(/Deux Martin/)).toBeInTheDocument()
     expect(screen.queryByText(/plus de.*résultats/i)).not.toBeInTheDocument()
+  })
+
+  it('créer sans parcours redirige vers la page du nouveau patient', async () => {
+    vi.stubGlobal(
+      'fetch',
+      buildFetchMock([
+        {
+          match: (url, method) =>
+            url.includes('/patient/search') && method === 'GET',
+          respond: () => ({
+            ok: true,
+            status: 200,
+            json: async () => ({ results: [], hasMore: false }),
+          }),
+        },
+        {
+          match: (url, method) => /\/patient$/.test(url) && method === 'POST',
+          respond: () => ({
+            ok: true,
+            status: 201,
+            json: async () => ({ id: 'nouveau-1' }),
+          }),
+        },
+      ]),
+    )
+
+    renderForm()
+    await openPopupAndFillIdentity('Paul', 'Neuf')
+    await userEvent.click(
+      screen.getByRole('button', { name: /Créer sans parcours/i }),
+    )
+
+    await waitFor(() => expect(navigate).toHaveBeenCalled())
+    expect(navigate.mock.calls[0][0].params).toEqual({
+      establishmentId: 'e1',
+      serviceId: 's1',
+      patientID: 'nouveau-1',
+    })
   })
 })
