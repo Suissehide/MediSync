@@ -1313,6 +1313,7 @@ function Planning() {
             weekDate={moveWeekDate}
             onWeekChange={setMoveWeekDate}
             planningCycle={planningCycle}
+            forbiddenWeeks={forbiddenWeeks ?? []}
             onConfirm={() => {
               if (moveWeekDate) {
                 handleBulkSlotOperation(moveWeekDate, 'move')
