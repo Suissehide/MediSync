@@ -59,17 +59,20 @@ describe('preferences de notification', () => {
     const res = await get()
     expect(res.statusCode).toBe(200)
     expect(res.json()).toMatchObject({
-      level: 'essential',
+      level: 'custom',
       services: null,
       reminderDelay: 'eve',
+      digest: 'now',
     })
+    expect(Object.values(res.json().mail).every((v) => v === false)).toBe(true)
   })
 
-  it('enregistre et relit', async () => {
+  it('enregistre et relit, y compris mail et digest', async () => {
     const prefs = {
       level: 'custom',
       services: [A],
       reminderDelay: '2h',
+      digest: 'daily',
       app: {
         reminder: true,
         added: false,
@@ -81,15 +84,28 @@ describe('preferences de notification', () => {
         mention: true,
         due: true,
       },
+      mail: {
+        reminder: true,
+        added: false,
+        moved: true,
+        absent: false,
+        diag: false,
+        end: false,
+        full: false,
+        mention: true,
+        due: false,
+      },
     }
     expect((await put(prefs)).statusCode).toBe(200)
     expect((await get()).json()).toEqual(prefs)
   })
 
-  it('refuse aucun service et un service qui n est pas au compte', async () => {
-    const base = {
-      level: 'essential',
+  it('digest invalide refuse', async () => {
+    const prefs = {
+      level: 'custom',
+      services: null,
       reminderDelay: 'eve',
+      digest: 'weekly',
       app: {
         reminder: true,
         added: true,
@@ -100,6 +116,48 @@ describe('preferences de notification', () => {
         full: true,
         mention: true,
         due: true,
+      },
+      mail: {
+        reminder: false,
+        added: false,
+        moved: false,
+        absent: false,
+        diag: false,
+        end: false,
+        full: false,
+        mention: false,
+        due: false,
+      },
+    }
+    expect((await put(prefs)).statusCode).toBe(400)
+  })
+
+  it('refuse aucun service et un service qui n est pas au compte', async () => {
+    const base = {
+      level: 'essential',
+      reminderDelay: 'eve',
+      digest: 'now',
+      app: {
+        reminder: true,
+        added: true,
+        moved: true,
+        absent: true,
+        diag: true,
+        end: true,
+        full: true,
+        mention: true,
+        due: true,
+      },
+      mail: {
+        reminder: false,
+        added: false,
+        moved: false,
+        absent: false,
+        diag: false,
+        end: false,
+        full: false,
+        mention: false,
+        due: false,
       },
     }
     expect((await put({ ...base, services: [] })).statusCode).toBe(400)
@@ -114,6 +172,7 @@ describe('preferences de notification', () => {
       level: 'essential',
       services: [A, B],
       reminderDelay: 'eve',
+      digest: 'now',
       app: {
         reminder: true,
         added: true,
@@ -124,6 +183,17 @@ describe('preferences de notification', () => {
         full: true,
         mention: true,
         due: true,
+      },
+      mail: {
+        reminder: false,
+        added: false,
+        moved: false,
+        absent: false,
+        diag: false,
+        end: false,
+        full: false,
+        mention: false,
+        due: false,
       },
     }
     expect((await put(prefs)).statusCode).toBe(200)

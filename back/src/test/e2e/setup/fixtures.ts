@@ -52,6 +52,8 @@ export const createUser = async (params: {
   email: string
   password?: string
   isSuperAdmin?: boolean
+  firstName?: string
+  lastName?: string
   memberships?: MembershipFixture[]
 }) => {
   const { hash, salt } = hashPassword(params.password ?? DEFAULT_PASSWORD)
@@ -61,6 +63,8 @@ export const createUser = async (params: {
       password: hash,
       salt,
       isSuperAdmin: params.isSuperAdmin ?? false,
+      firstName: params.firstName ?? null,
+      lastName: params.lastName ?? null,
     },
   })
   for (const m of params.memberships ?? []) {

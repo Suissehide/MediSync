@@ -16,6 +16,7 @@ import type { LocationDomainInterface } from '../domain/location.domain.interfac
 import type { MembershipDomainInterface } from '../domain/membership.domain.interface'
 import type { NotificationDomainInterface } from '../domain/notification.domain.interface'
 import type { NotificationDispatcherInterface } from '../domain/notification-dispatcher.interface'
+import type { NotificationMailerInterface } from '../domain/notification-mailer.interface'
 import type { NotificationSchedulerInterface } from '../domain/notification-scheduler.interface'
 import type { PathwayDomainInterface } from '../domain/pathway.domain.interface'
 import type { PathwayTemplateDomainInterface } from '../domain/pathwayTemplate.domain.interface'
@@ -56,6 +57,7 @@ import type { LocationRepositoryInterface } from '../infra/orm/repositories/loca
 import type { MembershipRepositoryInterface } from '../infra/orm/repositories/membership.repository.interface'
 import type { NotificationRepositoryInterface } from '../infra/orm/repositories/notification.repository.interface'
 import type { NotificationContextRepositoryInterface } from '../infra/orm/repositories/notification-context.repository.interface'
+import type { NotificationMailRepositoryInterface } from '../infra/orm/repositories/notification-mail.repository.interface'
 import type { NotificationScheduleRepositoryInterface } from '../infra/orm/repositories/notification-schedule.repository.interface'
 import type { PathwayRepositoryInterface } from '../infra/orm/repositories/pathway.repository.interface'
 import type { PathwayTemplateRepositoryInterface } from '../infra/orm/repositories/pathwayTemplate.repository.interface'
@@ -199,4 +201,6 @@ export interface IocContainer {
   readonly notificationDispatcher: NotificationDispatcherInterface
   readonly notificationScheduleRepository: NotificationScheduleRepositoryInterface
   readonly notificationScheduler: NotificationSchedulerInterface
+  readonly notificationMailRepository: NotificationMailRepositoryInterface
+  readonly notificationMailer: NotificationMailerInterface
 }

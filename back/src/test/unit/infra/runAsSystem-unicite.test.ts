@@ -26,7 +26,8 @@ import ts from 'typescript'
 // LE COMPTE, DIT UNE SEULE FOIS ET DANS UNE SEULE UNITE :
 //   - SEPT emplois DECLARES, c'est-a-dire sept entrees d'`AUTORISES` ci-dessous, une par FICHIER,
 //     chacune avec sa raison ;
-//   - ONZE APPELS au total, `application/starter.ts` en portant trois, `patientServiceFile.repository.ts` et
+//   - DOUZE APPELS au total, `application/starter.ts` en portant quatre (Task 3 de l etape 3,
+//     scheduleNotificationMails, ajoute le quatrieme), `patientServiceFile.repository.ts` et
 //     `membership.repository.ts` en portant deux chacun.
 //
 // La liste ci-dessous enumere les SITES D'APPEL, groupes par question posee — c'est l'unite qui
@@ -44,6 +45,9 @@ import ts from 'typescript'
 //      (`config.logRetentionMonths`) pour les deux, calculee independamment dans chaque domaine
 //      (`ActivityLogDomain.cleanup`, `PatientAccessLogDomain.cleanup`) plutot que factorisee.
 //      TROISIEME appel, meme fichier : `scheduleNotifications`, qui parcourt TOUS les services.
+//      QUATRIEME appel, meme fichier : `scheduleNotificationMails` (Task 3 de l etape 3), l envoi
+//      des e-mails de notification (immediat ou resume quotidien), qui traverse lui aussi TOUS
+//      les etablissements.
 //   2. Le signal de suivi ailleurs (`infra/orm/repositories/patientServiceFile.repository.ts`,
 //      `estSuiviAilleurs`, design §5.3) : une lecture qui traverse volontairement la frontiere
 //      entre services, pour rendre un booleen et rien d'autre. Ses bornes (etablissement et
@@ -163,8 +167,10 @@ const AUTORISES = [
       'consultations (schedulePatientAccessLogCleanup) — retention parametrable ' +
       '(config.logRetentionMonths) pour les deux. TROISIEME appel : la planification des ' +
       'notifications (scheduleNotifications, Task 5 de l etape 2) — aucune requete HTTP, et les ' +
-      'rappels doivent parcourir tous les services',
-    appels: 3,
+      'rappels doivent parcourir tous les services. QUATRIEME appel : l envoi des e-mails de ' +
+      'notification (scheduleNotificationMails, Task 3 de l etape 3, envoi immediat et resume ' +
+      'quotidien) — meme raison, la file traverse tous les etablissements',
+    appels: 4,
   },
   {
     fichier: 'infra/orm/repositories/patientServiceFile.repository.ts',

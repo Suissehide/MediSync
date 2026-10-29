@@ -13,10 +13,13 @@ export const NOTIFICATION_PREF_KEYS = [
 export type NotificationPrefKey = (typeof NOTIFICATION_PREF_KEYS)[number]
 export type NotificationLevel = 'all' | 'essential' | 'custom'
 export type ReminderDelay = 'eve' | '2h' | '1h'
+export type Digest = 'now' | 'daily'
 
 export type NotificationPrefs = {
   level: NotificationLevel
   services: string[] | null
   app: Record<NotificationPrefKey, boolean>
+  mail: Record<NotificationPrefKey, boolean>
   reminderDelay: ReminderDelay
+  digest: Digest
 }
