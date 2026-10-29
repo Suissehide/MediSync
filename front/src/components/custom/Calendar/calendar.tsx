@@ -264,6 +264,15 @@ function Calendar({
     )
   }, [events, currentView])
 
+  const seancesParJour = useMemo(() => {
+    const parJour = new Map<string, number>()
+    for (const e of events) {
+      const jour = dayjs.utc(e.start).format('YYYY-MM-DD')
+      parJour.set(jour, (parJour.get(jour) ?? 0) + 1)
+    }
+    return parJour
+  }, [events])
+
   const showDayEmptyState = useMemo(() => {
     if (currentView !== 'timeGridDay' || !currentViewStart) {
       return false
@@ -385,7 +394,7 @@ function Calendar({
     }
     return (
       <div className="flex w-full items-center gap-4">
-        <span className="w-28 shrink-0 text-sm text-text-light">
+        <span className="w-24 shrink-0 text-[13px] font-medium tabular-nums text-text-dark">
           {eventContent.timeText}
         </span>
         <div className="min-w-0 flex-1">{contenu}</div>
@@ -477,9 +486,25 @@ function Calendar({
           editMode &&
             'relative before:pointer-events-none before:absolute before:inset-0 before:z-[1] before:rounded-md before:shadow-[inset_0_0_0_2px_var(--color-destructive)]',
         )}
-        // Vue liste : sur toute la largeur, et seul notre bloc porte la couleur, pas la ligne.
-        listDaysClass="max-w-none"
-        listItemEventClass="bg-transparent p-1"
+        // Vue liste, faite pour balayer une semaine : chaque jour en bandeau sur toute la largeur,
+        // puis ses séances en lignes serrées, séparées d'un filet plutôt qu'encadrées.
+        listDaysClass="my-0 max-w-none px-0"
+        listDayClass="flex-col items-stretch gap-0 border-b-0"
+        listDayHeaderClass="sticky top-0 z-20 w-full max-w-none bg-card px-4 py-1.5"
+        // Sans la pastille du thème sur aujourd'hui : l'accent est la couleur du libellé.
+        listDayHeaderInnerClass="rounded-none bg-transparent p-0"
+        // Le thème rend l'en-tête en deux niveaux (format principal et secondaire) : un seul suffit.
+        listDayHeaderContent={(info) =>
+          info.level > 0 ? null : (
+            <EnteteJourListe
+              date={info.date}
+              aujourdhui={info.isToday}
+              seances={seancesParJour.get(toUtcDay(info.date)) ?? 0}
+            />
+          )
+        }
+        listDayBodyClass="m-0 w-full rounded-none border-0"
+        listItemEventClass="rounded-none border-0 border-b border-border/70 bg-transparent px-4 py-1 last:border-b-0 hover:bg-card/60"
         slotHeaderFormat={(arg) => {
           const hour = arg.date.hour.toString()
           const minute = arg.date.minute.toString().padStart(2, '0')
@@ -535,9 +560,13 @@ function Calendar({
         backgroundEventContent={renduEvenement}
         // Le thème teinte les événements à partir de leur couleur : créneaux, rendez-vous et
         // semaines interdites gardent la leur, pleine (elle porte son alpha quand il en faut un).
-        backgroundEventClass="bg-[var(--fc-event-color)] opacity-100"
+        backgroundEventClass={(info) =>
+          cn('bg-[var(--fc-event-color)] opacity-100', bordureCreneau(info))
+        }
         // Sans les marges du thème : notre contenu a les siennes, et une demi-heure en a besoin.
-        columnEventClass="m-0 bg-[var(--fc-event-color)]"
+        columnEventClass={(info) =>
+          cn('m-0 bg-[var(--fc-event-color)]', bordureCreneau(info))
+        }
         columnEventInnerClass="p-0"
         noEventsContent={() => (
           <NoEventsState label="Aucune séance planifiée cette semaine" />
@@ -600,6 +629,40 @@ function Calendar({
             : undefined
         }
       />
+    </div>
+  )
+}
+
+// Les créneaux (className « fc-slot » de buildSlotEvents) se séparent de leurs voisins dans la
+// grille ; en liste, le filet entre les lignes suffit.
+const bordureCreneau = (info: EventDisplayInfo) =>
+  info.event.className.includes('fc-slot')
+    ? 'rounded-[5px] border-[1.5px] border-black/10'
+    : undefined
+
+function EnteteJourListe({
+  date,
+  aujourdhui,
+  seances,
+}: {
+  date: Date
+  aujourdhui: boolean
+  seances: number
+}) {
+  const jour = dayjs.utc(date)
+  return (
+    <div className="flex items-baseline gap-3 text-[13px]">
+      <span
+        className={cn(
+          'whitespace-nowrap font-semibold first-letter:uppercase',
+          aujourdhui ? 'text-primary' : 'text-text-dark',
+        )}
+      >
+        {jour.format('dddd D MMMM')}
+      </span>
+      <span className="text-text-light">
+        {seances} séance{seances > 1 ? 's' : ''}
+      </span>
     </div>
   )
 }

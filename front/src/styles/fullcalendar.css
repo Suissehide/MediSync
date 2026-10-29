@@ -44,10 +44,3 @@
   --fc-breezy-muted-border: color-mix(in srgb, var(--border) 50%, transparent);
   --fc-breezy-strong-border: var(--border-dark);
 }
-
-/* Créneaux (className « fc-slot » de buildSlotEvents), séparés de leurs voisins. */
-.fc-slot {
-  opacity: 1 !important;
-  border: 1.5px solid rgb(0 0 0 / 0.1);
-  border-radius: 5px;
-}
