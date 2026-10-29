@@ -745,7 +745,7 @@ describe('écran d un jeu d indicateurs', () => {
     ).toBeDisabled()
     expect(screen.getByRole('radio', { name: 'Oui' })).toBeDisabled()
     expect(
-      screen.getByRole('group', {
+      screen.getByRole('radiogroup', {
         name: 'Une offre de suivi est-elle proposée ?',
       }),
     ).toHaveAccessibleDescription('Choisissez une année civile pour saisir')

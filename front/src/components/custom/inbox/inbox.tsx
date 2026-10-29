@@ -67,8 +67,9 @@ export function Inbox() {
   const [open, setOpen] = useState<InboxPanel>(null)
   const [focus, setFocus] = useState<Focus>(null)
   const [subPopupOpen, setSubPopupOpen] = useState(false)
+  // Radix ferme l'ancien panneau après le clic qui ouvre le nouveau : ne pas l'écraser.
   const toggle = (panel: Exclude<InboxPanel, null>) => (next: boolean) =>
-    setOpen(next ? panel : null)
+    setOpen((current) => (next ? panel : current === panel ? null : current))
   const openNotification = (n: InboxNotification) => {
     const target = notificationTarget(n)
     if (target.kind === 'task') {

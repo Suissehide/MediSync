@@ -1,5 +1,5 @@
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { Check, Filter, type LucideIcon } from 'lucide-react'
+import { DropdownMenu } from 'radix-ui'
 import { Fragment } from 'react'
 
 import { cn } from '../../libs/utils.ts'

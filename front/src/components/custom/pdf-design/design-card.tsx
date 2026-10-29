@@ -1,4 +1,3 @@
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import {
   Check,
   Copy,
@@ -11,6 +10,7 @@ import {
   TextCursorInput,
   Trash2,
 } from 'lucide-react'
+import { DropdownMenu } from 'radix-ui'
 
 import { cn } from '../../../libs/utils.ts'
 import type { SourcesImages } from '../../../types/pdfAsset.ts'
