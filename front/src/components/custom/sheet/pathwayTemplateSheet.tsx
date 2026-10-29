@@ -1,4 +1,4 @@
-import { Copy, Ellipsis, Loader2Icon, Route, Trash2 } from 'lucide-react'
+import { ChevronDown, Copy, Loader2Icon, Route, Trash2 } from 'lucide-react'
 import { DropdownMenu } from 'radix-ui'
 import { useEffect, useMemo, useState } from 'react'
 
@@ -244,8 +244,8 @@ export default function PathwayTemplateSheet({
                 <DropdownMenu.Root>
                   <DropdownMenu.Trigger asChild>
                     <Button variant="outline">
-                      <Ellipsis className="w-4 h-4" />
-                      Plus
+                      Actions
+                      <ChevronDown className="w-4 h-4" />
                     </Button>
                   </DropdownMenu.Trigger>
                   <DropdownMenu.Portal>
