@@ -13,13 +13,13 @@ import { environment } from '../constants/config.constant.ts'
 import type { AuthState } from '../types/auth.ts'
 
 const TanStackRouterDevtools =
-  environment !== 'development'
-    ? () => null // Render nothing in production
-    : React.lazy(() =>
+  environment === 'development'
+    ? React.lazy(() =>
         import('@tanstack/react-router-devtools').then((res) => ({
           default: res.TanStackRouterDevtools,
         })),
       )
+    : () => null // Render nothing in production
 
 type RouterContext = {
   queryClient: QueryClient

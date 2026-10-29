@@ -136,7 +136,8 @@ describe('AddPatientForm — recherche d’identité existante', () => {
       url.toString().includes('/patient/search'),
     )
     expect(searchCall).toBeDefined()
-    const requestedUrl = (searchCall?.[0] as string).toString()
+    const [url] = searchCall ?? []
+    const requestedUrl = String(url)
     expect(requestedUrl).toContain('firstName=Isabelle')
     expect(requestedUrl).toContain('lastName=Fontaine')
   })

@@ -49,34 +49,42 @@ const propsDePage = {
   pageSupprimable: true,
 }
 
-const monter = (
-  depart: PdfElement = texte,
-  options: {
-    assets?: PdfAssetSummary[]
-    onDeposer?: (fichier: File) => Promise<PdfAssetSummary>
-  } = {},
-) => {
+type OptionsHarnais = {
+  assets?: PdfAssetSummary[]
+  onDeposer?: (fichier: File) => Promise<PdfAssetSummary>
+}
+
+const Harnais = ({
+  depart,
+  options,
+  vus,
+}: {
+  depart: PdfElement
+  options: OptionsHarnais
+  vus: Partial<PdfElement>[]
+}) => {
+  const [element, setElement] = useState(depart)
+  return (
+    <Inspecteur
+      {...propsDePage}
+      page={page([element])}
+      element={element}
+      assets={options.assets}
+      onDeposer={options.onDeposer}
+      onModifier={(champs) => {
+        vus.push(champs)
+        setElement((avant) => ({ ...avant, ...champs }) as PdfElement)
+      }}
+      onSupprimer={vi.fn()}
+      onDupliquer={vi.fn()}
+      onOrdre={vi.fn()}
+    />
+  )
+}
+
+const monter = (depart: PdfElement = texte, options: OptionsHarnais = {}) => {
   const vus: Partial<PdfElement>[] = []
-  const Harnais = () => {
-    const [element, setElement] = useState(depart)
-    return (
-      <Inspecteur
-        {...propsDePage}
-        page={page([element])}
-        element={element}
-        assets={options.assets}
-        onDeposer={options.onDeposer}
-        onModifier={(champs) => {
-          vus.push(champs)
-          setElement((avant) => ({ ...avant, ...champs }) as PdfElement)
-        }}
-        onSupprimer={vi.fn()}
-        onDupliquer={vi.fn()}
-        onOrdre={vi.fn()}
-      />
-    )
-  }
-  render(<Harnais />)
+  render(<Harnais depart={depart} options={options} vus={vus} />)
   return vus
 }
 

@@ -311,9 +311,8 @@ describe('EditPatient — le sous-dossier envoie une charge partielle', () => {
         (init as RequestInit)?.method === 'PATCH',
     )
     expect(serviceFilePatch).toBeDefined()
-    const body = JSON.parse(
-      (serviceFilePatch?.[1] as RequestInit).body as string,
-    )
+    const [, init] = serviceFilePatch ?? []
+    const body = JSON.parse((init as RequestInit).body as string)
     expect(body).toEqual({ notes: 'note modifiée' })
   })
 })

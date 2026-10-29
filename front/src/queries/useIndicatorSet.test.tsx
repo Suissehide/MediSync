@@ -25,8 +25,7 @@ const okResponse = (body: unknown) => ({
   json: async () => body,
 })
 
-const wrapper = () => {
-  const queryClient = new QueryClient()
+const wrapper = (queryClient = new QueryClient()) => {
   return ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   )
@@ -128,13 +127,10 @@ describe('useSaveIndicatorAnswerMutation', () => {
 
     const queryClient = new QueryClient()
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries')
-    const Wrapper = ({ children }: { children: ReactNode }) => (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    )
 
     const { result } = renderHook(
       () => useSaveIndicatorAnswerMutation('set1'),
-      { wrapper: Wrapper },
+      { wrapper: wrapper(queryClient) },
     )
 
     result.current.mutate({

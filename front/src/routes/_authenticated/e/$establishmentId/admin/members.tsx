@@ -69,10 +69,10 @@ function MemberSettings() {
 
   const handleToggleActive = useCallback(
     (member: Member) => {
-      if (member.user.deactivatedAt !== null) {
-        reactivateMember.mutate(member.id)
-      } else {
+      if (member.user.deactivatedAt === null) {
         deactivateMember.mutate(member.id)
+      } else {
+        reactivateMember.mutate(member.id)
       }
     },
     [deactivateMember, reactivateMember],

@@ -69,7 +69,7 @@ function CreateMemberAccountForm() {
         .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
         .map((s) => ({
           value: s.id,
-          label: s.deactivatedAt !== null ? `${s.name} (désactivé)` : s.name,
+          label: s.deactivatedAt === null ? s.name : `${s.name} (désactivé)`,
         })),
     ],
     [services],

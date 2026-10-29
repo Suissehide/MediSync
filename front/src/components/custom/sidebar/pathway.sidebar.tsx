@@ -40,10 +40,10 @@ function SidebarPathway() {
   const viewStart = usePlanningStore((state) => state.viewStart)
 
   const handleEditPathwayTemplate = (pathwayTemplate: PathwayTemplate) => {
-    if (currentPathwayTemplate?.id !== pathwayTemplate.id) {
-      setPathwayTemplate(pathwayTemplate, viewStart)
-    } else {
+    if (currentPathwayTemplate?.id === pathwayTemplate.id) {
       clearPathwayTemplate()
+    } else {
+      setPathwayTemplate(pathwayTemplate, viewStart)
     }
   }
 
