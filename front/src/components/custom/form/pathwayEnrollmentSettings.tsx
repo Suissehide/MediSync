@@ -29,22 +29,13 @@ export const PathwayEnrollmentSettings = withForm({
   render: function Render({ form }) {
     const id = useId()
     return (
-      <section className="flex flex-col gap-3 pt-4 border-t border-border">
-        <div>
-          <h3 className="text-[15px] font-semibold text-foreground">
-            Inscription d’un patient
-          </h3>
-          <p className="text-[13px] text-text-light">
-            Ce qui se passe quand on ajoute un patient à ce parcours.
-          </p>
-        </div>
-
+      <section className="flex flex-col gap-3">
         <form.AppField name="firstAppointmentOnly">
           {(field) => (
             <div className="flex flex-col gap-2">
               <span
                 id={`${id}-mode`}
-                className="text-sm font-medium text-foreground"
+                className="text-sm text-text-light leading-none"
               >
                 Rendez-vous créés
               </span>
@@ -60,12 +51,12 @@ export const PathwayEnrollmentSettings = withForm({
                     value={value}
                     className="group flex gap-2.5 items-start px-3 py-2.5 rounded-md border text-left cursor-pointer border-border bg-white data-[state=checked]:border-primary data-[state=checked]:bg-primary/6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                   >
-                    <span className="mt-0.5 size-4 shrink-0 rounded-full border-[1.5px] border-slate-300 transition-[border] group-data-[state=checked]:border-[5px] group-data-[state=checked]:border-primary" />
+                    <span className="mt-px size-4 shrink-0 rounded-full border-[1.5px] border-slate-300 transition-[border] group-data-[state=checked]:border-[5px] group-data-[state=checked]:border-primary" />
                     <span>
-                      <span className="block text-sm font-semibold text-foreground">
+                      <span className="block text-sm font-medium text-foreground">
                         {title}
                       </span>
-                      <span className="block text-[13px] text-text-light leading-snug text-pretty">
+                      <span className="block text-xs text-text-light leading-snug text-pretty">
                         {description}
                       </span>
                     </span>
@@ -94,12 +85,12 @@ export const PathwayEnrollmentSettings = withForm({
                 <Switch.Thumb className="block size-4 rounded-full bg-white shadow transition-transform duration-150 data-[state=checked]:translate-x-4" />
               </Switch.Root>
               <span>
-                <span className="block text-sm font-semibold text-foreground">
+                <span className="block text-sm font-medium text-foreground">
                   Demander un motif à l’inscription
                 </span>
                 <span
                   id={`${id}-motif`}
-                  className="block text-[13px] text-text-light leading-snug text-pretty"
+                  className="block text-xs text-text-light leading-snug text-pretty"
                 >
                   Un champ « Motif » à remplir s’affiche quand on ajoute un
                   patient. Le motif est recopié dans les notes de transmission
