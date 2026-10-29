@@ -151,41 +151,6 @@ export default function PathwayTemplateSheet({
               </div>
             </div>
           </div>
-          <DropdownMenu.Root>
-            <DropdownMenu.Trigger
-              aria-label="Plus d'actions"
-              className="absolute right-12 top-4 rounded-full p-1 opacity-70 cursor-pointer transition-opacity hover:opacity-100 hover:bg-foreground/20 focus:outline-none"
-            >
-              <Ellipsis className="h-5 w-5" />
-            </DropdownMenu.Trigger>
-            <DropdownMenu.Portal>
-              <DropdownMenu.Content
-                className="min-w-[160px] bg-primary-foreground rounded shadow-md border border-border p-1 z-[200]"
-                align="end"
-                sideOffset={5}
-                collisionPadding={8}
-              >
-                <DropdownMenu.Item
-                  onSelect={() =>
-                    duplicatePathwayTemplate.mutate(pathwayTemplateID, {
-                      onSuccess: (copy) => setOpen(copy.id),
-                    })
-                  }
-                  className="flex items-center gap-2 px-3 py-2 rounded cursor-pointer outline-none data-[highlighted]:bg-primary/20 text-sm select-none"
-                >
-                  <Copy size={14} />
-                  Dupliquer
-                </DropdownMenu.Item>
-                <DropdownMenu.Item
-                  onSelect={() => setShowDeleteConfirm(true)}
-                  className="flex items-center gap-2 px-3 py-2 rounded cursor-pointer outline-none data-[highlighted]:bg-destructive/20 text-sm text-destructive select-none"
-                >
-                  <Trash2 size={14} />
-                  Supprimer
-                </DropdownMenu.Item>
-              </DropdownMenu.Content>
-            </DropdownMenu.Portal>
-          </DropdownMenu.Root>
         </SheetHeader>
 
         <div className="flex-1 flex flex-col min-h-0">
@@ -275,7 +240,43 @@ export default function PathwayTemplateSheet({
 
               <div className="w-full border-t border-border-dark"></div>
 
-              <div className="px-4 py-4 flex justify-end gap-4 shrink-0">
+              <div className="px-4 py-4 flex justify-between gap-4 shrink-0">
+                <DropdownMenu.Root>
+                  <DropdownMenu.Trigger asChild>
+                    <Button variant="outline">
+                      <Ellipsis className="w-4 h-4" />
+                      Plus
+                    </Button>
+                  </DropdownMenu.Trigger>
+                  <DropdownMenu.Portal>
+                    <DropdownMenu.Content
+                      className="min-w-[160px] bg-primary-foreground rounded shadow-md border border-border p-1 z-[200]"
+                      align="start"
+                      side="top"
+                      sideOffset={5}
+                      collisionPadding={8}
+                    >
+                      <DropdownMenu.Item
+                        onSelect={() =>
+                          duplicatePathwayTemplate.mutate(pathwayTemplateID, {
+                            onSuccess: (copy) => setOpen(copy.id),
+                          })
+                        }
+                        className="flex items-center gap-2 px-3 py-2 rounded cursor-pointer outline-none data-[highlighted]:bg-primary/20 text-sm select-none"
+                      >
+                        <Copy size={14} />
+                        Dupliquer
+                      </DropdownMenu.Item>
+                      <DropdownMenu.Item
+                        onSelect={() => setShowDeleteConfirm(true)}
+                        className="flex items-center gap-2 px-3 py-2 rounded cursor-pointer outline-none data-[highlighted]:bg-destructive/20 text-sm text-destructive select-none"
+                      >
+                        <Trash2 size={14} />
+                        Supprimer
+                      </DropdownMenu.Item>
+                    </DropdownMenu.Content>
+                  </DropdownMenu.Portal>
+                </DropdownMenu.Root>
                 <div className="flex gap-4">
                   <Button
                     variant="default"
