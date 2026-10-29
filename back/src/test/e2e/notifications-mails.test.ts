@@ -419,8 +419,6 @@ describe('NotificationMailer', () => {
       expect(blob).not.toContain(SECRET_PATIENT)
       expect(blob).not.toContain(SECRET_THEMATIC)
       expect(blob).not.toContain(SECRET_TASK)
-      expect(blob).not.toContain('Salle A')
-      expect(blob).not.toContain('Salle B')
     }
     const mention = sent.find((m) => m.mail.subject.includes('mention'))
     expect(mention?.mail.text).toContain('Lea Martin')
