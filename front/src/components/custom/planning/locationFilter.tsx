@@ -33,6 +33,7 @@ function LocationFilter({
       id: location.id,
       label: location.name,
       checked: !hiddenIds.has(location.id),
+      group: 'Salles',
     })),
   ]
 
