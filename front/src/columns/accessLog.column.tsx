@@ -3,10 +3,11 @@ import dayjs from 'dayjs'
 import { ShieldAlert } from 'lucide-react'
 
 import { Etiquette } from '../components/table/etiquette.tsx'
+import type { Features } from '../components/table/features.ts'
 import { ACCESS_LOG_ACTION_LABELS } from '../constants/accessLog.constant.ts'
 import type { PatientAccessLogEntry } from '../types/accessLog.ts'
 
-const columnHelper = createColumnHelper<PatientAccessLogEntry>()
+const columnHelper = createColumnHelper<Features, PatientAccessLogEntry>()
 
 type AccessLogColumnOptions = {
   // Résout `serviceId` en nom lisible — sur cette route, TOUJOURS le service courant

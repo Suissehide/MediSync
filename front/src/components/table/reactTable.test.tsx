@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import { choiceColumn } from './choiceColumn.tsx'
+import type { Features } from './features.ts'
 import { ReactTable } from './reactTable.tsx'
 
 // jsdom mesure un conteneur nul : le virtualiseur réel ne rendrait aucune ligne.
@@ -25,7 +26,7 @@ vi.mock('@tanstack/react-virtual', () => ({
 
 type Ligne = { id: string; nom: string; diag: string | null }
 
-const helper = createColumnHelper<Ligne>()
+const helper = createColumnHelper<Features, Ligne>()
 const colonneNom = helper.accessor('nom', { header: 'Nom' })
 const colonnes = [
   colonneNom,

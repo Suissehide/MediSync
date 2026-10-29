@@ -9,6 +9,7 @@ import {
   multiChoiceColumn,
 } from '../components/table/choiceColumn.tsx'
 import { Etiquette } from '../components/table/etiquette.tsx'
+import type { Features } from '../components/table/features.ts'
 import { Button } from '../components/ui/button.tsx'
 import {
   fieldValue,
@@ -20,7 +21,7 @@ import type {
   ServiceFieldCategory,
 } from '../types/serviceField.ts'
 
-const columnHelper = createColumnHelper<PatientWithTags>()
+const columnHelper = createColumnHelper<Features, PatientWithTags>()
 
 // Etiquettes de parcours affichees avant le bouton de depliage : au-dela, la cellule tenait
 // sur plusieurs lignes et faisait grandir toute la ligne du tableau.

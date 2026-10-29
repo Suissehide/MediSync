@@ -2,11 +2,12 @@ import { createColumnHelper } from '@tanstack/react-table'
 import dayjs from 'dayjs'
 
 import { Etiquette } from '../components/table/etiquette.tsx'
+import type { Features } from '../components/table/features.ts'
 import { TYPE_LABELS } from '../constants/activityLog.constant.ts'
 import { PLATFORM_ACTIVITY_ACTION_LABELS } from '../constants/superAdminAccessLog.constant.ts'
 import type { ActivityLog } from '../types/activityLog.ts'
 
-const columnHelper = createColumnHelper<ActivityLog>()
+const columnHelper = createColumnHelper<Features, ActivityLog>()
 
 export const activityLogColumns = [
   columnHelper.accessor('createdAt', {

@@ -4,16 +4,16 @@ import {
   type Column,
   type ColumnDef,
   flexRender,
-  getCoreRowModel,
-  useReactTable,
+  useTable,
 } from '@tanstack/react-table'
 import dayjs, { type Dayjs } from 'dayjs'
 import { CalendarDays, ChevronLeft, ChevronRight, X } from 'lucide-react'
-import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react'
+import { type CSSProperties, useMemo, useRef, useState } from 'react'
 
 import AddPatientForm from '@/components/custom/popup/addPatientForm.tsx'
 import AddPatientToSlotForm from '@/components/custom/popup/addPatientToSlotForm.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
+import { type Features, features } from '@/components/table/features.ts'
 import { HeaderTable } from '@/components/table/headerTable.tsx'
 import type { CustomMeta } from '@/components/table/reactTable.tsx'
 import { Button } from '@/components/ui/button.tsx'
@@ -67,19 +67,21 @@ function SuiviMarkIcon({ mark, color }: { mark: SuiviMark; color: string }) {
 }
 
 function getCommonPinningStyles(
-  column: Column<SuiviRow, unknown>,
+  column: Column<Features, SuiviRow, unknown>,
 ): CSSProperties {
   const isPinned = column.getIsPinned()
   return {
-    left: isPinned === 'left' ? `${column.getStart('left')}px` : undefined,
-    right: isPinned === 'right' ? `${column.getAfter('right')}px` : undefined,
+    insetInlineStart:
+      isPinned === 'start' ? `${column.getStart('start')}px` : undefined,
+    insetInlineEnd:
+      isPinned === 'end' ? `${column.getAfter('end')}px` : undefined,
     position: isPinned ? 'sticky' : 'relative',
     zIndex: isPinned ? 1 : 0,
     backgroundColor: isPinned ? 'var(--color-background)' : undefined,
     boxShadow:
-      isPinned === 'left'
+      isPinned === 'start'
         ? 'inset -1px 0 0 var(--color-border)'
-        : isPinned === 'right'
+        : isPinned === 'end'
           ? 'inset 1px 0 0 var(--color-border)'
           : undefined,
   }
@@ -142,16 +144,13 @@ function SuiviPage() {
     })
   }, [trackingPathways])
 
-  const columns = useMemo<ColumnDef<SuiviRow, unknown>[]>(
+  const columns = useMemo<ColumnDef<Features, SuiviRow, unknown>[]>(
     () => [
       {
         id: 'patient',
         header: 'Patient',
         size: 180,
         enableSorting: false,
-        meta: {
-          pin: 'left',
-        } satisfies CustomMeta<SuiviRow, unknown>,
         cell: ({ row }) =>
           row.original.type === 'patient'
             ? `${row.original.lastName} ${row.original.firstName}`
@@ -164,7 +163,7 @@ function SuiviPage() {
         enableSorting: false,
         meta: {
           align: 'center',
-        } satisfies CustomMeta<SuiviRow, unknown>,
+        } satisfies CustomMeta<SuiviRow>,
         cell: ({ row }: { row: { original: SuiviRow } }) => {
           if (row.original.type === 'group') {
             return null
@@ -190,23 +189,15 @@ function SuiviPage() {
     [days],
   )
 
-  const table = useReactTable({
+  const table = useTable({
+    features,
     data: rows,
     columns,
-    getCoreRowModel: getCoreRowModel(),
     getRowId: (row) => row.id,
     defaultColumn: { size: 32, minSize: 0 },
     enableColumnPinning: true,
+    initialState: { columnPinning: { start: ['patient'], end: [] } },
   })
-
-  useEffect(() => {
-    for (const column of table.getAllLeafColumns()) {
-      const meta = column.columnDef.meta as CustomMeta<SuiviRow, unknown>
-      if (meta?.pin) {
-        column.pin(meta.pin)
-      }
-    }
-  }, [table])
 
   const prevMonth = () => setDate((d) => d.subtract(1, 'month'))
   const nextMonth = () => setDate((d) => d.add(1, 'month'))

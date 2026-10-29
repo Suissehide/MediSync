@@ -5,12 +5,13 @@ import { CopyableId } from '../components/custom/copyableId.tsx'
 import EditServiceMemberForm from '../components/custom/popup/editServiceMemberForm.tsx'
 import { nomDuCompte } from '../components/custom/popup/editSoignantAccountsForm.tsx'
 import { Etiquette, EtiquetteStatut } from '../components/table/etiquette.tsx'
+import type { Features } from '../components/table/features.ts'
 import { Button } from '../components/ui/button.tsx'
 import { SERVICE_ROLE_LABEL } from '../constants/member.constant.ts'
 import type { ServiceMember } from '../types/serviceMember.ts'
 import type { Soignant } from '../types/soignant.ts'
 
-const columnHelper = createColumnHelper<ServiceMember>()
+const columnHelper = createColumnHelper<Features, ServiceMember>()
 
 type ServiceMemberColumnOptions = {
   soignants: Soignant[]

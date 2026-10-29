@@ -1,17 +1,24 @@
-import { type Column, flexRender, type Table } from '@tanstack/react-table'
+import {
+  type Column,
+  flexRender,
+  type RowData,
+  type Table,
+} from '@tanstack/react-table'
 import { ChevronDown, ChevronsUpDown, ChevronUp } from 'lucide-react'
 import type React from 'react'
 
 import { cn } from '../../libs/utils.ts'
-import type { CustomMeta } from './reactTable.tsx'
+import type { Features } from './features.ts'
 
-type HeaderTableProps<TData> = {
-  table: Table<TData>
-  getCommonPinningStyles: (column: Column<TData>) => React.CSSProperties
+type HeaderTableProps<TData extends RowData> = {
+  table: Table<Features, TData>
+  getCommonPinningStyles: (
+    column: Column<Features, TData, unknown>,
+  ) => React.CSSProperties
   fixedLayout?: boolean
 }
 
-export function HeaderTable<TData>({
+export function HeaderTable<TData extends RowData>({
   table,
   getCommonPinningStyles,
   fixedLayout,
@@ -22,14 +29,10 @@ export function HeaderTable<TData>({
         <tr key={headerGroup.id}>
           {headerGroup.headers.map((header) => {
             const { column } = header
-            const meta = header.column.columnDef.meta as CustomMeta<
-              TData,
-              unknown
-            >
+            const meta = header.column.columnDef.meta
             const headerClass = meta?.headerClass ?? ''
             const grow = meta?.grow
             const align = meta?.align ?? 'left'
-            const filter = meta?.filter
             const sortState = column.getIsSorted()
 
             let SortIcon = (
@@ -68,34 +71,21 @@ export function HeaderTable<TData>({
                 className="h-10 border-b border-border-dark bg-card"
               >
                 {header.isPlaceholder ? null : (
-                  <>
-                    <button
-                      type="button"
-                      onClick={column.getToggleSortingHandler()}
-                      className={cn(
-                        'w-full flex items-center gap-3 px-4 py-2 text-xs text-text-light font-medium transition-colors',
-                        align === 'right' && 'justify-end',
-                        align === 'center' && 'justify-center',
-                        column.getCanSort() && 'cursor-pointer hover:text-text',
-                      )}
-                    >
-                      <span
-                        className={cn('title-column truncate', headerClass)}
-                      >
-                        {flexRender(
-                          column.columnDef.header,
-                          header.getContext(),
-                        )}
-                      </span>
-                      {column.getCanSort() && SortIcon}
-                    </button>
-
-                    {column.getCanFilter() && filter ? (
-                      <div className="default-filter">
-                        {flexRender(filter, { column })}
-                      </div>
-                    ) : null}
-                  </>
+                  <button
+                    type="button"
+                    onClick={column.getToggleSortingHandler()}
+                    className={cn(
+                      'w-full flex items-center gap-3 px-4 py-2 text-xs text-text-light font-medium transition-colors',
+                      align === 'right' && 'justify-end',
+                      align === 'center' && 'justify-center',
+                      column.getCanSort() && 'cursor-pointer hover:text-text',
+                    )}
+                  >
+                    <span className={cn('title-column truncate', headerClass)}>
+                      {flexRender(column.columnDef.header, header.getContext())}
+                    </span>
+                    {column.getCanSort() && SortIcon}
+                  </button>
                 )}
               </th>
             )

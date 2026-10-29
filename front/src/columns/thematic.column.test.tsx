@@ -2,6 +2,7 @@ import type { CellContext } from '@tanstack/react-table'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
+import type { Features } from '../components/table/features.ts'
 import type { Thematic } from '../types/thematic.ts'
 import { getThematicColumns } from './thematic.column.tsx'
 
@@ -28,7 +29,7 @@ const roleCell = () => {
     throw new Error('colonne role introuvable')
   }
   return roleColumn.cell as (
-    context: CellContext<Thematic, unknown>,
+    context: CellContext<Features, Thematic, unknown>,
   ) => React.ReactNode
 }
 

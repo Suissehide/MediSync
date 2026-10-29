@@ -9,6 +9,7 @@ import {
   EtiquetteStatut,
   type TonEtiquette,
 } from '../components/table/etiquette.tsx'
+import type { Features } from '../components/table/features.ts'
 import { Button } from '../components/ui/button.tsx'
 import {
   ESTABLISHMENT_ROLE_LABEL,
@@ -18,7 +19,7 @@ import type { EstablishmentRole } from '../types/auth.ts'
 import type { Member } from '../types/member.ts'
 import type { Service } from '../types/service.ts'
 
-const columnHelper = createColumnHelper<Member>()
+const columnHelper = createColumnHelper<Features, Member>()
 
 // Grisé jusqu'à la fin du délai de 5 minutes, puis réactivé sans rechargement.
 const ResendInvitationButton = ({

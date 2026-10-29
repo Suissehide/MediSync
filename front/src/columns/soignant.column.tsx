@@ -7,12 +7,13 @@ import EditSoignantAccountsForm, {
 } from '../components/custom/popup/editSoignantAccountsForm.tsx'
 import EditSoignantThematicsForm from '../components/custom/popup/editSoignantThematicsForm.tsx'
 import { EtiquettesTronquees } from '../components/table/etiquette.tsx'
+import type { Features } from '../components/table/features.ts'
 import { Button } from '../components/ui/button.tsx'
 import type { ServiceMember } from '../types/serviceMember.ts'
 import type { Soignant } from '../types/soignant.ts'
 import type { Thematic } from '../types/thematic.ts'
 
-const columnHelper = createColumnHelper<Soignant>()
+const columnHelper = createColumnHelper<Features, Soignant>()
 
 type SoignantColumnOptions = {
   onRestore: (id: string) => void

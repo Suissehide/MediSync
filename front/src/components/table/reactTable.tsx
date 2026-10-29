@@ -3,27 +3,19 @@ import {
   type ColumnDef,
   type ColumnFiltersState,
   type ExpandedState,
-  getCoreRowModel,
-  getExpandedRowModel,
-  getFacetedMinMaxValues,
-  getFacetedRowModel,
-  getFacetedUniqueValues,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
   type PaginationState,
   type Row,
   type RowSelectionState,
   type SortingState,
-  useReactTable,
-  type VisibilityState,
+  useTable,
+  type ColumnVisibilityState as VisibilityState,
 } from '@tanstack/react-table'
 import {
   type CSSProperties,
-  type FC,
   type ReactNode,
   useEffect,
   useId,
+  useMemo,
   useRef,
   useState,
 } from 'react'
@@ -32,25 +24,15 @@ import { cn, safeParse } from '../../libs/utils.ts'
 import type { Choice } from './choiceColumn.tsx'
 import { ChoiceFilters } from './choiceFilters.tsx'
 import { ColumnPicker } from './columnPicker.tsx'
-import {
-  dateFilterFn,
-  dateRangeFilterFn,
-  multiSelectFilterFn,
-  numberFilterFn,
-  numberRangeFilterFn,
-  selectFilterFn,
-  textFilterFn,
-} from './filtersFns'
+import { type Features, features } from './features.ts'
 import { HeaderTable } from './headerTable.js'
 import { PaginationTable } from './paginationTable.tsx'
 import { VirtualizedBodyTable } from './virtualizedBodyTable'
 
-export type CustomMeta<TData, TValue> = {
-  pin?: 'left' | 'right'
+export type CustomMeta<TData> = {
   headerClass?: string
   grow?: boolean
   align?: 'left' | 'center' | 'right'
-  filter?: FC<{ column: Column<TData, TValue> }>
   // Nombre de colonnes couvertes par la cellule de cette ligne (les suivantes sont sautées).
   colSpan?: (row: TData) => number
   // Colonne masquée par défaut, que l'utilisateur ajoute depuis « Colonnes ».
@@ -61,10 +43,6 @@ export type CustomMeta<TData, TValue> = {
 
 // Id DOM d'une ligne, pour la désigner (aria-controls) depuis une autre.
 export const rowDomId = (prefix: string, rowId: string) => `${prefix}-${rowId}`
-
-type CustomColumnDef<TData, TValue = unknown> = ColumnDef<TData, TValue> & {
-  meta?: CustomMeta<TData, TValue>
-}
 
 // Pagination tenue par le serveur : la table n'affiche que la page recue, et le total vient de
 // la reponse. L'ecran garde l'etat (page, taille) et le passe a sa requete. Exclusive de
@@ -77,11 +55,11 @@ export type ServerPagination = {
 }
 
 type ReactTableProps<TData extends { id: string }> = {
-  columns: CustomColumnDef<TData, any>[]
+  columns: ColumnDef<Features, TData, any>[]
   data: TData[]
   customButtons?: ReactNode[]
   title?: string
-  customHeader?: (rows: Row<TData>[]) => ReactNode
+  customHeader?: (rows: Row<Features, TData>[]) => ReactNode
   filterId?: string
   pagination?: boolean
   serverPagination?: ServerPagination
@@ -165,7 +143,20 @@ export function ReactTable<TData extends { id: string }>({
     pageSize: safeParse(localStorage.getItem(`page-size/${filterId}`), 25),
   })
 
-  const table = useReactTable({
+  // Meme reference d'un rendu a l'autre : la v9 compare l'etat controle par reference, et un
+  // objet neuf a chaque rendu relancerait un rendu sans fin.
+  const pageServeur = serverPagination?.pageIndex
+  const tailleServeur = serverPagination?.pageSize
+  const paginationControlee = useMemo(
+    () =>
+      pageServeur === undefined || tailleServeur === undefined
+        ? undefined
+        : { pageIndex: pageServeur, pageSize: tailleServeur },
+    [pageServeur, tailleServeur],
+  )
+
+  const table = useTable({
+    features,
     data: data,
     columns: columns,
     state: {
@@ -175,30 +166,14 @@ export function ReactTable<TData extends { id: string }>({
       columnFilters,
       expanded,
       ...(pagination ? { pagination: paginationState } : {}),
-      ...(serverPagination
-        ? {
-            pagination: {
-              pageIndex: serverPagination.pageIndex,
-              pageSize: serverPagination.pageSize,
-            },
-          }
-        : {}),
-    },
-    filterFns: {
-      text: textFilterFn,
-      number: numberFilterFn,
-      range: numberRangeFilterFn,
-      date: dateFilterFn,
-      dateRange: dateRangeFilterFn,
-      select: selectFilterFn,
-      multiSelect: multiSelectFilterFn,
+      ...(paginationControlee ? { pagination: paginationControlee } : {}),
     },
     defaultColumn: {
       size: 150,
       minSize: 0,
     },
-    globalFilterFn: textFilterFn,
-    manualPagination: serverPagination !== undefined,
+    // Sans pagination, rien a decouper ; avec celle du serveur, la page est deja decoupee.
+    manualPagination: !pagination,
     ...(serverPagination ? { rowCount: serverPagination.rowCount } : {}),
     onPaginationChange: serverPagination
       ? (updater) => {
@@ -213,7 +188,6 @@ export function ReactTable<TData extends { id: string }>({
       : pagination
         ? setPaginationState
         : undefined,
-    getPaginationRowModel: pagination ? getPaginationRowModel() : undefined,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
@@ -222,20 +196,9 @@ export function ReactTable<TData extends { id: string }>({
     getSubRows,
     onExpandedChange: setExpanded,
     meta: { rowIdPrefix },
-    getExpandedRowModel: getExpandedRowModel(),
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getFacetedRowModel: getFacetedRowModel(),
-    getFacetedUniqueValues: getFacetedUniqueValues(),
-    getFacetedMinMaxValues: getFacetedMinMaxValues(),
     enableRowSelection: true,
     enableColumnPinning: true,
     autoResetPageIndex: false,
-    //
-    debugTable: false,
-    debugHeaders: false,
-    debugColumns: false,
   })
 
   useEffect(() => {
@@ -261,8 +224,11 @@ export function ReactTable<TData extends { id: string }>({
   }, [columnVisibility, filterId])
 
   useEffect(() => {
+    // `table` change a chaque rendu en v9 : ne rendre un nouveau tableau que si un filtre tombe.
     const ids = new Set(table.getAllLeafColumns().map((c) => c.id))
-    setColumnFilters((fs) => fs.filter((f) => ids.has(f.id)))
+    setColumnFilters((fs) =>
+      fs.every((f) => ids.has(f.id)) ? fs : fs.filter((f) => ids.has(f.id)),
+    )
   }, [table])
 
   const lastResetSignal = useRef(resetSignal)
@@ -289,35 +255,27 @@ export function ReactTable<TData extends { id: string }>({
     }
   }, [filteredCount])
 
-  const getCommonPinningStyles = <TData,>(
-    column: Column<TData, unknown>,
+  const getCommonPinningStyles = (
+    column: Column<Features, TData, unknown>,
   ): CSSProperties => {
     const isPinned = column.getIsPinned()
 
     return {
-      left: isPinned === 'left' ? `${column.getStart('left')}px` : undefined,
-      right: isPinned === 'right' ? `${column.getAfter('right')}px` : undefined,
+      insetInlineStart:
+        isPinned === 'start' ? `${column.getStart('start')}px` : undefined,
+      insetInlineEnd:
+        isPinned === 'end' ? `${column.getAfter('end')}px` : undefined,
       position: isPinned ? 'sticky' : 'relative',
       zIndex: isPinned ? 1 : 0,
       backgroundColor: isPinned ? 'var(--color-card)' : undefined,
       boxShadow:
-        isPinned === 'left'
+        isPinned === 'start'
           ? 'inset -1px 0 0 var(--color-border-dark)'
-          : isPinned === 'right'
+          : isPinned === 'end'
             ? 'inset 1px 0 0 var(--color-border-dark)'
             : undefined,
     }
   }
-
-  useEffect(() => {
-    for (const column of table.getAllLeafColumns()) {
-      const meta = column.columnDef.meta as CustomMeta<TData, unknown>
-      const pin = meta?.pin
-      if (pin) {
-        column.pin(pin)
-      }
-    }
-  }, [table])
 
   const hasToolbar =
     toolbar !== undefined ||

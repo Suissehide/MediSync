@@ -20,6 +20,7 @@ import { toSelectOptions } from '@/libs/utils.ts'
 import { useActivityLogsQuery } from '@/queries/useActivityLog.ts'
 import type { ActivityLog } from '@/types/activityLog.ts'
 import type { Service } from '@/types/service.ts'
+import type { Features } from '../table/features.ts'
 
 // Le journal de l'etablissement (administration) ou celui du seul service courant (chef de
 // service) : sans `services`, ni filtre ni colonne de service.
@@ -51,7 +52,7 @@ const PREMIERE_PAGE = { pageIndex: 0, pageSize: 25 }
 // sans lui, chaque frappe lancerait une recherche sur tout le journal.
 const DELAI_SAISIE_MS = 300
 
-const columnHelper = createColumnHelper<ActivityLog>()
+const columnHelper = createColumnHelper<Features, ActivityLog>()
 
 export function JournalActivite({ services }: Props) {
   const [filters, setFilters] = useState(DEFAULT_FILTERS)

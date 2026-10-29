@@ -1,8 +1,9 @@
-import type { Table } from '@tanstack/react-table'
+import type { RowData, Table } from '@tanstack/react-table'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 import { Button } from '../ui/button.tsx'
 import { Select } from '../ui/select.tsx'
+import type { Features } from './features.ts'
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100].map((n) => ({
   value: String(n),
@@ -29,16 +30,16 @@ const getVisiblePageNumbers = (
   return Array.from({ length: end - start + 1 }, (_, i) => start + i)
 }
 
-type PaginationTableProps<TData> = {
-  table: Table<TData>
+type PaginationTableProps<TData extends RowData> = {
+  table: Table<Features, TData>
   totalRows: number
 }
 
-export function PaginationTable<TData>({
+export function PaginationTable<TData extends RowData>({
   table,
   totalRows,
 }: PaginationTableProps<TData>) {
-  const { pageIndex, pageSize } = table.getState().pagination
+  const { pageIndex, pageSize } = table.store.state.pagination
   const currentPage = pageIndex + 1
   const pageCount = table.getPageCount()
   const visiblePages = getVisiblePageNumbers(currentPage, pageCount)
