@@ -175,6 +175,7 @@ export default function ProgrammePDFModal({
                 </label>
                 <Select
                   id="programme-design"
+                  clearable={false}
                   value={selectedDesign?.id ?? ''}
                   onValueChange={(value) => {
                     setSelectedDesignId(value)
