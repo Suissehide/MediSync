@@ -107,8 +107,7 @@ class NotificationMailer implements NotificationMailerInterface {
     return { toSkip, immediate, daily }
   }
 
-  // Capture (PENDING -> SENT) avant l'envoi : sous deux `runOnce` concurrents, un seul gagne
-  // chaque id et envoie ; un echec du mailer apres capture n'est jamais rejoue.
+  // Capture avant envoi : un seul passage concurrent gagne chaque id, un echec apres capture n'est jamais rejoue.
   async #sendImmediate(
     immediate: PendingNotificationRow[],
     recipients: Map<string, RecipientRow>,
