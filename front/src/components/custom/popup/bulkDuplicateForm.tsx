@@ -96,7 +96,7 @@ export function BulkDuplicateForm(props: BulkDuplicateFormProps) {
           <Button
             variant="default"
             onClick={onConfirm}
-            disabled={!editMode && (!props.weekDate || isForbiddenTarget)}
+            disabled={!editMode && !props.weekDate}
           >
             <Copy className="w-4 h-4" />
             Dupliquer

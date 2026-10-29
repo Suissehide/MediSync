@@ -31,7 +31,7 @@ function weekRowsInMonth(month: Dayjs): number {
 interface WeekPickerProps {
   value: Dayjs | null
   onChange: (date: Dayjs | null) => void
-  /** Lundis (YYYY-MM-DD) des semaines affichées en rouge et non sélectionnables. */
+  /** Lundis (YYYY-MM-DD) des semaines affichées en rouge. */
   forbiddenWeekStarts?: Set<string>
 }
 
@@ -153,7 +153,6 @@ export function WeekPicker({
         timezone="UTC"
         onMonthChange={setVisibleMonth}
         showDaysOutsideCurrentMonth
-        shouldDisableDate={isForbiddenDay}
         slots={{ day: WeekDay as React.ComponentType<PickerDayProps> }}
         slotProps={{
           day: ((ownerState: PickerDayProps) => ({

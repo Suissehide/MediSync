@@ -96,7 +96,7 @@ export function BulkMoveForm(props: BulkMoveFormProps) {
           <Button
             variant="default"
             onClick={onConfirm}
-            disabled={!editMode && (!props.weekDate || isForbiddenTarget)}
+            disabled={!editMode && !props.weekDate}
           >
             <MoveRight className="w-4 h-4" />
             Déplacer
