@@ -465,6 +465,18 @@ describe('NotificationDispatcher et rendez-vous', () => {
 
     // Service decoche : ide1 ne suit (en preference) qu'un autre service, rien ne doit partir.
     const autreService = (await createService(E, 'Autre service')).id
+    // ide1 doit etre membre de l'autre service : une liste sans aucun de ses services vaut « tous ».
+    const rattachement = await testDb.establishmentMembership.findFirstOrThrow({
+      where: { userId: ids['ide1@t.fr'], establishmentId: E },
+    })
+    await testDb.serviceMembership.create({
+      data: {
+        establishmentMembershipId: rattachement.id,
+        serviceId: autreService,
+        establishmentId: E,
+        role: 'INTERVENANT',
+      },
+    })
     await testDb.user.update({
       where: { id: ids['ide1@t.fr'] },
       data: { notificationPrefs: { services: [autreService] } },
