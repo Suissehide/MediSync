@@ -1348,6 +1348,7 @@ function Planning() {
         {exportOpen && (
           <PlanningExportModal
             initialDate={usePlanningStore.getState().viewStart}
+            initialExcludedPathwayIds={hiddenPathwayIds}
             onClose={() => setExportOpen(false)}
           />
         )}
