@@ -1272,6 +1272,7 @@ function Planning() {
             weekDate={duplicateWeekDate}
             onWeekChange={setDuplicateWeekDate}
             planningCycle={planningCycle}
+            forbiddenWeeks={forbiddenWeeks ?? []}
             onConfirm={() => {
               if (duplicateWeekDate) {
                 handleBulkSlotOperation(duplicateWeekDate, 'duplicate')
