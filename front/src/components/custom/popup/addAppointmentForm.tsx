@@ -1,6 +1,6 @@
 import dayjs from 'dayjs'
 import { Check, X } from 'lucide-react'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { generateDurationOptions } from '../../../libs/utils.ts'
@@ -54,7 +54,8 @@ function AddAppointmentForm({
   isPending = false,
   defaultPatientIDs,
 }: AddAppointmentFormProps) {
-  const today = dayjs.utc()
+  // Figé : TanStack Form compare defaultValues à chaque rendu, un « maintenant » recalculé boucle.
+  const [today] = useState(() => dayjs.utc())
   const { thematics } = useThematicQueries()
   const { patients } = usePatientQueries()
   const { slot } = useSlotByIDQuery(slotID)

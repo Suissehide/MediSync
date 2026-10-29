@@ -1,7 +1,7 @@
 import { useStore } from '@tanstack/react-form'
 import dayjs from 'dayjs'
 import { Check, X } from 'lucide-react'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { combineDateAndTime } from '../../../libs/utils.ts'
@@ -67,7 +67,8 @@ function AddSlotForm({
     [locations],
   )
 
-  const today = dayjs.utc()
+  // Figé : TanStack Form compare defaultValues à chaque rendu, un « maintenant » recalculé boucle.
+  const [today] = useState(() => dayjs.utc())
 
   const form = useAppForm({
     defaultValues: {
