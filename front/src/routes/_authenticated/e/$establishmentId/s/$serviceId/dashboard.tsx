@@ -401,14 +401,12 @@ function Dashboard() {
           />
         )}
 
-        {isAppointment && (
-          <AppointmentSheet
-            open={isAppointment}
-            setOpen={setOpenEventId}
-            eventID={appointmentId}
-            soignants={slotSoignants}
-          />
-        )}
+        <AppointmentSheet
+          open={isAppointment}
+          setOpen={setOpenEventId}
+          eventID={isAppointment ? appointmentId : ''}
+          soignants={slotSoignants}
+        />
       </div>
     </DashboardLayout>
   )
