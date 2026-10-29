@@ -64,6 +64,10 @@ if (!Element.prototype.releasePointerCapture) {
 if (!Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = () => undefined
 }
+// L'editeur de design remet son cadre en haut au changement de zoom.
+if (!Element.prototype.scrollTo) {
+  Element.prototype.scrollTo = () => undefined
+}
 
 // jsdom ne connait pas `ResizeObserver`, et un composant qui en construit un plante au
 // montage — l'editeur de design en pose un pour calculer son echelle. Ce bouchon n'emet
