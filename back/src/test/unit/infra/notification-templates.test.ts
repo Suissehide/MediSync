@@ -18,15 +18,8 @@ const TRAP = {
   patients: [{ id: 'p', name: 'DUBOIS Marie' }],
   thematicName: 'Diagnostic éducatif cardio',
   text: 'Rappeler DUBOIS Marie',
-  locationName: 'Bureau Hublot',
 }
-const FORBIDDEN = [
-  'DUBOIS',
-  'Marie',
-  'Diagnostic éducatif cardio',
-  'Rappeler',
-  'Bureau',
-]
+const FORBIDDEN = ['DUBOIS', 'Marie', 'Diagnostic éducatif cardio', 'Rappeler']
 
 // Champs utiles par type (ceux que la spec autorise a lire), le piege est ajoute a part.
 const USEFUL: Record<string, Record<string, unknown>> = {
@@ -101,12 +94,18 @@ describe('notification-templates', () => {
     expect(notificationSubject(type as (typeof TYPES)[number])).toBe(expected)
   })
 
-  it('REMINDER : date seule, jamais la salle', () => {
+  it('REMINDER : phrase avec salle si connue', () => {
     expect(
       notificationLine({
         type: 'REMINDER',
         payload: { startDate: START, locationName: 'Bureau 2' },
       }),
+    ).toBe('Rappel : vous avez une séance le jeu. 22/10 à 09:00, Bureau 2.')
+  })
+
+  it('REMINDER : phrase sans salle inconnue', () => {
+    expect(
+      notificationLine({ type: 'REMINDER', payload: { startDate: START } }),
     ).toBe('Rappel : vous avez une séance le jeu. 22/10 à 09:00.')
   })
 
@@ -153,7 +152,21 @@ describe('notification-templates', () => {
           after: { startDate: START, locationName: 'Bureau 2' },
         },
       }),
-    ).toBe('Votre séance du jeu. 22/10 à 09:00 change de salle.')
+    ).toBe('Votre séance du jeu. 22/10 à 09:00 change de salle : Bureau 2.')
+  })
+
+  it('APPOINTMENT_MOVED : salle retiree (locationName vide) -> salle non precisee', () => {
+    expect(
+      notificationLine({
+        type: 'APPOINTMENT_MOVED',
+        payload: {
+          before: { startDate: START, locationName: 'Bureau 1' },
+          after: { startDate: START, locationName: null },
+        },
+      }),
+    ).toBe(
+      'Votre séance du jeu. 22/10 à 09:00 change de salle : salle non précisée.',
+    )
   })
 
   it('APPOINTMENT_CANCELLED', () => {
@@ -249,9 +262,8 @@ describe('notification-templates', () => {
     )
     expect(mail.subject).toBe('MediSync : vos notifications du jeu. 22/10')
     expect(mail.text).toContain(
-      'Rappel : vous avez une séance le jeu. 22/10 à 09:00.',
+      'Rappel : vous avez une séance le jeu. 22/10 à 09:00, Bureau 2.',
     )
-    expect(mail.text).not.toContain('Bureau')
     expect(mail.text).toContain(
       'Un patient était absent à votre séance du ven. 23/10 à 10:00, sans justification.',
     )

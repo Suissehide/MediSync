@@ -9,6 +9,7 @@ export type MailableNotification = {
 
 const CTA = 'Ouvrir MediSync'
 const FOOTER = 'Vous recevez cet e-mail selon vos préférences de notification.'
+const ROOM_UNKNOWN = 'salle non précisée'
 const COLLEAGUE_UNKNOWN = 'Un collègue'
 
 const DATE_ONLY = new Intl.DateTimeFormat('fr-FR', {
@@ -72,8 +73,10 @@ export const notificationLine = ({
   payload,
 }: MailableNotification): string => {
   switch (type) {
-    case 'REMINDER':
-      return `Rappel : vous avez une séance ${withDate('le', payload.startDate)}.`
+    case 'REMINDER': {
+      const room = asString(payload.locationName)
+      return `Rappel : vous avez une séance ${withDate('le', payload.startDate)}${room ? `, ${room}` : ''}.`
+    }
     case 'PATIENT_ADDED': {
       const count = asNumber(payload.count)
       return count > 1
@@ -92,7 +95,8 @@ export const notificationLine = ({
       if (beforeDate.getTime() !== afterDate.getTime()) {
         return `Votre séance du ${formatDateTime(beforeDate)} est déplacée au ${formatDateTime(afterDate)}.`
       }
-      return `Votre séance du ${formatDateTime(afterDate)} change de salle.`
+      const room = asString(after.locationName) || ROOM_UNKNOWN
+      return `Votre séance du ${formatDateTime(afterDate)} change de salle : ${room}.`
     }
     case 'APPOINTMENT_CANCELLED':
       return `Votre séance ${withDate('du', payload.startDate)} est annulée.`
