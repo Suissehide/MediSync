@@ -2,7 +2,7 @@ import { DateCalendar } from '@mui/x-date-pickers'
 import { createFileRoute } from '@tanstack/react-router'
 import dayjs, { type Dayjs } from 'dayjs'
 import { CalendarDays } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { getDayAppointmentColumns } from '@/columns/dayAppointment.column.tsx'
 import { DATE_CALENDAR_SX } from '@/components/custom/Calendar/calendarDatePickerButton.tsx'
@@ -38,6 +38,10 @@ import type { Soignant } from '@/types/soignant.ts'
 export const Route = createFileRoute(
   '/_authenticated/e/$establishmentId/s/$serviceId/agenda',
 )({
+  // `date` (YYYY-MM-DD) : lien « Voir l'agenda »/« Ouvrir le RDV » du panneau de notifications.
+  validateSearch: (search: Record<string, unknown>): { date?: string } => ({
+    date: typeof search.date === 'string' ? search.date : undefined,
+  }),
   component: Agenda,
 })
 
@@ -73,7 +77,12 @@ const getNewAppointmentProps = (row: DaySlotRow | null, slot?: Slot) => {
 }
 
 function Agenda() {
+  const { date } = Route.useSearch()
   const [selectedDay, setSelectedDay] = useState(() => {
+    const fromSearch = date ? dayjs.utc(date) : null
+    if (fromSearch?.isValid()) {
+      return fromSearch.startOf('day')
+    }
     const stored = localStorage.getItem(SELECTED_DAY_STORAGE_KEY)
     const parsed = stored ? dayjs.utc(stored) : null
 
@@ -87,10 +96,21 @@ function Agenda() {
     null,
   )
 
-  const handleDayChange = (day: Dayjs) => {
+  const handleDayChange = useCallback((day: Dayjs) => {
     setSelectedDay(day)
     localStorage.setItem(SELECTED_DAY_STORAGE_KEY, day.format('YYYY-MM-DD'))
-  }
+  }, [])
+
+  // Une notification peut changer `date` sur un agenda deja monte : on suit le nouveau parametre.
+  useEffect(() => {
+    if (!date) {
+      return
+    }
+    const parsed = dayjs.utc(date)
+    if (parsed.isValid()) {
+      handleDayChange(parsed.startOf('day'))
+    }
+  }, [date, handleDayChange])
 
   const today = dayjs.utc().startOf('day')
 

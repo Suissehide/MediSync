@@ -5,6 +5,7 @@ import type {
   ServiceMembership,
   User,
 } from '../../../../../generated/client'
+import type { NotificationPrefs } from '../../../../utils/notification-prefs'
 import type { PrimaTransactionClient } from '../client'
 
 export type UserEntityRepo = User
@@ -64,4 +65,15 @@ export interface UserRepositoryInterface {
     userID: string,
     client?: PrimaTransactionClient,
   ) => Promise<UserEntityRepo>
+  // `GET /me/notification-preferences`, sans contexte, complétées des défauts.
+  findNotificationPrefs: (userId: string) => Promise<NotificationPrefs>
+  // `PUT /me/notification-preferences` — même absence de contexte, `User.update`.
+  setNotificationPrefs: (
+    userId: string,
+    prefs: NotificationPrefs,
+  ) => Promise<void>
+  // Dispatcher (sous tenant) et planificateur (systeme) : colonnes scalaires, jamais d'include d'appartenances.
+  findNotificationPrefsMany: (
+    userIds: string[],
+  ) => Promise<Map<string, NotificationPrefs>>
 }

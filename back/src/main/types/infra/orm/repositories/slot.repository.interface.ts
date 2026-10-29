@@ -1,4 +1,5 @@
 import type {
+  Location,
   PathwayTemplate,
   Prisma,
   Slot,
@@ -18,9 +19,10 @@ export type SlotWithTemplateAndAppointmentsRepo = SlotEntityRepo & {
 export type PathwayWithTemplateRepo = PathwayEntityRepo & {
   template: PathwayTemplate | null
 }
+// `location` toujours presente ici : `slotInclude` inclut `slotTemplateInclude` au complet pour ce DTO.
 export type SlotDTORepo = SlotEntityRepo & {
   pathway: PathwayWithTemplateRepo | null
-  slotTemplate: SlotTemplateWithSoignantsRepo
+  slotTemplate: SlotTemplateWithSoignantsRepo & { location?: Location | null }
   appointments: AppointmentWithPatientsRepo[]
 }
 // Le repository pose serviceId/establishmentId (tenant) lui-même : l'appelant

@@ -119,6 +119,7 @@ const buildDomain = (
       debug: jest.fn(recordLog),
     },
     appEventBus: { emit: jest.fn() },
+    notificationDispatcher: { enrolled: jest.fn() },
     patientRepository: {
       create: jest.fn(async () => patient),
       findByID: jest.fn(async () => patientWithAppointments()),

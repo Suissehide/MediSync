@@ -12,6 +12,10 @@ export type AppointmentWithPatientsRepo = AppointmentEntityRepo & {
     patient: PatientEntityRepo
   })[]
 }
+// Forme de `findByID` seulement : la salle du créneau, pour le payload `moved`.
+export type AppointmentWithSessionRepo = AppointmentWithPatientsRepo & {
+  slot: { slotTemplate: { location: { name: string } | null } }
+}
 // Le repository pose serviceId/establishmentId (tenant) lui-même :
 // l'appelant ne les fournit pas. `appointmentPatients` (la relation brute
 // Prisma) est omise au profit du seul `patientIDs` ci-dessous, que le
@@ -41,15 +45,18 @@ export interface AppointmentRepositoryInterface {
   findByID: (
     id: string,
   ) => Promise<
-    AppointmentWithPatientsRepo & { thematic: { name: string } | null }
+    AppointmentWithSessionRepo & { thematic: { name: string } | null }
   >
   create: (
     appointmentCreateParams: AppointmentCreateEntityRepo,
   ) => Promise<AppointmentEntityRepo>
+  // Meme forme que `findByID` (chaque branche relit via `appointmentInclude`), sans `slot`.
   update: (
     appointmentID: string,
     appointmentUpdateParams: AppointmentUpdateEntityRepo,
-  ) => Promise<AppointmentEntityRepo>
+  ) => Promise<
+    AppointmentWithPatientsRepo & { thematic: { name: string } | null }
+  >
   addPatientToAppointment: (
     appointmentPatientUpdateParams: AppointmentPatientAddEntityRepo,
   ) => Promise<AppointmentPatientEntityRepo>

@@ -33,3 +33,9 @@ export function toStartOfWeek(date: Date): Date {
   const daysToMonday = day === 0 ? -6 : 1 - day
   return d.add(daysToMonday, 'day').startOf('day').toDate()
 }
+
+// Une seance est stockee en heure murale de Paris ecrite comme UTC : instant reel correspondant.
+export const sessionInstant = (stored: Date): Date =>
+  dayjs
+    .tz(dayjs.utc(stored).format('YYYY-MM-DDTHH:mm:ss'), 'Europe/Paris')
+    .toDate()

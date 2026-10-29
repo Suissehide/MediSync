@@ -54,6 +54,8 @@ import { IndicatorSetRepository } from '../../../infra/orm/repositories/indicato
 import { LocationRepository } from '../../../infra/orm/repositories/location.repository'
 import { MembershipRepository } from '../../../infra/orm/repositories/membership.repository'
 import { NotificationRepository } from '../../../infra/orm/repositories/notification.repository'
+import { NotificationContextRepository } from '../../../infra/orm/repositories/notification-context.repository'
+import { NotificationScheduleRepository } from '../../../infra/orm/repositories/notification-schedule.repository'
 import { PathwayRepository } from '../../../infra/orm/repositories/pathway.repository'
 import { PathwayTemplateRepository } from '../../../infra/orm/repositories/pathwayTemplate.repository'
 import { PatientRepository } from '../../../infra/orm/repositories/patient.repository'
@@ -74,6 +76,8 @@ import { ThematicRepository } from '../../../infra/orm/repositories/thematic.rep
 import { UserRepository } from '../../../infra/orm/repositories/user.repository'
 import { FastifyHttpServer } from '../../../interfaces/http/fastify/fastify-http-server'
 import { ActivityLogSubscriber } from '../../../services/activity-log.subscriber'
+import { NotificationDispatcher } from '../../../services/notification.dispatcher'
+import { NotificationScheduler } from '../../../services/notification.scheduler'
 import type { Config } from '../../../types/application/config'
 import type { IocContainer } from '../../../types/application/ioc'
 import { AppEventBus } from '../../../utils/app-event-bus'
@@ -595,6 +599,22 @@ class AwilixIocContainer {
     this.register(
       'notificationRepository',
       asClass(NotificationRepository).singleton(),
+    )
+    this.register(
+      'notificationContextRepository',
+      asClass(NotificationContextRepository).singleton(),
+    )
+    this.register(
+      'notificationDispatcher',
+      asClass(NotificationDispatcher).singleton(),
+    )
+    this.register(
+      'notificationScheduleRepository',
+      asClass(NotificationScheduleRepository).singleton(),
+    )
+    this.register(
+      'notificationScheduler',
+      asClass(NotificationScheduler).singleton(),
     )
   }
 

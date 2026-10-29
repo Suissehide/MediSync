@@ -4,6 +4,7 @@ import type {
   AppointmentEntityRepo,
   AppointmentRepositoryInterface,
   AppointmentUpdateEntityRepo,
+  AppointmentWithPatientsRepo,
 } from '../../../types/infra/orm/repositories/appointment.repository.interface'
 import type {
   AppointmentPatientAddEntityRepo,
@@ -148,7 +149,9 @@ class AppointmentRepository implements AppointmentRepositoryInterface {
   async update(
     appointmentID: string,
     appointmentUpdateParams: AppointmentUpdateEntityRepo,
-  ): Promise<AppointmentEntityRepo> {
+  ): Promise<
+    AppointmentWithPatientsRepo & { thematic: { name: string } | null }
+  > {
     const { appointmentPatients, ...appointmentData } = appointmentUpdateParams
     const { serviceId } = this.scope
 
