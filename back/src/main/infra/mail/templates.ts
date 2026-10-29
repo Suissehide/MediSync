@@ -3,14 +3,18 @@ import type { Mail } from '../../types/infra/mail/mailer.interface'
 // Contenu NEUTRE (MDS-35) : produit et établissement seulement, jamais de service, de
 // pathologie ni de donnée patient — un e-mail se lit par-dessus l'épaule et se transfère.
 
-const escapeHtml = (value: string): string =>
+export const escapeHtml = (value: string): string =>
   value
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
 
-const layout = (paragraphs: string[], link: string, cta: string): string => `
+export const layout = (
+  paragraphs: string[],
+  link: string,
+  cta: string,
+): string => `
 <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;color:#1f2937">
   <h1 style="font-size:22px"><span style="color:#2563eb">Medi</span>Sync</h1>
   ${paragraphs.map((p) => `<p>${p}</p>`).join('\n  ')}
