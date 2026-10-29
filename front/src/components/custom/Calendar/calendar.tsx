@@ -12,9 +12,8 @@ import listPlugin from '@fullcalendar/list'
 import FullCalendar from '@fullcalendar/react'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import dayjs, { type Dayjs } from 'dayjs'
-import { CalendarDays, CalendarOff } from 'lucide-react'
+import { CalendarOff } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { createRoot } from 'react-dom/client'
 
 import { usePlanningStore } from '../../../store/usePlanningStore.ts'
 import type { Appointment } from '../../../types/appointment.ts'
@@ -298,14 +297,6 @@ function Calendar({
     api?.gotoDate(date.toDate())
     setAnchorEl(null)
   }
-
-  useEffect(() => {
-    const button = document.querySelector('.fc-selectDateButton-button')
-    if (button && !button.querySelector('svg')) {
-      const root = createRoot(button)
-      root.render(<CalendarDays size={16} />)
-    }
-  }, [])
 
   const handleSelect = (dateSelectArg: DateSelectArg) => {
     handleSelectEvent?.(dateSelectArg)
