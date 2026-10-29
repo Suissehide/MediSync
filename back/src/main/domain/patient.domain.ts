@@ -1199,62 +1199,30 @@ class PatientDomain implements PatientDomainInterface {
     ]
   }
 
+  // Débuts possibles calés sur des tranches de la durée depuis le début du créneau : pas de trou entre deux rendez-vous.
   private getNextAvailableAppointment(
     slotStart: Date,
     slotEnd: Date,
     existingAppointments: { startDate: Date; endDate: Date }[],
     durationMinutes = 30,
   ) {
-    // Trier les rendez-vous existants par startDate
-    const sortedAppointments = [...existingAppointments].sort(
-      (a, b) => a.startDate.getTime() - b.startDate.getTime(),
-    )
-
-    let nextAvailableStart = dayjs(slotStart)
     const slotEndDayjs = dayjs(slotEnd)
-
-    // Avance la fenêtre candidate [start, start+durée] tant qu'elle chevauche
-    // un rendez-vous existant. On ré-itère car repousser le début après un
-    // rendez-vous peut faire entrer la fenêtre en collision avec le suivant.
-    let collisionFound = true
-    while (collisionFound) {
-      collisionFound = false
-      const candidateEnd = nextAvailableStart.add(durationMinutes, 'minute')
-
-      for (const appointment of sortedAppointments) {
-        const appointmentStart = dayjs(appointment.startDate)
-        const appointmentEnd = dayjs(appointment.endDate)
-
-        // Chevauchement d'intervalles : start < apptEnd && candidateEnd > apptStart
-        if (
-          nextAvailableStart.isBefore(appointmentEnd) &&
-          candidateEnd.isAfter(appointmentStart)
-        ) {
-          nextAvailableStart = appointmentEnd
-          collisionFound = true
-          break
-        }
-      }
-
-      // Sortie si la fenêtre ne tient plus dans le créneau.
-      if (
-        nextAvailableStart.add(durationMinutes, 'minute').isAfter(slotEndDayjs)
-      ) {
-        return null
+    for (
+      let start = dayjs(slotStart);
+      !start.add(durationMinutes, 'minute').isAfter(slotEndDayjs);
+      start = start.add(durationMinutes, 'minute')
+    ) {
+      const end = start.add(durationMinutes, 'minute')
+      const collides = existingAppointments.some(
+        (appointment) =>
+          start.isBefore(appointment.endDate) &&
+          end.isAfter(appointment.startDate),
+      )
+      if (!collides) {
+        return { startDate: start.toDate(), endDate: end.toDate() }
       }
     }
-
-    const nextAvailableEnd = nextAvailableStart.add(durationMinutes, 'minute')
-
-    // Vérifier que ça tient dans le slot
-    if (nextAvailableEnd.isAfter(slotEndDayjs)) {
-      return null
-    }
-
-    return {
-      startDate: nextAvailableStart.toDate(),
-      endDate: nextAvailableEnd.toDate(),
-    }
+    return null
   }
 }
 
