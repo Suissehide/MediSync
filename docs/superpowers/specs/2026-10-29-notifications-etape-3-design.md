@@ -68,4 +68,4 @@ Back (e2e, faux transport du `Mailer` déjà utilisé par les tests d'invitation
 - **aucun e-mail ne contient un nom de patient, une thématique ni un texte de tâche** (vérifié sur le contenu texte et HTML de chaque type, avec des données qui en portent) ;
 - compte désactivé : rien.
 
-Front (Vitest) : colonne E-mail ; Tout coche tous les e-mails, Essentiel rétablit le défaut ; choix d'envoi enregistré ; adresse affichée.
+Front (Vitest) : colonne E-mail ; défaut sans e-mail en Personnalisé ; Tout coche tous les e-mails, Essentiel coche rappel, modifié et mention ; choix d'envoi enregistré ; adresse affichée.
