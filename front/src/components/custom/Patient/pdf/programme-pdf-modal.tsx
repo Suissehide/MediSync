@@ -9,6 +9,7 @@ import { useSourcesImages } from '../../../../queries/usePdfAsset.ts'
 import { usePdfDesignQueries } from '../../../../queries/usePdfDesign.ts'
 import { usePatientSlotsQuery } from '../../../../queries/useSlot.ts'
 import { useThematicQueries } from '../../../../queries/useThematic.ts'
+import { scopedStorageName } from '../../../../store/scoped-storage.ts'
 import { useAuthStore } from '../../../../store/useAuthStore.ts'
 import type { Patient } from '../../../../types/patient.ts'
 import type { PdfDesignSummary } from '../../../../types/pdfDesignList.ts'
@@ -41,6 +42,18 @@ export const chooseDesign = (
   disponibles.find((design) => design.isDefault) ??
   disponibles[0]
 
+// Le dernier design choisi, par service : ses identifiants n'ont pas de sens ailleurs.
+const designMemoKey = () =>
+  scopedStorageName('programme-pdf-design', useAuthStore.getState().context)
+
+const lireDernierDesign = (): string | null => {
+  try {
+    return localStorage.getItem(designMemoKey())
+  } catch {
+    return null
+  }
+}
+
 interface ProgrammePDFModalProps {
   patient: Patient
   onClose: () => void
@@ -61,7 +74,9 @@ export default function ProgrammePDFModal({
   // Le nom du service vient du contexte de tenant, pose par le layout de route.
   const serviceName = useAuthStore((state) => state.context?.serviceName) ?? ''
 
-  const [selectedDesignId, setSelectedDesignId] = useState<string | null>(null)
+  const [selectedDesignId, setSelectedDesignId] = useState<string | null>(
+    lireDernierDesign,
+  )
 
   const availableDesigns = useMemo<PdfDesignSummary[]>(
     () => designsProposables(designs, presets),
@@ -156,7 +171,14 @@ export default function ProgrammePDFModal({
               <select
                 className="border border-border rounded-md px-2 py-1 text-sm bg-background text-foreground"
                 value={selectedDesign?.id ?? ''}
-                onChange={(event) => setSelectedDesignId(event.target.value)}
+                onChange={(event) => {
+                  setSelectedDesignId(event.target.value)
+                  try {
+                    localStorage.setItem(designMemoKey(), event.target.value)
+                  } catch {
+                    // Stockage indisponible : le choix vaut pour cette ouverture seulement.
+                  }
+                }}
                 aria-label="Design du document"
               >
                 {availableDesigns.map((design) => (

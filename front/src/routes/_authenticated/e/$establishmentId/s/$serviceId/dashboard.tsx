@@ -15,6 +15,7 @@ import AppointmentSheet from '@/components/custom/sheet/appointmentSheet.tsx'
 import DashboardLayout from '@/components/dashboard.layout.tsx'
 import { SLOT } from '@/constants/process.constant.ts'
 import { labelConflicts } from '@/libs/planningConflicts.ts'
+import { isSlotVisible } from '@/libs/slotAvailability.ts'
 import { buildCalendarEventsFromSlots, containsKeyword } from '@/libs/utils.ts'
 import { useAppointmentMutations } from '@/queries/useAppointment.ts'
 import { useLocationQueries } from '@/queries/useLocation.ts'
@@ -162,11 +163,13 @@ function Dashboard() {
 
   useEffect(() => {
     if (slots) {
+      // Un créneau supprimé ne reste affiché que s'il porte encore des inscriptions.
+      const visible = slots.filter(isSlotVisible)
       const filtered = {
-        soignant: () => filterSlotsBySoignants(slots, selectedIDs),
+        soignant: () => filterSlotsBySoignants(visible, selectedIDs),
         pathway: () =>
-          filterSlotsByPathwayTemplates(slots, selectedPathwayTemplateIDs),
-        location: () => filterSlotsByLocations(slots, selectedLocationIDs),
+          filterSlotsByPathwayTemplates(visible, selectedPathwayTemplateIDs),
+        location: () => filterSlotsByLocations(visible, selectedLocationIDs),
       }[mode]()
 
       const slotEvents = buildCalendarEventsFromSlots(
@@ -205,7 +208,7 @@ function Dashboard() {
     if (!event || eventID.startsWith('appointment_')) {
       return
     }
-    if (event.extendedProps?.locked) {
+    if (event.extendedProps?.locked || event.extendedProps?.archived) {
       return
     }
     if (
@@ -337,6 +340,7 @@ function Dashboard() {
                   (e) =>
                     e.extendedProps?.type === 'slot' &&
                     !e.extendedProps?.locked &&
+                    !e.extendedProps?.archived &&
                     containsKeyword(e.extendedProps?.states ?? [], [
                       'individual',
                     ]),

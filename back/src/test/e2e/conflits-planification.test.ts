@@ -220,4 +220,102 @@ describe('conflits de planification', () => {
       }),
     ])
   })
+
+  it('POST /slot ne signale pas un creneau neuf, encore vide, dans une salle occupee', async () => {
+    await creneauOccupe(
+      '2026-04-06T09:00:00Z',
+      '2026-04-06T10:00:00Z',
+      locationID,
+    )
+    const slotTemplate = await testDb.slotTemplate.create({
+      data: {
+        startTime: new Date('2026-04-06T09:30:00Z'),
+        endTime: new Date('2026-04-06T10:30:00Z'),
+        offsetDays: 0,
+        isIndividual: true,
+        color: '#fff',
+        locationID,
+        serviceId,
+        establishmentId,
+      },
+    })
+
+    const cree = await testApp.app.inject({
+      method: 'POST',
+      url: url('/slot'),
+      cookies,
+      payload: {
+        startDate: '2026-04-06T09:30:00.000Z',
+        endDate: '2026-04-06T10:30:00.000Z',
+        slotTemplateID: slotTemplate.id,
+      },
+    })
+
+    expect(cree.statusCode).toBe(201)
+    expect(cree.json().conflicts).toEqual([])
+  })
+
+  it('POST /appointment renvoie le conflit patient qu il cree', async () => {
+    const s1 = await creneau('2026-04-07T09:00:00Z', '2026-04-07T10:00:00Z')
+    const s2 = await creneau('2026-04-07T09:00:00Z', '2026-04-07T10:00:00Z')
+    await inscrire(
+      s1.id,
+      new Date('2026-04-07T09:00:00Z'),
+      new Date('2026-04-07T09:30:00Z'),
+    )
+
+    const cree = await testApp.app.inject({
+      method: 'POST',
+      url: url('/appointment'),
+      cookies,
+      payload: {
+        startDate: '2026-04-07T09:15:00.000Z',
+        endDate: '2026-04-07T09:45:00.000Z',
+        type: 'ambulatory',
+        slotID: s2.id,
+        patientIDs: [patientID],
+      },
+    })
+
+    expect(cree.statusCode).toBe(201)
+    expect(cree.json().conflicts).toEqual([
+      expect.objectContaining({
+        type: 'patient',
+        slotIDs: [s1.id, s2.id],
+        patientID,
+      }),
+    ])
+  })
+
+  // Le créneau garde un autre conflit : seule la suppression explique une liste vide.
+  it('PATCH /appointment qui vide la liste de patients supprime le rendez-vous et ne signale rien', async () => {
+    const s1 = await creneau('2026-04-08T09:00:00Z', '2026-04-08T10:00:00Z')
+    const s2 = await creneau('2026-04-08T09:00:00Z', '2026-04-08T10:00:00Z')
+    const debut = new Date('2026-04-08T09:00:00Z')
+    const fin = new Date('2026-04-08T09:30:00Z')
+    await inscrire(s1.id, debut, fin)
+    await inscrire(s2.id, debut, fin)
+    const autre = await testDb.patient.create({
+      data: {
+        establishmentId,
+        firstName: 'Paul',
+        lastName: 'Durand',
+        createDate: new Date(),
+      },
+    })
+    const doublon = await inscrire(s2.id, debut, fin, autre.id)
+
+    const vide = await testApp.app.inject({
+      method: 'PATCH',
+      url: url(`/appointment/${doublon.id}`),
+      cookies,
+      payload: { appointmentPatients: [] },
+    })
+
+    expect(vide.statusCode).toBe(200)
+    expect(vide.json().conflicts).toEqual([])
+    expect(
+      await testDb.appointment.findUnique({ where: { id: doublon.id } }),
+    ).toBeNull()
+  })
 })

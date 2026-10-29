@@ -112,6 +112,17 @@ describe('describeConflict', () => {
   })
 })
 
+describe('describeConflict sans creneau charge', () => {
+  it('garde une phrase correcte quand la salle est inconnue', () => {
+    const conflict = {
+      type: 'salle' as const,
+      slotIDs: ['a', 'b'],
+      locationID: 'loc-1',
+    }
+    expect(describeConflict(conflict, 'a', [])).toBe('Salle déjà occupée')
+  })
+})
+
 describe('labelConflicts', () => {
   it('range un libelle par creneau concerne', () => {
     const slots = [slot('a', '09:00', '10:00'), slot('b', '09:30', '10:30')]
@@ -144,5 +155,17 @@ describe('conflictWarning', () => {
       message: 'Salle déjà occupée, capacité dépassée',
       severity: 'warning',
     })
+  })
+
+  // Restaurer deux créneaux en conflit renvoie le même conflit deux fois.
+  it('ne compte qu une fois un conflit renvoye par deux creneaux', () => {
+    const salle = {
+      type: 'salle' as const,
+      slotIDs: ['a', 'b'],
+      locationID: 'loc-1',
+    }
+    expect(conflictWarning([salle, { ...salle }]).title).toBe(
+      'Enregistré, mais 1 conflit',
+    )
   })
 })

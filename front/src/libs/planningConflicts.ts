@@ -26,7 +26,7 @@ export const describeConflict = (
   if (conflict.type === 'salle') {
     const name =
       slots.find((slot) => conflict.slotIDs.includes(slot.id))?.slotTemplate
-        ?.location?.name ?? 'La salle'
+        ?.location?.name ?? 'Salle'
     const other = slots.find(
       (slot) => slot.id !== slotID && conflict.slotIDs.includes(slot.id),
     )
@@ -77,7 +77,11 @@ export const labelConflicts = (
   return labels
 }
 
-export const conflictWarning = (conflicts: PlanningConflict[]) => {
+export const conflictWarning = (all: PlanningConflict[]) => {
+  // Deux créneaux d'une même paire renvoient le même conflit.
+  const conflicts = [
+    ...new Map(all.map((c) => [JSON.stringify(c), c])).values(),
+  ]
   const summary = [...new Set(conflicts.map((c) => SUMMARY[c.type]))].join(', ')
   return {
     title: `Enregistré, mais ${conflicts.length} conflit${conflicts.length > 1 ? 's' : ''}`,

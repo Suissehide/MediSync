@@ -7,6 +7,7 @@ import {
   ecartEnJours,
   getPathwayProgress,
   getPathwayStartDates,
+  getUpcomingSlotSuggestions,
   groupSlotsByDay,
   jourRelatif,
   splitPatientSlots,
@@ -302,5 +303,33 @@ describe('ecartEnJours et jourRelatif', () => {
     expect(jourRelatif(-1)).toBe('hier')
     expect(jourRelatif(3)).toBe('dans 3 jours')
     expect(jourRelatif(-6)).toBe('il y a 6 jours')
+  })
+})
+
+describe('getUpcomingSlotSuggestions', () => {
+  const proposable = (id: string, extra: Partial<Slot> = {}) => {
+    const { start, end } = dansNJours(3)
+    return {
+      id,
+      startDate: start,
+      endDate: end,
+      locked: false,
+      slotTemplate: { thematicId: 'them-1', capacity: 5 },
+      appointments: [],
+      ...extra,
+    } as unknown as Slot
+  }
+
+  it('ne propose pas un creneau supprime', () => {
+    const suggestions = getUpcomingSlotSuggestions(
+      [
+        proposable('vivant'),
+        proposable('supprime', { archivedAt: '2026-03-01' } as Partial<Slot>),
+      ],
+      'them-1',
+      'p1',
+    )
+
+    expect(suggestions.map((s) => s.slot.id)).toEqual(['vivant'])
   })
 })

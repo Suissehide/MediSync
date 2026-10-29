@@ -47,6 +47,26 @@ describe('buildDaySlotRows', () => {
     expect(rows[0].patients.map((p) => p.appointmentId)).toEqual(['a1', 'a2'])
     expect(rows.map((r) => r.canBook)).toEqual([false, false, true])
   })
+
+  it("un créneau supprimé ne reste que pour ses patients, et n'accepte plus rien", () => {
+    const rows = buildDaySlotRows(
+      [
+        // Rendez-vous sans patient (import historique) : rien à conserver.
+        slot('archive-fantome', '2026-03-02T09:00:00.000Z', {
+          archivedAt: '2026-03-01',
+          appointments: [{ id: 'a0', appointmentPatients: [] }],
+        } as unknown as Partial<Slot>),
+        slot('archive-avec-patient', '2026-03-02T10:00:00.000Z', {
+          archivedAt: '2026-03-01',
+          appointments: [appointment('a1', 'p1')],
+        } as Partial<Slot>),
+      ],
+      dayjs.utc('2026-03-02'),
+    )
+
+    expect(rows.map((r) => r.id)).toEqual(['archive-avec-patient'])
+    expect(rows[0].canBook).toBe(false)
+  })
 })
 
 describe('buildDaySlotRows, créneau individuel', () => {

@@ -1,5 +1,6 @@
 import { Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 
+import { hexToRGBA } from '../../../../../libs/color.ts'
 import {
   formatMinute,
   formatTimeRange,
@@ -26,6 +27,8 @@ const SLOT_THEMATIC_LINE = 8.4
 const SLOT_LOCATION_LINE = 7.2
 const SLOT_CHROME = 5
 const TIME_LABEL_SIZE = 7
+// Meme repli que l'export du planning, pour un creneau hors parcours.
+const DEFAULT_SLOT_COLOR = '#94a3b8'
 
 const styles = StyleSheet.create({
   calendarPage: {
@@ -78,7 +81,7 @@ const styles = StyleSheet.create({
   },
   weekLabelCell: {
     width: LABEL_COLUMN_WIDTH,
-    backgroundColor: '#f9a8d4',
+    backgroundColor: '#e2e8f0',
     padding: 4,
     borderWidth: 0.5,
     borderColor: '#e5e7eb',
@@ -88,12 +91,12 @@ const styles = StyleSheet.create({
   weekLabelText: {
     fontSize: 8,
     fontFamily: 'Helvetica-Bold',
-    color: '#be185d',
+    color: '#1e293b',
     textAlign: 'center',
   },
   dayHeaderCell: {
     flex: 1,
-    backgroundColor: '#c4b5fd',
+    backgroundColor: '#f1f5f9',
     padding: 4,
     borderWidth: 0.5,
     borderColor: '#e5e7eb',
@@ -102,12 +105,12 @@ const styles = StyleSheet.create({
   dayHeaderName: {
     fontSize: 8,
     fontFamily: 'Helvetica-Bold',
-    color: '#4c1d95',
+    color: '#334155',
     textAlign: 'center',
   },
   dayHeaderDate: {
     fontSize: 7,
-    color: '#5b21b6',
+    color: '#64748b',
     textAlign: 'center',
   },
   timeBody: {
@@ -115,7 +118,7 @@ const styles = StyleSheet.create({
   },
   timeAxis: {
     width: LABEL_COLUMN_WIDTH,
-    backgroundColor: '#fce7f3',
+    backgroundColor: '#f8fafc',
     borderWidth: 0.5,
     borderColor: '#e5e7eb',
   },
@@ -125,12 +128,12 @@ const styles = StyleSheet.create({
     right: 0,
     fontSize: TIME_LABEL_SIZE,
     fontFamily: 'Helvetica-Bold',
-    color: '#be185d',
+    color: '#475569',
     textAlign: 'center',
   },
   dayColumn: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#ffffff',
     borderWidth: 0.5,
     borderColor: '#e5e7eb',
   },
@@ -148,15 +151,13 @@ const styles = StyleSheet.create({
   slotBlock: {
     flexGrow: 1,
     padding: 2,
-    backgroundColor: '#fdf4ff',
-    borderWidth: 0.5,
-    borderColor: '#f0abfc',
+    borderWidth: 0.75,
     overflow: 'hidden',
   },
   slotTime: {
     fontSize: 6,
     fontFamily: 'Helvetica-Bold',
-    color: '#be185d',
+    color: '#475569',
   },
   slotThematic: {
     textOverflow: 'ellipsis',
@@ -166,7 +167,7 @@ const styles = StyleSheet.create({
   },
   slotLocation: {
     fontSize: 6,
-    color: '#7c3aed',
+    color: '#64748b',
     marginTop: 1,
   },
 })
@@ -248,6 +249,7 @@ function SlotFrame({
   const free =
     height - SLOT_CHROME - (placed.laneCount > 2 ? 2 : 1) * SLOT_TIME_LINE
   const location = placed.slot.slotTemplate?.location?.name
+  const color = placed.slot.pathway?.template?.color ?? DEFAULT_SLOT_COLOR
   const showLocation =
     location && free >= SLOT_THEMATIC_LINE + SLOT_LOCATION_LINE
   const thematicLines = Math.max(
@@ -269,7 +271,12 @@ function SlotFrame({
         },
       ]}
     >
-      <View style={styles.slotBlock}>
+      <View
+        style={[
+          styles.slotBlock,
+          { backgroundColor: hexToRGBA(color, 0.12), borderColor: color },
+        ]}
+      >
         <Text style={styles.slotTime}>{formatTimeRange(placed)}</Text>
         <Text style={[styles.slotThematic, { maxLines: thematicLines }]}>
           {placed.slot.slotTemplate?.thematic ?? ''}

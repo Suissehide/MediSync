@@ -10,7 +10,11 @@ import type { Slot } from '../types/slot.ts'
 import type { SlotTemplate } from '../types/slotTemplate.ts'
 import type { Soignant } from '../types/soignant.ts'
 import { getContrastTextColor } from './color.ts'
-import { getFreeIntervals, hasSlotAvailability } from './slotAvailability.ts'
+import {
+  getFreeIntervals,
+  hasSlotAvailability,
+  isSlotVisible,
+} from './slotAvailability.ts'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -96,6 +100,8 @@ export const buildCalendarEventsFromSlots = (
         capacity: slot.slotTemplate?.capacity,
         appointments: slot.appointments,
         locked: slot.locked,
+        // Supprimé mais gardé pour ses rendez-vous : plus rien ne s'y pose.
+        archived: !!slot.archivedAt,
         conflicts: conflictLabels?.get(slot.id) ?? [],
       },
     }
@@ -141,6 +147,8 @@ const byStartDate = (a: { startDate: string }, b: { startDate: string }) =>
 
 const buildDaySlotRow = (slot: Slot): DaySlotRow => {
   const appointments = slot.appointments ?? []
+  // Un créneau supprimé n'accepte plus d'inscription, même s'il reste affiché.
+  const bookable = !slot.locked && !slot.archivedAt
   const single = appointments.length === 1 ? appointments[0] : null
   const isIndividual = slot.slotTemplate?.isIndividual ?? false
   const row: DaySlotRow = {
@@ -157,7 +165,7 @@ const buildDaySlotRow = (slot: Slot): DaySlotRow => {
     type: single?.type,
     isIndividual,
     capacity: slot.slotTemplate?.capacity ?? 1,
-    canBook: !slot.locked && hasSlotAvailability(slot),
+    canBook: bookable && hasSlotAvailability(slot),
   }
   if (!isIndividual || appointments.length < 2) {
     return row
@@ -196,7 +204,7 @@ const buildDaySlotRow = (slot: Slot): DaySlotRow => {
         appointmentId: null,
         startDate: interval.start,
         endDate: interval.end,
-        canBook: !slot.locked,
+        canBook: bookable,
       })),
     ].sort(byStartDate),
   }
@@ -217,8 +225,7 @@ export const buildDaySlotRows = (
   return slots
     .filter(
       (slot) =>
-        dayjs.utc(slot.startDate).isSame(day, 'day') &&
-        (!slot.archivedAt || slot.appointments?.length),
+        dayjs.utc(slot.startDate).isSame(day, 'day') && isSlotVisible(slot),
     )
     .map(buildDaySlotRow)
     .sort(byStartDate)
