@@ -541,14 +541,9 @@ export function PathwaySelector({ state }: PathwaySelectorProps) {
         onValueChange={(tag) => tag && handleAddTags([tag])}
       />
 
-      <div className="flex justify-between items-baseline">
-        <span className="text-sm font-semibold text-foreground">
-          Parcours à inscrire, par priorité
-        </span>
-        <span className="text-xs text-text-light">
-          Le n° 1 est planifié en premier
-        </span>
-      </div>
+      <span className="text-sm font-semibold text-foreground">
+        Parcours à inscrire, par priorité
+      </span>
 
       {addedPathways.length === 0 ? (
         <div className="p-8 border border-dashed border-slate-300 rounded-lg text-center text-sm text-text-light">
