@@ -54,6 +54,7 @@ import { TOAST_SEVERITY } from '@/constants/ui.constant.ts'
 import { can } from '@/hooks/useCan.ts'
 import { useToast } from '@/hooks/useToast.ts'
 import { labelConflicts } from '@/libs/planningConflicts.ts'
+import { getBookedPatientCount } from '@/libs/slotAvailability.ts'
 import {
   buildCalendarEventsFromSlots,
   buildCalendarEventsFromSlotTemplates,
@@ -366,11 +367,16 @@ function Planning() {
     }
   }
 
-  /** Un créneau qui porte des rendez-vous est archivé : le supprimer les perdrait. */
+  /**
+   * Un créneau où un patient est inscrit est archivé : le supprimer perdrait son
+   * rendez-vous. Un rendez-vous sans patient (l'import historique en a laissé)
+   * n'est pas une inscription : le créneau part pour de bon.
+   */
   const archiveOrDeleteSlots = (ids: string[]) => {
-    const toArchive = ids.filter(
-      (id) => slots?.find((s) => s.id === id)?.appointments?.length,
-    )
+    const toArchive = ids.filter((id) => {
+      const slot = slots?.find((s) => s.id === id)
+      return slot && getBookedPatientCount(slot) > 0
+    })
     for (const id of ids) {
       if (!toArchive.includes(id)) {
         deleteSlot.mutate(id)

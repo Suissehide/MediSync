@@ -48,6 +48,13 @@ class AppointmentDomain implements AppointmentDomainInterface {
         "Ce créneau est verrouillé : impossible d'y ajouter un rendez-vous.",
       )
     }
+    // Un créneau archivé est supprimé côté utilisateur : il ne garde que ses
+    // rendez-vous existants, il n'en reçoit plus de nouveaux.
+    if (slot.archivedAt) {
+      throw Boom.conflict(
+        "Ce créneau est supprimé : impossible d'y ajouter un rendez-vous.",
+      )
+    }
     // `thematicId` n'a pas de clé composite en base (nullable) : on vérifie
     // que la thématique appartient au tenant en la chargeant par son
     // repository filtré, qui répond 404 si elle appartient à un autre service.
@@ -76,6 +83,11 @@ class AppointmentDomain implements AppointmentDomainInterface {
       if (slot.locked) {
         throw Boom.conflict(
           'Ce créneau est verrouillé : impossible de déplacer un rendez-vous dessus.',
+        )
+      }
+      if (slot.archivedAt) {
+        throw Boom.conflict(
+          'Ce créneau est supprimé : impossible de déplacer un rendez-vous dessus.',
         )
       }
     }

@@ -77,6 +77,14 @@ export const getBookedPatientCount = (slot: Slot): number =>
 export const getSlotCapacity = (slot: Slot): number =>
   slot.slotTemplate?.capacity ?? 1
 
+/**
+ * Un créneau supprimé (archivé) ne reste affiché que tant qu'un patient y est
+ * inscrit : ses rendez-vous ne doivent pas disparaître de l'historique. Un
+ * rendez-vous sans patient — l'import historique en a laissé — ne compte pas.
+ */
+export const isSlotVisible = (slot: Slot): boolean =>
+  !slot.archivedAt || getBookedPatientCount(slot) > 0
+
 export const isPatientBookedOnSlot = (slot: Slot, patientID: string): boolean =>
   (slot.appointments ?? []).some((appointment) =>
     appointment.appointmentPatients?.some((ap) => ap.patient.id === patientID),
@@ -121,6 +129,7 @@ export const getUpcomingSlotSuggestions = (
       (slot) =>
         slot.slotTemplate?.thematicId === thematicID &&
         !slot.locked &&
+        !slot.archivedAt &&
         dayjs.utc(slot.startDate).isAfter(lowerBound),
     )
     .sort((a, b) => dayjs.utc(a.startDate).diff(dayjs.utc(b.startDate)))

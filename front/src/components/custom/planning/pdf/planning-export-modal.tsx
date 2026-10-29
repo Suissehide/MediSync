@@ -91,6 +91,8 @@ export default function PlanningExportModal({
     () =>
       (slots ?? []).filter(
         (slot) =>
+          // Le PDF montre le planning : les créneaux supprimés n'y sont plus.
+          !slot.archivedAt &&
           !excludedPathwayIds.has(slot.pathway?.template?.id ?? NO_PATHWAY_KEY),
       ),
     [slots, excludedPathwayIds],

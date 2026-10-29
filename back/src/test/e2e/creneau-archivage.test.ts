@@ -98,6 +98,20 @@ describe('archivage d un creneau', () => {
     expect(renvoye.archivedAt).toBe('2026-10-08T10:00:00.000Z')
     expect(renvoye.appointments.map((a) => a.id)).toEqual([appointment.id])
 
+    // Supprimé côté utilisateur : il garde son rendez-vous, il n'en reçoit plus.
+    const refus = await testApp.app.inject({
+      method: 'POST',
+      url: url('/appointment'),
+      cookies,
+      payload: {
+        startDate: '2026-04-01T09:30:00.000Z',
+        endDate: '2026-04-01T10:00:00.000Z',
+        slotID: slot.id,
+        patientIDs: [],
+      },
+    })
+    expect(refus.statusCode).toBe(409)
+
     const restaure = await testApp.app.inject({
       method: 'PATCH',
       url: url(`/slot/${slot.id}`),
