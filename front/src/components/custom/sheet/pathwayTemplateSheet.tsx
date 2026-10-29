@@ -200,7 +200,7 @@ export default function PathwayTemplateSheet({
                   e.preventDefault()
                   await form.handleSubmit()
                 }}
-                className="w-full flex-1 flex flex-col min-h-0 gap-4 px-4 py-4"
+                className="w-full flex-1 flex flex-col min-h-0 overflow-y-auto gap-4 px-4 py-4"
               >
                 <form.AppField
                   name="name"
