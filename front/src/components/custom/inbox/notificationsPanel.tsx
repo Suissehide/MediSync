@@ -1,4 +1,5 @@
-import { Bell, CheckCheck, ListTodo } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
+import { Bell, CheckCheck } from 'lucide-react'
 import { useState } from 'react'
 
 import {
@@ -7,7 +8,12 @@ import {
   useInboxMutations,
   useServiceMembers,
 } from '@/queries/useInbox.ts'
-import { dayGroup, memberName, whenLabel } from './inbox.utils.ts'
+import { dayGroup, whenLabel } from './inbox.utils.ts'
+import {
+  notificationTarget,
+  notificationText,
+  notificationTypeOf,
+} from './notificationTypes.tsx'
 import {
   FilterBar,
   PanelHeader,
@@ -17,7 +23,7 @@ import {
 
 const GROUPS = ["Aujourd'hui", 'Hier', 'Cette semaine', 'Plus ancien'] as const
 
-function MentionRow({
+function NotificationRow({
   n,
   onOpen,
 }: {
@@ -26,28 +32,31 @@ function MentionRow({
 }) {
   const members = useServiceMembers(n.service)
   const unread = n.readAt === null
+  const { icon: Icon, color, tint, kind, cta } = notificationTypeOf(n.type)
+  const target = notificationTarget(n)
+  const showCta = cta !== '' && (target.kind !== 'task' || n.service.canTasks)
   return (
     <button
       type="button"
       onClick={() => onOpen(n)}
       className={`cursor-pointer w-full text-left flex gap-3 px-[18px] py-3 hover:bg-[#f8fafc] ${unread ? 'bg-[#f8fbff]' : 'bg-white'}`}
     >
-      <span className="w-[34px] h-[34px] shrink-0 rounded-full bg-[#f0fdfa] text-[#0f766e] flex items-center justify-center">
-        <ListTodo className="w-4 h-4" />
+      <span
+        style={{ backgroundColor: tint, color }}
+        className="w-[34px] h-[34px] shrink-0 rounded-full flex items-center justify-center"
+      >
+        <Icon className="w-4 h-4" />
       </span>
       <span className="flex-1 min-w-0">
         <span className="block text-sm text-foreground">
-          <b className="font-semibold">
-            {memberName(members, n.payload.authorId)}
-          </b>{' '}
-          vous a mentionné dans une tâche : {n.payload.text}
+          {notificationText(n, members)}
         </span>
         <span className="block text-xs text-text-light mt-0.5">
-          Mention · {whenLabel(n.createdAt)}
+          {kind} · {whenLabel(n.createdAt)}
         </span>
-        {n.service.canTasks && (
+        {showCta && (
           <span className="block text-[13px] text-primary font-medium mt-1">
-            Ouvrir la tâche
+            {cta}
           </span>
         )}
       </span>
@@ -67,11 +76,13 @@ function MentionRow({
 export function NotificationsPanel({
   services,
   notifications,
-  onOpenTask,
+  onOpenNotification,
+  onClose,
 }: {
   services: InboxService[]
   notifications: InboxNotification[]
-  onOpenTask: (n: InboxNotification) => void
+  onOpenNotification: (n: InboxNotification) => void
+  onClose: () => void
 }) {
   const [serviceId, setServiceId] = useState('all')
   const [scope, setScope] = useState<'unread' | 'all'>('unread')
@@ -108,7 +119,7 @@ export function NotificationsPanel({
     if (n.readAt === null) {
       markRead.mutate(n)
     }
-    onOpenTask(n)
+    onOpenNotification(n)
   }
 
   return (
@@ -166,7 +177,7 @@ export function NotificationsPanel({
                     {d.title}
                   </h4>
                   {d.items.map((n) => (
-                    <MentionRow key={n.id} n={n} onOpen={open} />
+                    <NotificationRow key={n.id} n={n} onOpen={open} />
                   ))}
                 </div>
               ))}
@@ -174,8 +185,16 @@ export function NotificationsPanel({
           ))
         )}
       </div>
-      <div className="px-[18px] py-2.5 border-t border-border text-xs text-text-light">
-        Conservées 30 jours
+      <div className="px-[18px] py-2.5 border-t border-border text-xs text-text-light flex items-center justify-between">
+        <span>Conservées 30 jours</span>
+        <Link
+          to="/user/settings"
+          hash="notifications"
+          onClick={onClose}
+          className="text-primary font-medium"
+        >
+          Préférences
+        </Link>
       </div>
     </>
   )

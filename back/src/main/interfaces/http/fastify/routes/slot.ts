@@ -135,7 +135,11 @@ const slotRouter: FastifyPluginAsync = (fastify) => {
     },
     async (request) => {
       const { slotID } = request.params
-      const updated = await slotDomain.update(slotID, request.body)
+      const updated = await slotDomain.update(
+        slotID,
+        request.body,
+        request.user.userID,
+      )
       if (!updated) {
         throw Boom.notFound('Slot not found')
       }
@@ -158,7 +162,7 @@ const slotRouter: FastifyPluginAsync = (fastify) => {
     },
     async (request, reply) => {
       const { slotID } = request.params
-      const deleted = await slotDomain.delete(slotID)
+      const deleted = await slotDomain.delete(slotID, request.user.userID)
       if (!deleted) {
         logger.info('Slot not found')
         throw Boom.notFound('Slot not found')

@@ -1,5 +1,7 @@
+import type { Prisma } from '../../../../generated/client'
 import type { IocContainer } from '../../../types/application/ioc'
 import type {
+  NotificationCreateEntityRepo,
   NotificationEntityRepo,
   NotificationRepositoryInterface,
 } from '../../../types/infra/orm/repositories/notification.repository.interface'
@@ -48,6 +50,21 @@ class NotificationRepository implements NotificationRepositoryInterface {
     await this.prisma.notification.updateMany({
       where: { ...this.tenantContext.scope(), userId, readAt: null },
       data: { readAt: new Date() },
+    })
+  }
+
+  async createMany(rows: NotificationCreateEntityRepo[]): Promise<void> {
+    if (rows.length === 0) {
+      return
+    }
+    const scope = this.tenantContext.scope()
+    await this.prisma.notification.createMany({
+      data: rows.map((r) => ({
+        ...scope,
+        ...r,
+        payload: r.payload as Prisma.InputJsonValue,
+      })),
+      skipDuplicates: true,
     })
   }
 }

@@ -1,6 +1,12 @@
 import { LocalizationProvider } from '@mui/x-date-pickers'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+  RouterProvider,
+} from '@tanstack/react-router'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import dayjs from 'dayjs'
@@ -11,7 +17,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { InboxApi } from '@/api/inbox.api.ts'
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { User } from '@/types/auth.ts'
-import type { Notification, Task } from '@/types/task.ts'
+import type { Notification, NotificationType, Task } from '@/types/task.ts'
 import { Inbox } from './inbox.tsx'
 
 // `main.tsx` enregistre ce greffon au demarrage ; le DatePicker d'echeance en depend (dayjs.utc).
@@ -34,6 +40,15 @@ vi.mock('@/api/inbox.api.ts', () => ({
 // Le panneau Taches lit l'echelle courante, inutile hors RouterProvider dans ces scenarios.
 vi.mock('@/navigation/navigation.ts', () => ({ useCurrentScale: () => null }))
 
+// On observe l'appel de navigation : la vraie destination est absente de l'arbre de test.
+const { navigateMock } = vi.hoisted(() => ({ navigateMock: vi.fn() }))
+vi.mock('@tanstack/react-router', async () => {
+  const actual = await vi.importActual<typeof import('@tanstack/react-router')>(
+    '@tanstack/react-router',
+  )
+  return { ...actual, useNavigate: () => navigateMock }
+})
+
 const notif = (
   id: string,
   readAt: string | null,
@@ -43,6 +58,17 @@ const notif = (
   type: 'MENTION',
   payload: { taskId: 't1', authorId: 'u2', text },
   readAt,
+  createdAt: new Date().toISOString(),
+})
+const notifOf = (
+  id: string,
+  type: NotificationType,
+  payload: Record<string, unknown>,
+): Notification => ({
+  id,
+  type,
+  payload,
+  readAt: null,
   createdAt: new Date().toISOString(),
 })
 const task = (id: string, assigneeIds: string[]): Task => ({
@@ -76,17 +102,27 @@ const user: User = {
   ],
 }
 
-const wrapper = ({ children }: { children: ReactNode }) => (
-  <QueryClientProvider
-    client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-  >
-    {children}
-  </QueryClientProvider>
-)
+// `Inbox` navigue : il lui faut un `RouterProvider`, meme sans clic sur un type qui navigue.
+const renderInbox = (ui: ReactNode = <Inbox />) =>
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <RouterProvider
+        router={createRouter({
+          routeTree: createRootRoute({ component: () => <>{ui}</> }),
+          history: createMemoryHistory({ initialEntries: ['/'] }),
+        })}
+      />
+    </QueryClientProvider>,
+  )
 
 describe('Inbox', () => {
   beforeEach(() => {
     useAuthStore.setState({ user })
+    navigateMock.mockReset()
     vi.mocked(InboxApi.tasks).mockReset().mockResolvedValue([])
     vi.mocked(InboxApi.notifications).mockReset().mockResolvedValue([])
     vi.mocked(InboxApi.markRead).mockReset().mockResolvedValue(undefined)
@@ -105,7 +141,7 @@ describe('Inbox', () => {
             firstName: 'Léo',
             lastName: 'C',
             deactivatedAt: null,
-            invitationStatus: 'ACCEPTED',
+            invitationStatus: null,
             invitationResendableAt: null,
           },
         },
@@ -119,7 +155,7 @@ describe('Inbox', () => {
             firstName: 'Claire',
             lastName: 'Leroy',
             deactivatedAt: null,
-            invitationStatus: 'ACCEPTED',
+            invitationStatus: null,
             invitationResendableAt: null,
           },
         },
@@ -137,7 +173,7 @@ describe('Inbox', () => {
       task('t2', ['u2']),
       { ...task('t3', ['u1']), doneAt: '2026-10-19T09:00:00Z' },
     ])
-    render(<Inbox />, { wrapper })
+    renderInbox()
     expect(await screen.findByTestId('badge-notifs')).toHaveTextContent('1')
     expect(await screen.findByTestId('badge-tasks')).toHaveTextContent('1')
   })
@@ -145,7 +181,7 @@ describe('Inbox', () => {
   it('aucune pastille a 0', async () => {
     vi.mocked(InboxApi.notifications).mockResolvedValue([])
     vi.mocked(InboxApi.tasks).mockResolvedValue([])
-    render(<Inbox />, { wrapper })
+    renderInbox()
     await screen.findByRole('button', { name: 'Notifications' })
     expect(screen.queryByTestId('badge-notifs')).toBeNull()
     expect(screen.queryByTestId('badge-tasks')).toBeNull()
@@ -153,7 +189,7 @@ describe('Inbox', () => {
 
   it('un seul panneau ouvert a la fois', async () => {
     const u = userEvent.setup()
-    render(<Inbox />, { wrapper })
+    renderInbox()
     await u.click(await screen.findByRole('button', { name: 'Notifications' }))
     expect(
       await screen.findByRole('heading', { name: /Notifications/ }),
@@ -179,7 +215,7 @@ describe('Inbox', () => {
         ],
       },
     })
-    render(<Inbox />, { wrapper })
+    renderInbox()
     await screen.findByRole('button', { name: 'Notifications' })
     expect(screen.queryByRole('button', { name: 'Tâches' })).toBeNull()
     expect(InboxApi.tasks).not.toHaveBeenCalled()
@@ -190,7 +226,7 @@ describe('Inbox', () => {
     vi.mocked(InboxApi.notifications).mockImplementation(async (s) =>
       s.serviceId === 's1' ? [notif('n1', null)] : [],
     )
-    render(<Inbox />, { wrapper })
+    renderInbox()
     await u.click(await screen.findByRole('button', { name: 'Notifications' }))
     await u.click(await screen.findByRole('button', { name: /Tout lu/ }))
     expect(
@@ -208,7 +244,7 @@ describe('Inbox', () => {
           ]
         : [],
     )
-    render(<Inbox />, { wrapper })
+    renderInbox()
     await u.click(await screen.findByRole('button', { name: 'Notifications' }))
     expect(await screen.findByText(/Appeler/)).toBeInTheDocument()
     expect(screen.queryByText(/Deja lu/)).toBeNull()
@@ -221,7 +257,7 @@ describe('Inbox', () => {
     vi.mocked(InboxApi.notifications).mockImplementation(async (s) =>
       s.serviceId === 's2' ? [notif('n1', null)] : [],
     )
-    render(<Inbox />, { wrapper })
+    renderInbox()
     await u.click(await screen.findByRole('button', { name: 'Notifications' }))
     await screen.findByText(/Appeler le labo/)
     expect(screen.queryByText('Ouvrir la tâche')).toBeNull()
@@ -235,7 +271,7 @@ describe('Inbox', () => {
 
   it('Echap ferme la liste de mention sans fermer le panneau Taches', async () => {
     const u = userEvent.setup()
-    render(<Inbox />, { wrapper })
+    renderInbox()
     await u.click(await screen.findByRole('button', { name: 'Tâches' }))
     const input = await screen.findByPlaceholderText(
       'Nouvelle tâche… tapez @ pour mentionner',
@@ -273,17 +309,16 @@ describe('Inbox', () => {
         ? [{ ...task('t1', []), authorId: 'u2', soignantIds: ['so1'] }]
         : [],
     )
-    render(<Inbox />, { wrapper })
+    renderInbox()
     expect(await screen.findByTestId('badge-tasks')).toHaveTextContent('1')
   })
 
   it('Echap ferme la ligne Échéance sans fermer le panneau Taches', async () => {
     const u = userEvent.setup()
-    render(
+    renderInbox(
       <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="fr">
         <Inbox />
       </LocalizationProvider>,
-      { wrapper },
     )
     await u.click(await screen.findByRole('button', { name: 'Tâches' }))
     await u.click(await screen.findByRole('button', { name: 'Échéance' }))
@@ -291,5 +326,57 @@ describe('Inbox', () => {
     await u.keyboard('{Escape}')
     expect(screen.queryByRole('grid')).toBeNull()
     expect(screen.getByRole('heading', { name: /Tâches/ })).toBeInTheDocument()
+  })
+
+  it('clic sur un rendez-vous deplace : navigue vers l agenda a la date apres, marque lue, ferme le panneau', async () => {
+    const u = userEvent.setup()
+    vi.mocked(InboxApi.notifications).mockImplementation(async (s) =>
+      s.serviceId === 's1'
+        ? [
+            notifOf('n1', 'APPOINTMENT_MOVED', {
+              thematicName: 'Alimentation',
+              before: { startDate: '2026-10-20T07:00:00.000Z' },
+              after: { startDate: '2026-10-22T07:00:00.000Z' },
+              actorId: 'u2',
+            }),
+          ]
+        : [],
+    )
+    renderInbox()
+    await u.click(await screen.findByRole('button', { name: 'Notifications' }))
+    await u.click(await screen.findByText('Alimentation'))
+    expect(InboxApi.markRead).toHaveBeenCalled()
+    expect(navigateMock).toHaveBeenCalledWith({
+      to: '/e/$establishmentId/s/$serviceId/agenda',
+      params: { establishmentId: 'e1', serviceId: 's1' },
+      search: { date: '2026-10-22' },
+    })
+    expect(screen.queryByRole('heading', { name: /Notifications/ })).toBeNull()
+  })
+
+  it('clic sur une absence : navigue vers la fiche patient, marque lue, ferme le panneau', async () => {
+    const u = userEvent.setup()
+    vi.mocked(InboxApi.notifications).mockImplementation(async (s) =>
+      s.serviceId === 's1'
+        ? [
+            notifOf('n1', 'ABSENT', {
+              patientId: 'p1',
+              patientName: 'DUPONT Paul',
+              thematicName: 'Alimentation',
+              startDate: '2026-10-22T07:00:00.000Z',
+              actorId: 'u2',
+            }),
+          ]
+        : [],
+    )
+    renderInbox()
+    await u.click(await screen.findByRole('button', { name: 'Notifications' }))
+    await u.click(await screen.findByText('DUPONT Paul'))
+    expect(InboxApi.markRead).toHaveBeenCalled()
+    expect(navigateMock).toHaveBeenCalledWith({
+      to: '/e/$establishmentId/s/$serviceId/patient/$patientID',
+      params: { establishmentId: 'e1', serviceId: 's1', patientID: 'p1' },
+    })
+    expect(screen.queryByRole('heading', { name: /Notifications/ })).toBeNull()
   })
 })

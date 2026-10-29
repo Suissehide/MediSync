@@ -151,15 +151,16 @@ model SoignantThematic {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  password      String
-  salt          String
-  firstName     String?
-  lastName      String?
-  isSuperAdmin  Boolean   @default(false)
-  deactivatedAt DateTime?
-  lastLoginAt   DateTime?
+  id                String    @id @default(cuid())
+  email             String    @unique
+  password          String
+  salt              String
+  firstName         String?
+  lastName          String?
+  isSuperAdmin      Boolean   @default(false)
+  deactivatedAt     DateTime?
+  lastLoginAt       DateTime?
+  notificationPrefs Json      @default("{}")
 
   establishmentMemberships EstablishmentMembership[]
   accessLinks              AccessLink[]
@@ -986,6 +987,15 @@ model TaskSoignant {
 
 enum NotificationType {
   MENTION
+  REMINDER
+  PATIENT_ADDED
+  APPOINTMENT_MOVED
+  APPOINTMENT_CANCELLED
+  ABSENT
+  DIAGNOSTIC_DUE
+  PATHWAY_END
+  SLOT_ALMOST_FULL
+  TASK_DUE
 }
 
 model Notification {
@@ -995,10 +1005,12 @@ model Notification {
   userId          String
   type            NotificationType
   payload         Json
+  dedupeKey       String?
   readAt          DateTime?
   createdAt       DateTime         @default(now())
 
   @@unique([id, serviceId])
+  @@unique([userId, dedupeKey])
   @@index([serviceId])
   @@index([userId, createdAt])
 }
