@@ -118,6 +118,7 @@ export const PATHWAY_TEMPLATE = {
   UPDATE: 'update_pathway_template',
   DELETE: 'delete_pathway_template',
   REORDER: 'reorder_pathway_templates',
+  DUPLICATE: 'duplicate_pathway_template',
 }
 
 export const THEMATIC = {

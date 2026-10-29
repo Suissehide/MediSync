@@ -112,6 +112,12 @@ class PathwayTemplateDomain implements PathwayTemplateDomainInterface {
   reorder(orderedIds: string[]): Promise<void> {
     return this.pathwayTemplateRepository.reorder(orderedIds)
   }
+
+  duplicate(
+    pathwayTemplateID: string,
+  ): Promise<PathwayTemplateWithSlotTemplatesDomain> {
+    return this.pathwayTemplateRepository.duplicate(pathwayTemplateID)
+  }
 }
 
 export { PathwayTemplateDomain }

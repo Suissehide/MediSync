@@ -43,4 +43,7 @@ export interface PathwayTemplateRepositoryInterface {
     pathwayTemplateID: string,
   ) => Promise<PathwayTemplateWithSlotTemplatesRepo>
   reorder: (orderedIds: string[]) => Promise<void>
+  duplicate: (
+    pathwayTemplateID: string,
+  ) => Promise<PathwayTemplateWithSlotTemplatesRepo>
 }

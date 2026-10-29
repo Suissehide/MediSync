@@ -200,6 +200,29 @@ export const usePathwayTemplateMutations = () => {
     },
   })
 
+  const duplicatePathwayTemplate = useMutation({
+    mutationKey: [PATHWAY_TEMPLATE.DUPLICATE],
+    mutationFn: PathwayTemplateApi.duplicate,
+    onSuccess: () => {
+      toast({
+        title: 'Parcours dupliqué avec succès',
+        severity: TOAST_SEVERITY.SUCCESS,
+      })
+    },
+    onError: (error) => {
+      toast({
+        title: 'Erreur lors de la duplication du parcours',
+        message: error.message,
+        severity: TOAST_SEVERITY.ERROR,
+      })
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: [PATHWAY_TEMPLATE.GET_ALL],
+      })
+    },
+  })
+
   const reorderPathwayTemplates = useMutation({
     mutationKey: [PATHWAY_TEMPLATE.REORDER],
     mutationFn: PathwayTemplateApi.reorder,
@@ -247,5 +270,6 @@ export const usePathwayTemplateMutations = () => {
     deletePathwayTemplate,
     updatePathwayTemplate,
     reorderPathwayTemplates,
+    duplicatePathwayTemplate,
   }
 }

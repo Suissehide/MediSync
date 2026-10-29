@@ -106,6 +106,58 @@ class PathwayTemplateRepository implements PathwayTemplateRepositoryInterface {
     }
   }
 
+  // Copie le parcours et ses créneaux modèles en une seule écriture, placée en fin de liste.
+  async duplicate(
+    pathwayTemplateID: string,
+  ): Promise<PathwayTemplateWithSlotTemplatesRepo> {
+    const source = await this.findByID(pathwayTemplateID)
+    const displayOrder = await this.prisma.pathwayTemplate.count({
+      where: this.scope,
+    })
+    try {
+      const row = await this.prisma.pathwayTemplate.create({
+        data: {
+          ...this.scope,
+          name: `${source.name} (copie)`,
+          color: source.color,
+          mainTag: source.mainTag,
+          secondaryTags: source.secondaryTags,
+          motifRequired: source.motifRequired,
+          firstAppointmentOnly: source.firstAppointmentOnly,
+          prerequisiteIDs: source.prerequisiteIDs,
+          displayOrder,
+          slotTemplates: {
+            create: source.slotTemplates.map((st) => ({
+              ...this.scope,
+              startTime: st.startTime,
+              endTime: st.endTime,
+              offsetDays: st.offsetDays,
+              isIndividual: st.isIndividual,
+              capacity: st.capacity,
+              thematicId: st.thematicId,
+              locationID: st.locationID,
+              description: st.description,
+              color: st.color,
+              soignantLinks: {
+                create: st.soignants.map((s) => ({
+                  soignantId: s.id,
+                  establishmentId: this.scope.establishmentId,
+                })),
+              },
+            })),
+          },
+        },
+        include: withSlotTemplates,
+      })
+      return flatten(row)
+    } catch (err) {
+      throw this.errorHandler.boomErrorFromPrismaError({
+        entityName: 'PathwayTemplate',
+        error: err,
+      })
+    }
+  }
+
   async create(
     pathwayTemplateCreateParams: PathwayTemplateCreateEntityRepo,
   ): Promise<PathwayTemplateWithSlotTemplatesRepo> {

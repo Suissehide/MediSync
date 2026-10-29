@@ -40,4 +40,7 @@ export interface PathwayTemplateDomainInterface {
   ) => Promise<PathwayTemplateEntityDomain>
   delete: (pathwayTemplateID: string) => Promise<PathwayTemplateEntityDomain>
   reorder: (orderedIds: string[]) => Promise<void>
+  duplicate: (
+    pathwayTemplateID: string,
+  ) => Promise<PathwayTemplateWithSlotTemplatesDomain>
 }

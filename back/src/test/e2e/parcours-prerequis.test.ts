@@ -95,6 +95,44 @@ describe('parcours prérequis', () => {
     await testDb.$disconnect()
   })
 
+  it('duplique un parcours avec ses créneaux modèles et leurs soignants', async () => {
+    const a = await createTemplate('DUP-A', [])
+    const b = await createTemplate('DUP-B', [a])
+    const soignant = await testDb.soignant.create({
+      data: { name: 'IDE', serviceId, establishmentId },
+    })
+    await testDb.slotTemplate.create({
+      data: {
+        startTime: new Date('1970-01-01T09:00:00.000Z'),
+        endTime: new Date('1970-01-01T10:00:00.000Z'),
+        offsetDays: 2,
+        isIndividual: false,
+        capacity: 8,
+        color: '#123456',
+        templateID: b,
+        serviceId,
+        establishmentId,
+        soignantLinks: { create: { soignantId: soignant.id, establishmentId } },
+      },
+    })
+
+    const res = await inject('POST', `/pathway-template/${b}/duplicate`, {})
+    expect(res.statusCode).toBe(201)
+    const copy = res.json()
+    expect(copy.id).not.toBe(b)
+    expect(copy.name).toBe('DUP-B (copie)')
+    expect(copy.prerequisiteIDs).toEqual([a])
+    expect(copy.slotTemplates).toHaveLength(1)
+    expect(copy.slotTemplates[0]).toMatchObject({
+      offsetDays: 2,
+      capacity: 8,
+      soignants: [{ id: soignant.id }],
+    })
+    expect(await testDb.slotTemplate.count({ where: { templateID: b } })).toBe(
+      1,
+    )
+  })
+
   it('refuse une dépendance circulaire', async () => {
     const a = await createTemplate('CYCLE-A', [])
     const b = await createTemplate('CYCLE-B', [a])

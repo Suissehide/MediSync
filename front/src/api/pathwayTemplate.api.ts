@@ -103,6 +103,23 @@ export const PathwayTemplateApi = {
     return
   },
 
+  duplicate: async (pathwayTemplateID: string): Promise<PathwayTemplate> => {
+    const response = await fetchWithAuth(
+      `${tenantApiUrl()}/pathway-template/${pathwayTemplateID}/duplicate?action=duplicatePathwayTemplate`,
+      {
+        method: 'POST',
+      },
+    )
+    if (!response.ok) {
+      handleHttpError(
+        response,
+        {},
+        'Impossible de dupliquer le template de parcours',
+      )
+    }
+    return response.json()
+  },
+
   reorder: async (orderedIds: string[]): Promise<void> => {
     const response = await fetchWithAuth(
       `${tenantApiUrl()}/pathway-template/reorder?action=reorderPathwayTemplates`,

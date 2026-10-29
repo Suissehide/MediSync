@@ -35,8 +35,11 @@ export default function PathwayTemplateSheet({
 }: PathwayTemplateSheetProps) {
   const { pathwayTemplate, isPending } =
     usePathwayTemplateByIDQuery(pathwayTemplateID)
-  const { updatePathwayTemplate, deletePathwayTemplate } =
-    usePathwayTemplateMutations()
+  const {
+    updatePathwayTemplate,
+    deletePathwayTemplate,
+    duplicatePathwayTemplate,
+  } = usePathwayTemplateMutations()
   const { pathwayTemplates } = usePathwayTemplateQueries()
 
   const [secondaryTags, setSecondaryTags] = useState<string[]>([])
@@ -247,12 +250,23 @@ export default function PathwayTemplateSheet({
               <div className="w-full border-t border-border-dark"></div>
 
               <div className="px-4 py-4 flex justify-between gap-4 shrink-0">
-                <div>
+                <div className="flex gap-4">
                   <Button
                     variant="destructive"
                     onClick={() => setShowDeleteConfirm(true)}
                   >
                     Supprimer
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      duplicatePathwayTemplate.mutate(pathwayTemplateID, {
+                        onSuccess: (copy) => setOpen(copy.id),
+                      })
+                    }
+                    isLoading={duplicatePathwayTemplate.isPending}
+                  >
+                    Dupliquer
                   </Button>
                 </div>
                 <div className="flex gap-4">

@@ -78,6 +78,28 @@ const pathwayTemplateRouter: FastifyPluginAsync = (fastify) => {
     },
   )
 
+  // Duplicate
+  fastify.post<{ Params: GetPathwayTemplateByIdParams }>(
+    '/:pathwayTemplateID/duplicate',
+    {
+      schema: {
+        params: getPathwayTemplateByIdParamsSchema,
+        response: {
+          201: pathwayTemplateResponseSchema,
+          404: z.object({ message: z.string() }),
+        },
+      },
+      config: { permission: 'planning:write' },
+    },
+    async (request, reply) => {
+      const copy = await pathwayTemplateDomain.duplicate(
+        request.params.pathwayTemplateID,
+      )
+      reply.code(201)
+      return copy
+    },
+  )
+
   // Update
   fastify.patch<{
     Params: UpdatePathwayTemplateParams
