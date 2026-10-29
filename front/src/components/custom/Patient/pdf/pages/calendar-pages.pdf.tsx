@@ -1,6 +1,6 @@
 import { Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 
-import { getContrastTextColor } from '../../../../../libs/color.ts'
+import { hexToRGBA } from '../../../../../libs/color.ts'
 import {
   formatMinute,
   formatTimeRange,
@@ -151,19 +151,23 @@ const styles = StyleSheet.create({
   slotBlock: {
     flexGrow: 1,
     padding: 2,
+    borderWidth: 0.75,
     overflow: 'hidden',
   },
   slotTime: {
     fontSize: 6,
     fontFamily: 'Helvetica-Bold',
+    color: '#475569',
   },
   slotThematic: {
     textOverflow: 'ellipsis',
     fontSize: 7,
     fontFamily: 'Helvetica-Bold',
+    color: '#1f2937',
   },
   slotLocation: {
     fontSize: 6,
+    color: '#64748b',
     marginTop: 1,
   },
 })
@@ -245,8 +249,7 @@ function SlotFrame({
   const free =
     height - SLOT_CHROME - (placed.laneCount > 2 ? 2 : 1) * SLOT_TIME_LINE
   const location = placed.slot.slotTemplate?.location?.name
-  const background = placed.slot.pathway?.template?.color ?? DEFAULT_SLOT_COLOR
-  const color = getContrastTextColor(background)
+  const color = placed.slot.pathway?.template?.color ?? DEFAULT_SLOT_COLOR
   const showLocation =
     location && free >= SLOT_THEMATIC_LINE + SLOT_LOCATION_LINE
   const thematicLines = Math.max(
@@ -268,16 +271,17 @@ function SlotFrame({
         },
       ]}
     >
-      <View style={[styles.slotBlock, { backgroundColor: background }]}>
-        <Text style={[styles.slotTime, { color }]}>
-          {formatTimeRange(placed)}
-        </Text>
-        <Text style={[styles.slotThematic, { color, maxLines: thematicLines }]}>
+      <View
+        style={[
+          styles.slotBlock,
+          { backgroundColor: hexToRGBA(color, 0.12), borderColor: color },
+        ]}
+      >
+        <Text style={styles.slotTime}>{formatTimeRange(placed)}</Text>
+        <Text style={[styles.slotThematic, { maxLines: thematicLines }]}>
           {placed.slot.slotTemplate?.thematic ?? ''}
         </Text>
-        {showLocation && (
-          <Text style={[styles.slotLocation, { color }]}>{location}</Text>
-        )}
+        {showLocation && <Text style={styles.slotLocation}>{location}</Text>}
       </View>
     </View>
   )
