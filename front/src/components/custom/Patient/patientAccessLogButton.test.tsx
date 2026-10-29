@@ -4,7 +4,7 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { useAuthStore } from '@/store/useAuthStore.ts'
@@ -33,7 +33,8 @@ const contextIntervenant: TenantContext = {
   serviceRole: 'INTERVENANT',
 }
 
-const monter = () => {
+// Le routeur rend apres son premier chargement : sans l'attendre, une absence serait vraie a vide.
+const monter = async () => {
   const rootRoute = createRootRoute({
     component: () => (
       <PatientAccessLogButton
@@ -47,7 +48,9 @@ const monter = () => {
     routeTree: rootRoute,
     history: createMemoryHistory({ initialEntries: ['/'] }),
   })
-  return render(<RouterProvider router={router} />)
+  const rendu = render(<RouterProvider router={router} />)
+  await act(() => router.load())
+  return rendu
 }
 
 beforeEach(() => {
@@ -55,10 +58,10 @@ beforeEach(() => {
 })
 
 describe('PatientAccessLogButton', () => {
-  it('ne rend rien pour un role sans consultations:read (INTERVENANT) — absent du DOM, pas seulement masque', () => {
+  it('ne rend rien pour un role sans consultations:read (INTERVENANT) — absent du DOM, pas seulement masque', async () => {
     useAuthStore.setState({ context: contextIntervenant })
 
-    const { container } = monter()
+    const { container } = await monter()
 
     expect(
       screen.queryByRole('link', { name: /consultations du dossier/i }),
@@ -66,16 +69,16 @@ describe('PatientAccessLogButton', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('rend le lien pour un COORDINATEUR, avec les bons parametres (etablissement/service/patient)', () => {
+  it('rend le lien pour un COORDINATEUR, avec les bons parametres (etablissement/service/patient)', async () => {
     useAuthStore.setState({ context: contextCoordinateur })
 
-    monter()
+    await monter()
 
     const lien = screen.getByRole('link', { name: /consultations du dossier/i })
     expect(lien).toHaveAttribute('href', '/e/e1/s/s1/patient/p1/acces')
   })
 
-  it('reconstruit le lien pour un autre couple etablissement/service/patient, sans jamais les melanger', () => {
+  it('reconstruit le lien pour un autre couple etablissement/service/patient, sans jamais les melanger', async () => {
     useAuthStore.setState({ context: contextCoordinateur })
 
     const rootRoute = createRootRoute({
@@ -92,15 +95,16 @@ describe('PatientAccessLogButton', () => {
       history: createMemoryHistory({ initialEntries: ['/'] }),
     })
     render(<RouterProvider router={router} />)
+    await act(() => router.load())
 
     const lien = screen.getByRole('link', { name: /consultations du dossier/i })
     expect(lien).toHaveAttribute('href', '/e/e9/s/s9/patient/p9/acces')
   })
 
-  it('ne rend rien sans contexte du tout (compte deconnecte du tenant)', () => {
+  it('ne rend rien sans contexte du tout (compte deconnecte du tenant)', async () => {
     useAuthStore.setState({ context: null })
 
-    monter()
+    await monter()
 
     expect(
       screen.queryByRole('link', { name: /consultations du dossier/i }),

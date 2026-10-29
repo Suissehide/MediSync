@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { User } from '@/types/auth.ts'
+import { redirection } from '../../test/redirection.ts'
 import { Route } from './index.tsx'
 
 const userAvecService: User = {
@@ -88,8 +89,7 @@ const runBeforeLoad = (user: User) => {
 describe('beforeLoad de l index authentifie', () => {
   it('envoie vers le tableau de bord du service par defaut quand un couple existe', () => {
     expect(() => runBeforeLoad(userAvecService)).toThrow(
-      expect.objectContaining({
-        isRedirect: true,
+      redirection({
         to: '/e/$establishmentId/s/$serviceId/dashboard',
         params: { establishmentId: 'e1', serviceId: 's1' },
       }),
@@ -101,8 +101,7 @@ describe('beforeLoad de l index authentifie', () => {
   // impasse qu'une garde desormais supprimee empechait par un autre moyen.
   it('envoie un administrateur sans aucune affectation de service vers son administration', () => {
     expect(() => runBeforeLoad(adminSansService)).toThrow(
-      expect.objectContaining({
-        isRedirect: true,
+      redirection({
         to: '/e/$establishmentId/admin',
         params: { establishmentId: 'e1' },
       }),
@@ -111,7 +110,7 @@ describe('beforeLoad de l index authentifie', () => {
 
   it('envoie qui n a reellement aucun acces vers l ecran d attente', () => {
     expect(() => runBeforeLoad(sansAcces)).toThrow(
-      expect.objectContaining({ isRedirect: true, to: '/pending' }),
+      redirection({ to: '/pending' }),
     )
   })
 
@@ -122,7 +121,7 @@ describe('beforeLoad de l index authentifie', () => {
   // d'atteindre /super-admin autrement qu'en tapant l'URL a la main.
   it('envoie un super-admin sans aucun etablissement vers /super-admin, jamais vers /pending', () => {
     expect(() => runBeforeLoad(superAdminSansEtablissement)).toThrow(
-      expect.objectContaining({ isRedirect: true, to: '/super-admin' }),
+      redirection({ to: '/super-admin' }),
     )
   })
 
@@ -132,8 +131,7 @@ describe('beforeLoad de l index authentifie', () => {
   // service/établissement et l'établissement administré.
   it('envoie un super-admin qui a par ailleurs un couple etablissement/service vers son tableau de bord, jamais vers /super-admin', () => {
     expect(() => runBeforeLoad(superAdminAvecService)).toThrow(
-      expect.objectContaining({
-        isRedirect: true,
+      redirection({
         to: '/e/$establishmentId/s/$serviceId/dashboard',
         params: { establishmentId: 'e1', serviceId: 's1' },
       }),

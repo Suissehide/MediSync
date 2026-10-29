@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { activityLogColumns } from '@/columns/activityLog.column.tsx'
 import type { User } from '@/types/auth.ts'
+import { redirection } from '../../../../../../../test/redirection.ts'
 import { Route } from './activity-log.tsx'
 
 const membre = (role: 'COORDINATEUR' | 'INTERVENANT'): User => ({
@@ -33,8 +34,7 @@ describe('journal d activite du chef de service', () => {
 
   it('renvoie un intervenant au tableau de bord', () => {
     expect(() => lancer(membre('INTERVENANT'))).toThrow(
-      expect.objectContaining({
-        isRedirect: true,
+      redirection({
         to: '/e/$establishmentId/s/$serviceId/dashboard',
       }),
     )

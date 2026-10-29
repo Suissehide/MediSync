@@ -16,6 +16,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useAuthStore } from '@/store/useAuthStore.ts'
 import type { AuthState, User } from '@/types/auth.ts'
+import { redirection } from '../../../../../../../../test/redirection.ts'
 import { Route as serviceLayoutRoute } from '../../../$serviceId.tsx'
 import { Route as accesRoute } from './acces.tsx'
 
@@ -354,8 +355,7 @@ describe('beforeLoad de l ecran du journal des acces — garde consultations:rea
 
   it("refuse un INTERVENANT (n'a pas consultations:read), redirige vers le tableau de bord", () => {
     expect(() => runBeforeLoad(intervenant)).toThrow(
-      expect.objectContaining({
-        isRedirect: true,
+      redirection({
         to: '/e/$establishmentId/s/$serviceId/dashboard',
       }),
     )

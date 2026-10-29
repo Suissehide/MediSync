@@ -192,7 +192,7 @@ describe('EditMemberForm — affecter un membre a un service', () => {
   // `serviceRoles` a chaque clic — remplacer la fusion (`setServiceRoles((prev) => ({ ...prev,
   // [id]: value }))`) par un ecrasement (`setServiceRoles({ [id]: value })`)
   // ne fait rougir aucun des neuf tests precedents. Necessite le
-  // polyfill de `hasPointerCapture`/`scrollIntoView` (`src/test/setup.ts`) :
+  // polyfill de `hasPointerCapture`/`scrollIntoView` (`src/test/setup-dom.ts`) :
   // sans lui, RadixSelect leve a l'ouverture sous jsdom.
   it("changer le role d'un service via le VRAI composant ne touche pas le role deja choisi d'un autre service", async () => {
     const fetchMock = buildFetchMock([

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { User } from '@/types/auth.ts'
+import { redirection } from '../../../../../test/redirection.ts'
 import { Route } from './members.tsx'
 
 const admin: User = {
@@ -62,14 +63,10 @@ describe('beforeLoad de l ecran Membres — garde members:manage', () => {
   })
 
   it('refuse un simple membre de l etablissement (role MEMBER)', () => {
-    expect(() => runBeforeLoad(member)).toThrow(
-      expect.objectContaining({ isRedirect: true, to: '/' }),
-    )
+    expect(() => runBeforeLoad(member)).toThrow(redirection({ to: '/' }))
   })
 
   it('refuse un compte authentifie sans rattachement a cet etablissement', () => {
-    expect(() => runBeforeLoad(stranger)).toThrow(
-      expect.objectContaining({ isRedirect: true, to: '/' }),
-    )
+    expect(() => runBeforeLoad(stranger)).toThrow(redirection({ to: '/' }))
   })
 })

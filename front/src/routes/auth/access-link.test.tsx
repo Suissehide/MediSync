@@ -8,7 +8,7 @@ import {
   Outlet,
   RouterProvider,
 } from '@tanstack/react-router'
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -86,7 +86,11 @@ const buildFetchMock = (routes: Route[]) =>
     return { ...result, url }
   })
 
-const monter = (path: string, fetchMock: ReturnType<typeof buildFetchMock>) => {
+// Le routeur rend apres son premier chargement : sans l'attendre, une absence serait vraie a vide.
+const monter = async (
+  path: string,
+  fetchMock: ReturnType<typeof buildFetchMock>,
+) => {
   vi.stubGlobal('fetch', fetchMock)
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -105,6 +109,7 @@ const monter = (path: string, fetchMock: ReturnType<typeof buildFetchMock>) => {
       <RouterProvider router={router} />
     </QueryClientProvider>,
   )
+  await act(() => router.load())
   return { queryClient, router }
 }
 
@@ -146,14 +151,14 @@ afterEach(() => {
 describe('page publique de consommation d un lien d acces', () => {
   it('sans jeton dans l URL : message invalide, aucun appel reseau tente', async () => {
     const fetchMock = buildFetchMock([])
-    monter('/auth/access-link', fetchMock)
+    await monter('/auth/access-link', fetchMock)
 
     expect(await screen.findByText(/ce lien est invalide/i)).toBeInTheDocument()
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
   it('410 (lien invalide ou expire) : message distinct, invite a en demander un autre', async () => {
-    monter(
+    await monter(
       `/auth/access-link#${JETON}`,
       buildFetchMock([
         routeConsume(() => ({
@@ -173,7 +178,7 @@ describe('page publique de consommation d un lien d acces', () => {
   })
 
   it('401 (compte desactive) : message distinct du 410, ne parle jamais de lien invalide', async () => {
-    monter(
+    await monter(
       `/auth/access-link#${JETON}`,
       buildFetchMock([
         routeConsume(() => ({
@@ -205,7 +210,7 @@ describe('page publique de consommation d un lien d acces', () => {
         json: async () => utilisateurConnecte,
       })),
     ])
-    monter(`/auth/access-link#${JETON}`, fetchMock)
+    await monter(`/auth/access-link#${JETON}`, fetchMock)
 
     await remplirEtValider('MotDePasse-Suffisant1')
 
@@ -241,7 +246,7 @@ describe('page publique de consommation d un lien d acces', () => {
       })),
       routeSignIn(() => ({ ok: false, status: 401, json: async () => ({}) })),
     ])
-    monter(`/auth/access-link#${JETON}`, fetchMock)
+    await monter(`/auth/access-link#${JETON}`, fetchMock)
 
     await remplirEtValider('MotDePasse-Suffisant1')
 
@@ -273,7 +278,7 @@ describe('page publique de consommation d un lien d acces', () => {
       })),
       routeSignIn(() => ({ ok: false, status: 401, json: async () => ({}) })),
     ])
-    const { router } = monter(`/auth/access-link#${JETON}`, fetchMock)
+    const { router } = await monter(`/auth/access-link#${JETON}`, fetchMock)
     const longueurHistoriqueAvant = router.history.length
 
     await remplirEtValider('MotDePasse-Suffisant1')
@@ -294,7 +299,7 @@ describe('page publique de consommation d un lien d acces', () => {
   // client, l'ecran renverrait un 400 sans dire quoi corriger.
   it('un mot de passe trop court est refuse cote client, avec le message exact, avant tout appel reseau', async () => {
     const fetchMock = buildFetchMock([])
-    monter(`/auth/access-link#${JETON}`, fetchMock)
+    await monter(`/auth/access-link#${JETON}`, fetchMock)
 
     await userEvent.type(
       screen.getByLabelText(/^nouveau mot de passe/i),
@@ -316,7 +321,7 @@ describe('page publique de consommation d un lien d acces', () => {
   // le formulaire utilisable — rien ne prouve que le jeton a ete consomme
   // par une simple panne serveur.
   it("une erreur qui n'est ni 410 ni 401 affiche le vrai message d'API, pas une phrase figee, et laisse le formulaire pour reessayer", async () => {
-    monter(
+    await monter(
       `/auth/access-link#${JETON}`,
       buildFetchMock([
         routeConsume(() => ({
@@ -357,7 +362,10 @@ describe('page publique de consommation d un lien d acces', () => {
         json: async () => utilisateurConnecte,
       })),
     ])
-    const { queryClient } = monter(`/auth/access-link#${JETON}`, fetchMock)
+    const { queryClient } = await monter(
+      `/auth/access-link#${JETON}`,
+      fetchMock,
+    )
 
     await remplirEtValider('MotDePasse-Suffisant1')
 

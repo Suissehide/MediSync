@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { User } from '@/types/auth.ts'
+import { redirection } from '../../../../../test/redirection.ts'
 import { Route as journal } from './activity-log.tsx'
 
 // Navigation par echelle (2026-09-28) : le journal d'activite, rejoint par l'administration
@@ -55,7 +56,7 @@ describe.each([["Journal d'activite", journal]])(
 
     it('refuse un coordinateur, qui n administre pas l etablissement', () => {
       expect(() => lancer(route, coordinateur)).toThrow(
-        expect.objectContaining({ isRedirect: true, to: '/' }),
+        redirection({ to: '/' }),
       )
     })
   },

@@ -32,6 +32,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 })
 
 function RootErrorComponent({ error }: ErrorComponentProps) {
+  const message = error instanceof Error ? error.message : undefined
   const router = useRouter()
 
   return (
@@ -46,9 +47,9 @@ function RootErrorComponent({ error }: ErrorComponentProps) {
         Quelque chose s'est mal passé lors du chargement de la page. Vous pouvez
         réessayer ou recharger l'application.
       </p>
-      {environment === 'development' && error?.message && (
+      {environment === 'development' && message && (
         <pre className="max-w-md overflow-auto rounded-md bg-card p-3 text-left text-xs text-text-light">
-          {error.message}
+          {message}
         </pre>
       )}
       <div className="flex gap-3">

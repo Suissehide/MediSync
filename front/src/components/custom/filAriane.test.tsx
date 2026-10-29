@@ -5,7 +5,7 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 
@@ -59,7 +59,8 @@ const deuxEtablissements: User = {
 
 // Routeur minimal : quelques chemins aux formes des trois echelles, pour que le fil, lu sur la
 // route, ait de quoi se resoudre.
-const monter = (depart: string) => {
+// Le routeur rend apres son premier chargement : sans l'attendre, une absence serait vraie a vide.
+const monter = async (depart: string) => {
   const rootRoute = createRootRoute({ component: FilAriane })
   const enfants = [
     '/e/$establishmentId/s/$serviceId/dashboard',
@@ -72,6 +73,7 @@ const monter = (depart: string) => {
     history: createMemoryHistory({ initialEntries: [depart] }),
   })
   render(<RouterProvider router={router} />)
+  await act(() => router.load())
   return router
 }
 
@@ -85,7 +87,7 @@ describe('FilAriane', () => {
 
   it('nomme l etablissement et le service de la route, sans menu pour un seul service', async () => {
     useAuthStore.setState({ user: intervenantUnService })
-    monter('/e/e1/s/s1/dashboard')
+    await monter('/e/e1/s/s1/dashboard')
 
     expect(await fil()).toHaveTextContent('CHU')
     expect(await fil()).toHaveTextContent('Cardio')
@@ -96,7 +98,7 @@ describe('FilAriane', () => {
 
   it('fait de l etablissement un lien vers son administration pour qui l administre', async () => {
     useAuthStore.setState({ user: deuxEtablissements })
-    monter('/e/e1/s/s1/dashboard')
+    await monter('/e/e1/s/s1/dashboard')
 
     expect(
       within(await fil()).getByRole('link', { name: /CHU/ }),
@@ -105,7 +107,7 @@ describe('FilAriane', () => {
 
   it('liste les services par etablissement, marque le courant et l acces temporaire', async () => {
     useAuthStore.setState({ user: deuxEtablissements })
-    monter('/e/e1/s/s1/dashboard')
+    await monter('/e/e1/s/s1/dashboard')
 
     await userEvent.click(
       await screen.findByRole('button', {
@@ -137,7 +139,7 @@ describe('FilAriane', () => {
       LAST_CONTEXT_KEY('u1'),
       JSON.stringify({ establishmentId: 'e1', serviceId: 's2' }),
     )
-    monter('/e/e1/admin')
+    await monter('/e/e1/admin')
 
     const retour = within(await fil()).getByRole('link', {
       name: /Pneumo/,
@@ -156,7 +158,7 @@ describe('FilAriane', () => {
       LAST_CONTEXT_KEY('u1'),
       JSON.stringify({ establishmentId: 'e2', serviceId: 's3' }),
     )
-    monter('/e/e1/admin')
+    await monter('/e/e1/admin')
 
     expect(
       within(await fil()).getByRole('link', { name: /Cardio/ }),
@@ -169,7 +171,7 @@ describe('FilAriane', () => {
       LAST_CONTEXT_KEY('u1'),
       JSON.stringify({ establishmentId: 'e2', serviceId: 's3' }),
     )
-    monter('/user/settings')
+    await monter('/user/settings')
 
     expect(await fil()).toHaveTextContent('Clinique du Parc')
     expect(await fil()).toHaveTextContent('temporaire')
@@ -182,7 +184,7 @@ describe('FilAriane', () => {
     useAuthStore.setState({
       user: { ...base, isSuperAdmin: true, establishments: [] },
     })
-    monter('/super-admin')
+    await monter('/super-admin')
 
     await new Promise((r) => setTimeout(r, 0))
     expect(

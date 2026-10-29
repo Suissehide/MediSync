@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { User } from '@/types/auth.ts'
+import { redirection } from '../../../test/redirection.ts'
 import { Route } from './user.tsx'
 
 const user: User = {
@@ -114,8 +115,7 @@ const runBeforeLoad = (user: User) => {
 describe('beforeLoad de l ancienne URL /settings/user', () => {
   it('redirige vers l administration de l etablissement, recherche conservee', () => {
     expect(() => runBeforeLoad(user)).toThrow(
-      expect.objectContaining({
-        isRedirect: true,
+      redirection({
         to: '/e/$establishmentId/admin',
         params: { establishmentId: 'e1' },
         search: true,
@@ -128,8 +128,7 @@ describe('beforeLoad de l ancienne URL /settings/user', () => {
   // 15 avait fermee sur `index.tsx` restait ouverte par ce favori-ci.
   it('envoie un administrateur sans affectation de service vers son administration', () => {
     expect(() => runBeforeLoad(adminSansService)).toThrow(
-      expect.objectContaining({
-        isRedirect: true,
+      redirection({
         to: '/e/$establishmentId/admin',
         params: { establishmentId: 'e1' },
         search: true,
@@ -139,7 +138,7 @@ describe('beforeLoad de l ancienne URL /settings/user', () => {
 
   it('redirige vers /pending sans aucun acces, ni service ni administration', () => {
     expect(() => runBeforeLoad(userSansContexte)).toThrow(
-      expect.objectContaining({ isRedirect: true, to: '/pending' }),
+      redirection({ to: '/pending' }),
     )
   })
 
@@ -150,8 +149,7 @@ describe('beforeLoad de l ancienne URL /settings/user', () => {
   // ADMINISTRES, donc `e2`.
   it('envoie vers l etablissement ADMINISTRE, pas vers celui ou le compte est simple membre', () => {
     expect(() => runBeforeLoad(membreIciAdministrateurLaBas)).toThrow(
-      expect.objectContaining({
-        isRedirect: true,
+      redirection({
         to: '/e/$establishmentId/admin',
         params: { establishmentId: 'e2' },
         search: true,
@@ -164,8 +162,7 @@ describe('beforeLoad de l ancienne URL /settings/user', () => {
   // — sans quoi cet administrateur-la serait toujours ramene a `e1`.
   it('prefere, parmi les etablissements administres, celui du dernier couple accessible', () => {
     expect(() => runBeforeLoad(administrateurDeDeux)).toThrow(
-      expect.objectContaining({
-        isRedirect: true,
+      redirection({
         to: '/e/$establishmentId/admin',
         params: { establishmentId: 'e2' },
         search: true,
@@ -178,7 +175,7 @@ describe('beforeLoad de l ancienne URL /settings/user', () => {
   // On envoie directement la ou le layout aurait envoye, sans le detour.
   it('envoie au choix de contexte un compte sans aucune administration', () => {
     expect(() => runBeforeLoad(membrePartout)).toThrow(
-      expect.objectContaining({ isRedirect: true, to: '/choose-context' }),
+      redirection({ to: '/choose-context' }),
     )
   })
 })

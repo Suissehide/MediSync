@@ -1,3 +1,5 @@
+// @vitest-environment node
+// Sous jsdom, un Buffer n'est pas un Uint8Array du meme realm : pdfkit prendrait l'image pour un chemin.
 import { Document, pdf } from '@react-pdf/renderer'
 import { describe, expect, it } from 'vitest'
 
