@@ -8,8 +8,7 @@ import type {
 import type { UserRepositoryInterface } from '../../../types/infra/orm/repositories/user.repository.interface'
 import type { PostgresPrismaClient } from '../postgres-client'
 
-// Hors tenant : aucune methode ne lit tenantContext.scope() (leverait sous runAsSystem).
-// La file d'envoi est globale, tous etablissements et services confondus.
+// Hors tenant, file d'envoi globale : aucune methode ne lit tenantContext.scope().
 class NotificationMailRepository
   implements NotificationMailRepositoryInterface
 {
@@ -66,24 +65,25 @@ class NotificationMailRepository
       }),
       this.userRepository.findNotificationPrefsMany(userIds),
     ])
-    return new Map(
-      users.map((u) => {
-        const prefsOfUser = prefs.get(u.id)
-        if (!prefsOfUser) {
-          throw new Error(`Preferences introuvables pour ${u.id}`)
-        }
-        return [
-          u.id,
-          {
-            email: u.email,
-            firstName: u.firstName,
-            lastName: u.lastName,
-            deactivatedAt: u.deactivatedAt,
-            prefs: prefsOfUser,
-          },
-        ]
-      }),
-    )
+    const entries: [string, RecipientRow][] = []
+    for (const u of users) {
+      const prefsOfUser = prefs.get(u.id)
+      // Prefs introuvables pour cet utilisateur : il est ignore, jamais toute la file en echec.
+      if (!prefsOfUser) {
+        continue
+      }
+      entries.push([
+        u.id,
+        {
+          email: u.email,
+          firstName: u.firstName,
+          lastName: u.lastName,
+          deactivatedAt: u.deactivatedAt,
+          prefs: prefsOfUser,
+        },
+      ])
+    }
+    return new Map(entries)
   }
 
   async names(userIds: string[]): Promise<Map<string, string>> {
@@ -110,6 +110,20 @@ class NotificationMailRepository
       where: { id: { in: ids } },
       data: { mailState: state },
     })
+  }
+
+  // Un updateMany par id, borne a PENDING -> SENT : au plus un appel concurrent gagne la ligne.
+  async claim(ids: string[]): Promise<string[]> {
+    const claimed = await Promise.all(
+      ids.map(async (id) => {
+        const { count } = await this.prisma.notification.updateMany({
+          where: { id, mailState: 'PENDING' },
+          data: { mailState: 'SENT' },
+        })
+        return count === 1 ? id : null
+      }),
+    )
+    return claimed.filter((id): id is string => id !== null)
   }
 }
 

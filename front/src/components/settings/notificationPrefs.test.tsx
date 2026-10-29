@@ -146,6 +146,41 @@ describe('NotificationPrefs', () => {
     )
   })
 
+  it('couper l app d une ligne coupe aussi son e-mail, dans le meme PUT', async () => {
+    get.mockReset().mockResolvedValue({
+      ...essentialSaufAbsent,
+      mail: { ...essentialSaufAbsent.mail, reminder: true },
+    })
+    const u = userEvent.setup()
+    render(<NotificationPrefs />, { wrapper })
+    await u.click(
+      await screen.findByRole('switch', {
+        name: /Rappel avant mes rendez-vous dans l'app/,
+      }),
+    )
+    expect(put).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        level: 'custom',
+        app: expect.objectContaining({ reminder: false }),
+        mail: expect.objectContaining({ reminder: false }),
+      }),
+    )
+  })
+
+  it('interrupteur e-mail desactive quand l app de la ligne est coupee', async () => {
+    render(<NotificationPrefs />, { wrapper })
+    expect(
+      await screen.findByRole('switch', {
+        name: /Absence non justifiée par e-mail/,
+      }),
+    ).toBeDisabled()
+    expect(
+      screen.getByRole('switch', {
+        name: /Rappel avant mes rendez-vous par e-mail/,
+      }),
+    ).toBeEnabled()
+  })
+
   it('carte Resume quotidien a 7 h : PUT digest daily, sans changer le niveau', async () => {
     const u = userEvent.setup()
     render(<NotificationPrefs />, { wrapper })

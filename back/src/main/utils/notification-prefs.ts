@@ -90,7 +90,7 @@ export const normalizePrefs = (raw: unknown): NotificationPrefs => {
     }
   }
   return {
-    level: hasMail ? pick(r.level, LEVELS, 'essential') : 'custom',
+    level: hasMail ? pick(r.level, LEVELS, 'custom') : 'custom',
     services,
     app,
     mail,

@@ -28,8 +28,7 @@ const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000
 const todaySevenAM = (now: Date): Date =>
   dayjs.tz(`${dayjs(now).tz(PARIS).format('YYYY-MM-DD')} 07:00`, PARIS).toDate()
 
-// Envoi des notifications par e-mail, et resume quotidien des preferences `daily` — seul point
-// d'envoi, quel que soit l'auteur de la notification (planificateur, dispatcher, mentions).
+// Envoi des notifications par e-mail et resume quotidien des preferences `daily` — seul point d'envoi.
 class NotificationMailer implements NotificationMailerInterface {
   private readonly notificationMailRepository: NotificationMailRepositoryInterface
   private readonly mailer: MailerInterface
@@ -108,13 +107,24 @@ class NotificationMailer implements NotificationMailerInterface {
     return { toSkip, immediate, daily }
   }
 
+  // Capture (PENDING -> SENT) avant l'envoi : sous deux `runOnce` concurrents, un seul gagne
+  // chaque id et envoie ; un echec du mailer apres capture n'est jamais rejoue.
   async #sendImmediate(
     immediate: PendingNotificationRow[],
     recipients: Map<string, RecipientRow>,
     names: Map<string, string>,
   ): Promise<number> {
+    if (immediate.length === 0) {
+      return 0
+    }
+    const claimed = new Set(
+      await this.notificationMailRepository.claim(immediate.map((n) => n.id)),
+    )
     let sent = 0
     for (const n of immediate) {
+      if (!claimed.has(n.id)) {
+        continue
+      }
       const recipient = recipients.get(n.userId) as RecipientRow
       try {
         this.mailer.send(
@@ -125,7 +135,6 @@ class NotificationMailer implements NotificationMailerInterface {
             this.frontUrl,
           ),
         )
-        await this.notificationMailRepository.mark([n.id], 'SENT')
         sent += 1
       } catch (err) {
         this.#logError('envoi immediat', err)
@@ -134,8 +143,7 @@ class NotificationMailer implements NotificationMailerInterface {
     return sent
   }
 
-  // Resume : par destinataire, les notifications daily creees avant 7h Paris aujourd'hui ;
-  // lues -> SKIPPED, le reste dans un seul e-mail puis SENT.
+  // Resume : par destinataire, les notifications daily creees avant 7h Paris aujourd'hui ; lues -> SKIPPED, le reste capture puis un seul e-mail (rien capture -> aucun envoi).
   async #sendDigests(
     daily: PendingNotificationRow[],
     now: Date,
@@ -165,24 +173,28 @@ class NotificationMailer implements NotificationMailerInterface {
           )
           skipped += read.length
         }
-        if (unread.length > 0) {
-          const recipient = recipients.get(userId) as RecipientRow
-          this.mailer.send(
-            'notification-digest',
-            digestMail(
-              recipient.email,
-              unread.map((n) => this.#mailable(n, names)),
-              now,
-              this.frontUrl,
-            ),
-          )
-          await this.notificationMailRepository.mark(
-            unread.map((i) => i.id),
-            'SENT',
-          )
-          sent += unread.length
-          digests += 1
+        if (unread.length === 0) {
+          continue
         }
+        const claimed = new Set(
+          await this.notificationMailRepository.claim(unread.map((i) => i.id)),
+        )
+        const toSend = unread.filter((i) => claimed.has(i.id))
+        if (toSend.length === 0) {
+          continue
+        }
+        const recipient = recipients.get(userId) as RecipientRow
+        this.mailer.send(
+          'notification-digest',
+          digestMail(
+            recipient.email,
+            toSend.map((n) => this.#mailable(n, names)),
+            now,
+            this.frontUrl,
+          ),
+        )
+        sent += toSend.length
+        digests += 1
       } catch (err) {
         this.#logError('resume', err)
       }

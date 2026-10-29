@@ -79,10 +79,6 @@ describe('notification-templates', () => {
     expect(mail.text).toContain(FRONT_URL)
   })
 
-  // Sanity check du piege (verifiee a la main, non laissee dans le code) : voir le rapport de fix —
-  // APPOINTMENT_CANCELLED a ete temporairement modifie pour interpoler thematicName, ce qui a bien
-  // fait echouer le test ci-dessus, avant d'etre revert.
-
   it.each([
     ['REMINDER', 'MediSync : rappel de séance'],
     ['PATIENT_ADDED', 'MediSync : patient ajouté'],

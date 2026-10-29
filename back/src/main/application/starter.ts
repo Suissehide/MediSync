@@ -110,8 +110,7 @@ const scheduleNotifications = (instances: IocContainer): void => {
 
 const ONE_MINUTE_MS = 60 * 1000
 
-// Envoi des e-mails de notification (immediat ou resume quotidien a 7h Paris) — quatrieme appel
-// de runAsSystem de ce fichier : aucune requete HTTP, la file traverse tous les etablissements.
+// Envoi des e-mails de notification (immediat ou resume quotidien a 7h Paris) — quatrieme appel de runAsSystem de ce fichier.
 const scheduleNotificationMails = (instances: IocContainer): void => {
   const { notificationMailer, logger, tenantContext } = instances
   const run = (): void => {
@@ -119,11 +118,13 @@ const scheduleNotificationMails = (instances: IocContainer): void => {
       .runAsSystem(async () => {
         return await notificationMailer.runOnce(new Date())
       })
-      .then(({ sent, digests, skipped }) =>
-        logger.info(
-          `Notification mails: ${sent} envoyés, ${digests} résumés, ${skipped} ignorés`,
-        ),
-      )
+      .then(({ sent, digests, skipped }) => {
+        if (sent + digests + skipped > 0) {
+          logger.info(
+            `Notification mails: ${sent} envoyés, ${digests} résumés, ${skipped} ignorés`,
+          )
+        }
+      })
       .catch((err) => {
         const errorClass =
           err instanceof Error ? err.constructor.name : typeof err

@@ -195,12 +195,24 @@ export function NotificationPrefs() {
           },
     )
 
-  const toggleEvent = (key: NotificationPrefKey, channel: 'app' | 'mail') =>
+  // Couper l'app coupe aussi l'e-mail de la meme ligne, dans le meme save : aucune notification
+  // n'existe pour l'envoyer si l'app est coupee.
+  const toggleEvent = (key: NotificationPrefKey, channel: 'app' | 'mail') => {
+    if (channel === 'mail') {
+      return save({
+        ...data,
+        level: 'custom',
+        mail: { ...data.mail, [key]: !data.mail[key] },
+      })
+    }
+    const appOn = !data.app[key]
     save({
       ...data,
       level: 'custom',
-      [channel]: { ...data[channel], [key]: !data[channel][key] },
+      app: { ...data.app, [key]: appOn },
+      mail: appOn ? data.mail : { ...data.mail, [key]: false },
     })
+  }
 
   const setDelay = (delay: ReminderDelay) =>
     save({ ...data, reminderDelay: delay })
@@ -326,6 +338,7 @@ export function NotificationPrefs() {
                 <Switch
                   aria-label={`${e.label} par e-mail`}
                   checked={data.mail[e.key]}
+                  disabled={!data.app[e.key]}
                   onCheckedChange={() => toggleEvent(e.key, 'mail')}
                   className="justify-self-center"
                 />

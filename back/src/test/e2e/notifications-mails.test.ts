@@ -423,4 +423,77 @@ describe('NotificationMailer', () => {
     const mention = sent.find((m) => m.mail.subject.includes('mention'))
     expect(mention?.mail.text).toContain('Lea Martin')
   })
+
+  it('concurrence : deux runOnce en parallele sur les memes lignes PENDING, chaque e-mail envoye une seule fois (immediat et resume)', async () => {
+    const userImmediat = await createUser({ email: 'concurrent-immediat@m.fr' })
+    await setPrefs(userImmediat.id, {
+      level: 'all',
+      services: null,
+      app: {},
+      mail: presetMail('all'),
+      reminderDelay: 'eve',
+      digest: 'now',
+    })
+    const nImmediat = await createNotification({
+      userId: userImmediat.id,
+      type: 'REMINDER',
+      payload: { startDate: CREATED_BEFORE_7 },
+    })
+
+    const userDigest = await createUser({ email: 'concurrent-digest@m.fr' })
+    await setPrefs(userDigest.id, {
+      level: 'all',
+      services: null,
+      app: {},
+      mail: presetMail('all'),
+      reminderDelay: 'eve',
+      digest: 'daily',
+    })
+    const nDigest = await createNotification({
+      userId: userDigest.id,
+      type: 'PATIENT_ADDED',
+      payload: { firstStartDate: CREATED_BEFORE_7, count: 1 },
+      createdAt: CREATED_BEFORE_7,
+    })
+
+    await Promise.all([runOnceAt(PARIS_0700), runOnceAt(PARIS_0700)])
+
+    expect(
+      sent.filter((m) => m.mail.to === 'concurrent-immediat@m.fr'),
+    ).toHaveLength(1)
+    expect(
+      sent.filter((m) => m.mail.to === 'concurrent-digest@m.fr'),
+    ).toHaveLength(1)
+    expect(await mailStateOf(nImmediat.id)).toBe('SENT')
+    expect(await mailStateOf(nDigest.id)).toBe('SENT')
+  })
+
+  it('echec du mailer apres capture : jamais rejoue au passage suivant', async () => {
+    const user = await createUser({ email: 'echec-apres-capture@m.fr' })
+    await setPrefs(user.id, {
+      level: 'all',
+      services: null,
+      app: {},
+      mail: presetMail('all'),
+      reminderDelay: 'eve',
+      digest: 'now',
+    })
+    const n = await createNotification({
+      userId: user.id,
+      type: 'REMINDER',
+      payload: { startDate: CREATED_BEFORE_7 },
+    })
+
+    jest.spyOn(t.instances.mailer, 'send').mockImplementationOnce(() => {
+      throw new Error('smtp down')
+    })
+
+    await runOnceAt(PARIS_0700)
+    expect(sent).toHaveLength(0)
+    expect(await mailStateOf(n.id)).toBe('SENT')
+
+    await runOnceAt(PARIS_0701)
+    expect(sent).toHaveLength(0)
+    expect(await mailStateOf(n.id)).toBe('SENT')
+  })
 })

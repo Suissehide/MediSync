@@ -99,6 +99,14 @@ describe('notification-prefs', () => {
     expect(p.reminderDelay).toBe('1h')
   })
 
+  it('mail present mais niveau invalide : personnalise, pas essentiel', () => {
+    const p = normalizePrefs({
+      level: 'tout',
+      mail: presetMail('essential'),
+    })
+    expect(p.level).toBe('custom')
+  })
+
   it('garde le niveau quand mail est present', () => {
     const p = normalizePrefs({
       level: 'essential',

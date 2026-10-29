@@ -33,4 +33,6 @@ export interface NotificationMailRepositoryInterface {
   // Prenom nom des auteurs de mention.
   names: (userIds: string[]) => Promise<Map<string, string>>
   mark: (ids: string[], state: NotificationMailState) => Promise<void>
+  // PENDING -> SENT, un par un : renvoie les ids reellement captures (au plus une fois sous concurrence).
+  claim: (ids: string[]) => Promise<string[]>
 }
