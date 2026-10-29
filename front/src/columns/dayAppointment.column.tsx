@@ -1,7 +1,7 @@
 import {
   createColumnHelper,
-  type SortingFn,
-  sortingFns,
+  type SortFn,
+  sortFn_text,
 } from '@tanstack/react-table'
 import { Eye, Trash2, User, Users } from 'lucide-react'
 
@@ -16,17 +16,18 @@ import {
 import { Tronque } from '../components/custom/agenda/tronque.tsx'
 import { ConflictBadge } from '../components/custom/conflictBadge.tsx'
 import { Etiquette } from '../components/table/etiquette.tsx'
+import type { Features } from '../components/table/features.ts'
 import { Button } from '../components/ui/button.tsx'
 import { APPOINTMENT_TYPE } from '../constants/appointment.constant.ts'
 import { styleSoignant } from '../libs/color.ts'
 import type { DaySlotRow } from '../libs/utils.ts'
 
-const columnHelper = createColumnHelper<DaySlotRow>()
+const columnHelper = createColumnHelper<Features, DaySlotRow>()
 
 // Le tri range les plages et les créneaux isolés ; les créneaux d'une plage
 // restent dans l'ordre chronologique (à égalité, TanStack garde l'ordre d'origine).
-const parentsOnly: SortingFn<DaySlotRow> = (a, b, columnId) =>
-  a.depth > 0 ? 0 : sortingFns.text(a, b, columnId)
+const parentsOnly: SortFn<Features, DaySlotRow> = (a, b, columnId) =>
+  a.depth > 0 ? 0 : sortFn_text(a, b, columnId)
 
 // Une plage repliée : sa frise occupe les colonnes Patients et Type.
 const isRange = (row: DaySlotRow) => !!row.subRows
@@ -64,7 +65,7 @@ export const getDayAppointmentColumns = ({
       id: 'schedule',
       header: 'Horaire',
       size: 150,
-      sortingFn: parentsOnly,
+      sortFn: parentsOnly,
       cell: ({ row }) => {
         if (row.depth > 0) {
           return <SlotTimeline row={row} />
@@ -88,7 +89,7 @@ export const getDayAppointmentColumns = ({
     columnHelper.accessor('thematic', {
       header: 'Thématique',
       size: 180,
-      sortingFn: parentsOnly,
+      sortFn: parentsOnly,
       cell: ({ row, getValue }) => {
         if (row.original.kind === 'free') {
           return null
@@ -108,7 +109,7 @@ export const getDayAppointmentColumns = ({
     columnHelper.accessor('location', {
       header: 'Lieu',
       size: 160,
-      sortingFn: parentsOnly,
+      sortFn: parentsOnly,
       cell: ({ row, getValue }) =>
         row.depth > 0 ? null : <Tronque texte={getValue() || '—'} />,
     }),
@@ -193,7 +194,7 @@ export const getDayAppointmentColumns = ({
     columnHelper.accessor('type', {
       header: 'Type',
       size: 140,
-      sortingFn: parentsOnly,
+      sortFn: parentsOnly,
       cell: ({ row, getValue }) => {
         const type = getValue()
         if (!type) {

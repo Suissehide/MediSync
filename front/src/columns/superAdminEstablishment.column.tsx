@@ -6,13 +6,14 @@ import { CopyableId } from '../components/custom/copyableId.tsx'
 import { useOuvrirDestination } from '../components/custom/destinations.tsx'
 import CreateGrantForm from '../components/custom/popup/createGrantForm.tsx'
 import { Etiquette, EtiquetteStatut } from '../components/table/etiquette.tsx'
+import type { Features } from '../components/table/features.ts'
 import { Button } from '../components/ui/button.tsx'
 import { meQueryOptions } from '../queries/useMe.ts'
 import { useAuthStore } from '../store/useAuthStore.ts'
 import type { EstablishmentListItem } from '../types/superAdmin.ts'
 import { accessibleDestinations } from '../utils/tenant-context.ts'
 
-const columnHelper = createColumnHelper<EstablishmentListItem>()
+const columnHelper = createColumnHelper<Features, EstablishmentListItem>()
 
 // Colonnes de la liste des établissements (spec §3.3) : une par clé exacte de
 // `establishmentListItemSchema` (voir

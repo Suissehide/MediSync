@@ -1,22 +1,30 @@
-import type { Column, Table } from '@tanstack/react-table'
+import type { Column, RowData, Table } from '@tanstack/react-table'
 import { Check, Columns3 } from 'lucide-react'
 import { DropdownMenu } from 'radix-ui'
 import { Fragment } from 'react'
 
 import { Button } from '../ui/button.tsx'
-import type { CustomMeta } from './reactTable.tsx'
+import type { Features } from './features.ts'
 
-const optionalOf = <TData,>(column: Column<TData, unknown>) =>
-  (column.columnDef.meta as CustomMeta<TData, unknown> | undefined)?.optional
+const optionalOf = <TData extends RowData>(
+  column: Column<Features, TData, unknown>,
+) => column.columnDef.meta?.optional
 
 // Liste à cocher des colonnes optionnelles ; masquer efface filtre et tri.
-export function ColumnPicker<TData>({ table }: { table: Table<TData> }) {
+export function ColumnPicker<TData extends RowData>({
+  table,
+}: {
+  table: Table<Features, TData>
+}) {
   const columns = table.getAllLeafColumns().filter((c) => optionalOf(c))
   if (columns.length === 0) {
     return null
   }
 
-  const toggle = (column: Column<TData, unknown>, visible: boolean) => {
+  const toggle = (
+    column: Column<Features, TData, unknown>,
+    visible: boolean,
+  ) => {
     if (!visible) {
       column.setFilterValue(undefined)
       table.setSorting((s) => s.filter((x) => x.id !== column.id))

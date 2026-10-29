@@ -1,15 +1,19 @@
-import type { Table } from '@tanstack/react-table'
+import type { RowData, Table } from '@tanstack/react-table'
 import { RotateCcw } from 'lucide-react'
 
 import { choiceColor } from '../../libs/choicePalette.ts'
 import DropdownFilter from '../ui/dropdownFilter.tsx'
 import { EMPTY_CHOICE } from './choiceColumn.tsx'
-import type { CustomMeta } from './reactTable.tsx'
+import type { Features } from './features.ts'
 
 // Un filtre à cocher par colonne à choix visible.
-export function ChoiceFilters<TData>({ table }: { table: Table<TData> }) {
+export function ChoiceFilters<TData extends RowData>({
+  table,
+}: {
+  table: Table<Features, TData>
+}) {
   return table.getVisibleLeafColumns().map((column) => {
-    const meta = column.columnDef.meta as CustomMeta<TData, unknown> | undefined
+    const meta = column.columnDef.meta
     if (!meta?.choices) {
       return null
     }

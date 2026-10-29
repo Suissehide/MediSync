@@ -1,11 +1,4 @@
-import {
-  getCoreRowModel,
-  getFacetedRowModel,
-  getFacetedUniqueValues,
-  getFilteredRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from '@tanstack/react-table'
+import { createColumnHelper, useTable } from '@tanstack/react-table'
 import { render, renderHook, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { describe, expect, it } from 'vitest'
@@ -19,6 +12,7 @@ import {
   matchesChoice,
   multiChoiceColumn,
 } from './choiceColumn.tsx'
+import { type Features, features } from './features.ts'
 
 type Ligne = { id: string; diag: string | null }
 
@@ -43,17 +37,15 @@ const colonne = choiceColumn<Ligne>('diag', (l) => l.diag, {
 
 const ids = (sorting = [{ id: 'diag', desc: false }], filtre?: string[]) =>
   renderHook(() =>
-    useReactTable({
+    useTable({
+      features,
       data: lignes,
-      columns: [colonne],
+      columns: createColumnHelper<Features, Ligne>().columns([colonne]),
       state: {
         sorting,
         columnFilters: filtre ? [{ id: 'diag', value: filtre }] : [],
       },
       getRowId: (l) => l.id,
-      getCoreRowModel: getCoreRowModel(),
-      getSortedRowModel: getSortedRowModel(),
-      getFilteredRowModel: getFilteredRowModel(),
     }),
   )
     .result.current.getRowModel()
@@ -129,17 +121,16 @@ const colonneMulti = multiChoiceColumn<LigneMulti>(
 
 const tableMulti = (filtre?: string[]) =>
   renderHook(() =>
-    useReactTable({
+    useTable({
+      features,
       data: lignesMulti,
-      columns: [colonneMulti],
+      columns: createColumnHelper<Features, LigneMulti>().columns([
+        colonneMulti,
+      ]),
       state: {
         columnFilters: filtre ? [{ id: 'comorbidites', value: filtre }] : [],
       },
       getRowId: (l) => l.id,
-      getCoreRowModel: getCoreRowModel(),
-      getFilteredRowModel: getFilteredRowModel(),
-      getFacetedRowModel: getFacetedRowModel(),
-      getFacetedUniqueValues: getFacetedUniqueValues(),
     }),
   ).result.current
 

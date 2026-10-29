@@ -4,6 +4,7 @@ import { ShieldAlert } from 'lucide-react'
 
 import { CopyableId } from '../components/custom/copyableId.tsx'
 import { Etiquette } from '../components/table/etiquette.tsx'
+import type { Features } from '../components/table/features.ts'
 import { superAdminAccessLogActionLabels } from '../constants/superAdminAccessLog.constant.ts'
 import type { EstablishmentListItem } from '../types/superAdmin.ts'
 import type {
@@ -11,7 +12,7 @@ import type {
   SuperAdminAccessLogSource,
 } from '../types/superAdminAccessLog.ts'
 
-const columnHelper = createColumnHelper<SuperAdminAccessLogEntry>()
+const columnHelper = createColumnHelper<Features, SuperAdminAccessLogEntry>()
 
 type ColumnOptions = {
   source: SuperAdminAccessLogSource

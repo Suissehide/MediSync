@@ -3,11 +3,12 @@ import { Trash, Trash2, Undo2 } from 'lucide-react'
 
 import EditThematicSoignantsForm from '../components/custom/popup/editThematicSoignantsForm.tsx'
 import { EtiquettesTronquees } from '../components/table/etiquette.tsx'
+import type { Features } from '../components/table/features.ts'
 import { Button } from '../components/ui/button.tsx'
 import { THEMATIC_ROLE } from '../constants/thematic.constant.ts'
 import type { Thematic } from '../types/thematic.ts'
 
-const columnHelper = createColumnHelper<Thematic>()
+const columnHelper = createColumnHelper<Features, Thematic>()
 
 type ThematicActions = {
   onArchive: (id: string) => void

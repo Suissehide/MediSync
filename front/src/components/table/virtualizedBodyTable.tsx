@@ -3,6 +3,7 @@ import {
   type Column,
   flexRender,
   type Row,
+  type RowData,
   type Table,
 } from '@tanstack/react-table'
 import { useVirtualizer } from '@tanstack/react-virtual'
@@ -10,11 +11,14 @@ import type React from 'react'
 import { type ReactNode, type RefObject, useEffect } from 'react'
 
 import { cn } from '../../libs/utils.ts'
-import { type CustomMeta, rowDomId } from './reactTable.tsx'
+import type { Features } from './features.ts'
+import { rowDomId } from './reactTable.tsx'
 
-type VirtualizedBodyTableProps<TData> = {
-  table: Table<TData>
-  getCommonPinningStyles: (column: Column<TData>) => React.CSSProperties
+type VirtualizedBodyTableProps<TData extends RowData> = {
+  table: Table<Features, TData>
+  getCommonPinningStyles: (
+    column: Column<Features, TData, unknown>,
+  ) => React.CSSProperties
   rowHeight: number
   autoRowHeight?: boolean
   // Un tableau court se rend en entier : la virtualisation suppose des lignes de hauteur connue,
@@ -56,15 +60,15 @@ const getRowClass = ({
 }
 
 // Cellules à rendre, une cellule couvrant `colSpan` colonnes masquant les suivantes.
-function spanCells<TData>(row: Row<TData>) {
-  const result: { cell: Cell<TData, unknown>; span: number }[] = []
+function spanCells<TData extends RowData>(row: Row<Features, TData>) {
+  const result: { cell: Cell<Features, TData, unknown>; span: number }[] = []
   let skip = 0
   for (const cell of row.getVisibleCells()) {
     if (skip > 0) {
       skip--
       continue
     }
-    const meta = cell.column.columnDef.meta as CustomMeta<TData, unknown>
+    const meta = cell.column.columnDef.meta
     const span = meta?.colSpan?.(row.original) ?? 1
     skip = span - 1
     result.push({ cell, span })
@@ -72,7 +76,7 @@ function spanCells<TData>(row: Row<TData>) {
   return result
 }
 
-export function VirtualizedBodyTable<TData>({
+export function VirtualizedBodyTable<TData extends RowData>({
   table,
   getCommonPinningStyles,
   rowHeight,
@@ -173,7 +177,7 @@ export function VirtualizedBodyTable<TData>({
         </tr>
       )}
 
-      {visibleRows.map((row: Row<TData>, position) => {
+      {visibleRows.map((row: Row<Features, TData>, position) => {
         const disabled = isRowDisabled?.(row.original)
         const isSelected = row.getIsSelected()
         const isChild = row.depth > 0
@@ -219,7 +223,7 @@ export function VirtualizedBodyTable<TData>({
           >
             {spanCells(row).map(({ cell, span }) => {
               const { column } = cell
-              const meta = column.columnDef.meta as CustomMeta<TData, unknown>
+              const meta = column.columnDef.meta
               const grow = meta?.grow
               const align = meta?.align ?? 'left'
 

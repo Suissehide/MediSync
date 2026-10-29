@@ -1,7 +1,8 @@
-import type { ColumnDef, FilterFn } from '@tanstack/react-table'
+import type { ColumnDef, FilterFn, RowData } from '@tanstack/react-table'
 
 import { choiceColor } from '../../libs/choicePalette.ts'
 import { Etiquette } from './etiquette.tsx'
+import type { Features } from './features.ts'
 
 export type Choice = { value: string; label: string }
 
@@ -14,16 +15,19 @@ export const choiceLabel = (choices: Choice[], value: string) =>
 export const matchesChoice = (value: string | undefined, selected: string[]) =>
   selected.includes(value ?? EMPTY_CHOICE)
 
-export function choiceColumn<TData>(
+export function choiceColumn<TData extends RowData>(
   id: string,
   accessor: (row: TData) => string | null | undefined,
   options: { label: string; group?: string; choices: Choice[] },
-): ColumnDef<TData, string | undefined> {
+): ColumnDef<Features, TData, string | undefined> {
   const { label, group, choices } = options
   const indexOf = new Map(choices.map((c, i) => [c.value, i]))
 
-  const filterFn: FilterFn<TData> = (row, columnId, selected: string[]) =>
-    matchesChoice(row.getValue<string | undefined>(columnId), selected)
+  const filterFn: FilterFn<Features, TData> = (
+    row,
+    columnId,
+    selected: string[],
+  ) => matchesChoice(row.getValue<string | undefined>(columnId), selected)
   filterFn.autoRemove = (v) => !Array.isArray(v) || v.length === 0
 
   return {
@@ -31,7 +35,7 @@ export function choiceColumn<TData>(
     accessorFn: (row) => accessor(row) ?? undefined,
     header: label,
     sortUndefined: 'last',
-    sortingFn: (a, b, columnId) =>
+    sortFn: (a, b, columnId) =>
       choiceLabel(choices, a.getValue<string>(columnId)).localeCompare(
         choiceLabel(choices, b.getValue<string>(columnId)),
         'fr',
@@ -57,11 +61,11 @@ export function choiceColumn<TData>(
 }
 
 // Colonne à choix multiples : une étiquette par valeur, filtre en OU, facettes par valeur.
-export function multiChoiceColumn<TData>(
+export function multiChoiceColumn<TData extends RowData>(
   id: string,
   accessor: (row: TData) => string[] | null | undefined,
   options: { label: string; group?: string; choices: Choice[] },
-): ColumnDef<TData, string[] | undefined> {
+): ColumnDef<Features, TData, string[] | undefined> {
   const { label, group, choices } = options
   const indexOf = new Map(choices.map((c, i) => [c.value, i]))
   const values = (row: TData) => {
@@ -71,7 +75,11 @@ export function multiChoiceColumn<TData>(
   const joined = (v: string[] | undefined) =>
     (v ?? []).map((x) => choiceLabel(choices, x)).join(', ')
 
-  const filterFn: FilterFn<TData> = (row, columnId, selected: string[]) => {
+  const filterFn: FilterFn<Features, TData> = (
+    row,
+    columnId,
+    selected: string[],
+  ) => {
     const v = row.getValue<string[] | undefined>(columnId)
     return v
       ? v.some((x) => selected.includes(x))
@@ -85,7 +93,7 @@ export function multiChoiceColumn<TData>(
     getUniqueValues: (row) => values(row) ?? [undefined],
     header: label,
     sortUndefined: 'last',
-    sortingFn: (a, b, columnId) =>
+    sortFn: (a, b, columnId) =>
       joined(a.getValue<string[] | undefined>(columnId)).localeCompare(
         joined(b.getValue<string[] | undefined>(columnId)),
         'fr',

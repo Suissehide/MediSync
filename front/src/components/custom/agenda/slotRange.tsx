@@ -3,6 +3,7 @@ import dayjs from 'dayjs'
 import { ChevronDown } from 'lucide-react'
 
 import { cn, type DaySlotRow } from '../../../libs/utils.ts'
+import type { Features } from '../../table/features.ts'
 import { rowDomId } from '../../table/reactTable.tsx'
 import { Button } from '../../ui/button.tsx'
 
@@ -39,7 +40,7 @@ export function RangeToggle({
   row,
   idPrefix,
 }: {
-  row: Row<DaySlotRow>
+  row: Row<Features, DaySlotRow>
   idPrefix: string
 }) {
   const open = row.getIsExpanded()
@@ -65,7 +66,7 @@ export function RangeToggle({
 }
 
 // Horaire d'un créneau sous sa plage : point sur une ligne de temps, puis la durée.
-export function SlotTimeline({ row }: { row: Row<DaySlotRow> }) {
+export function SlotTimeline({ row }: { row: Row<Features, DaySlotRow> }) {
   const isLast = row.getParentRow()?.subRows.at(-1)?.id === row.id
   const isFree = row.original.kind === 'free'
   return (
@@ -97,7 +98,7 @@ export function SlotFrieze({
   row,
   onAddPatient,
 }: {
-  row: Row<DaySlotRow>
+  row: Row<Features, DaySlotRow>
   onAddPatient: (row: DaySlotRow) => void
 }) {
   return (

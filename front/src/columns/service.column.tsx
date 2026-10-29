@@ -6,8 +6,9 @@ import { CopyableId } from '@/components/custom/copyableId.tsx'
 import { EtiquetteStatut } from '@/components/table/etiquette.tsx'
 import { Button } from '@/components/ui/button.tsx'
 import type { Service } from '@/types/service.ts'
+import type { Features } from '../components/table/features.ts'
 
-const columnHelper = createColumnHelper<Service>()
+const columnHelper = createColumnHelper<Features, Service>()
 
 // PAS de compteur d'impact ici (arbitrage transmis par Léo, task-13-brief.md) :
 // la liste des services n'affiche AUCUN compteur en ligne. Les deux nombres

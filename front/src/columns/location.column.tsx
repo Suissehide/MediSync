@@ -2,10 +2,11 @@ import { createColumnHelper } from '@tanstack/react-table'
 import { Trash, Trash2, Undo2 } from 'lucide-react'
 
 import EditLocationForm from '../components/custom/popup/editLocationForm.tsx'
+import type { Features } from '../components/table/features.ts'
 import { Button } from '../components/ui/button.tsx'
 import type { Location } from '../types/location.ts'
 
-const columnHelper = createColumnHelper<Location>()
+const columnHelper = createColumnHelper<Features, Location>()
 
 type LocationActions = {
   onArchive: (id: string) => void
