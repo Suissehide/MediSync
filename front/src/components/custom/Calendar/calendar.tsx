@@ -16,6 +16,7 @@ import dayjs, { type Dayjs } from 'dayjs'
 import { CalendarOff } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import { cn } from '../../../libs/utils.ts'
 import { usePlanningStore } from '../../../store/usePlanningStore.ts'
 import type { Appointment } from '../../../types/appointment.ts'
 import type { PlanningCycle } from '../../../types/planningCycle.ts'
@@ -464,17 +465,18 @@ function Calendar({
             ? { weekday: 'long' }
             : { weekday: 'short', day: 'numeric' }
         }
-        // Le thème met les heures en capitales : « 7H » au lieu de « 7h ».
-        slotHeaderInnerClass="normal-case"
+        // Le thème met les heures en capitales et dans son gris le plus pâle, à peine lisible.
+        slotHeaderInnerClass="normal-case text-text-light"
         // La hauteur d'une demi-heure de la v6 : plus serrés, les créneaux tronquent leur texte.
         slotMinHeight={35}
         dayLaneClass={(info) => (info.isToday ? 'bg-primary/8' : undefined)}
-        // Mode édition : la vue s'encadre de rouge.
-        viewClass={
-          editMode
-            ? 'relative before:pointer-events-none before:absolute before:inset-0 before:z-[1] before:rounded-md before:shadow-[inset_0_0_0_2px_var(--color-destructive)]'
-            : undefined
-        }
+        // Pas de trait au-dessus des jours, la barre d'outils est juste au-dessus. En mode
+        // édition, la vue s'encadre de rouge.
+        viewClass={cn(
+          'rounded-t-none border-t-0',
+          editMode &&
+            'relative before:pointer-events-none before:absolute before:inset-0 before:z-[1] before:rounded-md before:shadow-[inset_0_0_0_2px_var(--color-destructive)]',
+        )}
         // Vue liste : sur toute la largeur, et seul notre bloc porte la couleur, pas la ligne.
         listDaysClass="max-w-none"
         listItemEventClass="bg-transparent p-1"
