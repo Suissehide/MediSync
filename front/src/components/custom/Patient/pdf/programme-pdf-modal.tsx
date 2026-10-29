@@ -14,6 +14,7 @@ import { useAuthStore } from '../../../../store/useAuthStore.ts'
 import type { Patient } from '../../../../types/patient.ts'
 import type { PdfDesignSummary } from '../../../../types/pdfDesignList.ts'
 import { Button } from '../../../ui/button.tsx'
+import { Select } from '../../../ui/select.tsx'
 import { assetIdsDe } from '../../pdf-design/assets.ts'
 import ProgrammePDF from './programme.pdf.tsx'
 
@@ -168,25 +169,27 @@ export default function ProgrammePDFModal({
           </h2>
           <div className="flex items-center gap-4">
             {availableDesigns.length > 1 && (
-              <select
-                className="border border-border rounded-md px-2 py-1 text-sm bg-background text-foreground"
-                value={selectedDesign?.id ?? ''}
-                onChange={(event) => {
-                  setSelectedDesignId(event.target.value)
-                  try {
-                    localStorage.setItem(designMemoKey(), event.target.value)
-                  } catch {
-                    // Stockage indisponible : le choix vaut pour cette ouverture seulement.
-                  }
-                }}
-                aria-label="Design du document"
-              >
-                {availableDesigns.map((design) => (
-                  <option key={design.id} value={design.id}>
-                    {design.name}
-                  </option>
-                ))}
-              </select>
+              <div className="w-56">
+                <label htmlFor="programme-design" className="sr-only">
+                  Design du document
+                </label>
+                <Select
+                  id="programme-design"
+                  value={selectedDesign?.id ?? ''}
+                  onValueChange={(value) => {
+                    setSelectedDesignId(value)
+                    try {
+                      localStorage.setItem(designMemoKey(), value)
+                    } catch {
+                      // Stockage indisponible : le choix vaut pour cette ouverture seulement.
+                    }
+                  }}
+                  options={availableDesigns.map((design) => ({
+                    value: design.id,
+                    label: design.name,
+                  }))}
+                />
+              </div>
             )}
             {pdfDocument && (
               <PDFDownloadLink document={pdfDocument} fileName={fileName}>
