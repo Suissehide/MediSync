@@ -21,6 +21,7 @@ import {
   SheetTitle,
 } from '../../ui/sheet.tsx'
 import { TagInput } from '../../ui/tagInput.tsx'
+import { PathwayEnrollmentSettings } from '../form/pathwayEnrollmentSettings.tsx'
 import { ConfirmDeleteForm } from '../popup/confirmDeleteForm.tsx'
 
 interface PathwayTemplateSheetProps {
@@ -269,18 +270,7 @@ export default function PathwayTemplateSheet({
                   </p>
                 </div>
 
-                <form.AppField name="motifRequired">
-                  {(field) => <field.Checkbox label="Motif obligatoire" />}
-                </form.AppField>
-
-                <form.AppField name="firstAppointmentOnly">
-                  {(field) => (
-                    <field.Checkbox
-                      label="Inscription au premier RDV uniquement"
-                      description="Le parcours devient individuel : le patient est inscrit uniquement au premier créneau disponible, au lieu de l’ensemble des créneaux du parcours."
-                    />
-                  )}
-                </form.AppField>
+                <PathwayEnrollmentSettings form={form} />
               </form>
 
               <div className="w-full border-t border-border-dark"></div>
