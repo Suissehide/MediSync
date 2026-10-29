@@ -1,5 +1,8 @@
 import type { Location, Prisma } from '../../../generated/client'
-import type { PlanningConflict } from '../../utils/planning-conflicts'
+import type {
+  ConflictSlot,
+  PlanningConflict,
+} from '../../utils/planning-conflicts'
 import type {
   SlotDateRangeRepo,
   SlotEntityRepo,
@@ -48,5 +51,5 @@ export interface SlotDomainInterface {
     from: Date
     to: Date
   }) => Promise<PlanningConflict[]>
-  conflictsOf: (slotID: string) => Promise<PlanningConflict[]>
+  conflictsOf: (slotOrID: string | ConflictSlot) => Promise<PlanningConflict[]>
 }
