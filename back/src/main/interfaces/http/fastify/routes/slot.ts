@@ -116,7 +116,7 @@ const slotRouter: FastifyPluginAsync = (fastify) => {
 
       const slot = await slotDomain.create(createSlotInput)
       reply.code(201)
-      return { ...slot, conflicts: await slotDomain.conflictsOf(slot.id) }
+      return { ...slot, conflicts: await slotDomain.conflictsOf(slot) }
     },
   )
 
@@ -143,7 +143,7 @@ const slotRouter: FastifyPluginAsync = (fastify) => {
       if (!updated) {
         throw Boom.notFound('Slot not found')
       }
-      return { ...updated, conflicts: await slotDomain.conflictsOf(slotID) }
+      return { ...updated, conflicts: await slotDomain.conflictsOf(updated) }
     },
   )
 

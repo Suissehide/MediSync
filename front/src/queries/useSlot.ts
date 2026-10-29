@@ -300,6 +300,13 @@ export const useSlotMutations = () => {
       const archivedAt = archived ? new Date().toISOString() : null
       return Promise.all(ids.map((id) => SlotApi.update({ id, archivedAt })))
     },
+    // Restaurer (bouton « Annuler » compris) peut ramener un conflit ; archiver n'en crée jamais.
+    onSuccess: (slots, { archived }) => {
+      const conflicts = slots.flatMap((slot) => slot.conflicts ?? [])
+      if (!archived && conflicts.length > 0) {
+        toast(conflictWarning(conflicts))
+      }
+    },
     onError: (error) => {
       toast({
         title: 'Erreur lors de la suppression des créneaux',

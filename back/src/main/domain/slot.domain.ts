@@ -11,6 +11,7 @@ import type {
 } from '../types/domain/slot.domain.interface'
 import type { SlotRepositoryInterface } from '../types/infra/orm/repositories/slot.repository.interface'
 import {
+  type ConflictSlot,
   detectConflicts,
   type PlanningConflict,
 } from '../utils/planning-conflicts'
@@ -40,14 +41,19 @@ class SlotDomain implements SlotDomainInterface {
   }
 
   // Fenêtre du créneau élargie à ses rendez-vous : déplacer un créneau ne déplace pas ses rendez-vous.
-  async conflictsOf(slotID: string): Promise<PlanningConflict[]> {
-    const slot = await this.slotRepository.findByID(slotID)
+  async conflictsOf(
+    slotOrID: string | ConflictSlot,
+  ): Promise<PlanningConflict[]> {
+    const slot =
+      typeof slotOrID === 'string'
+        ? await this.slotRepository.findByID(slotOrID)
+        : slotOrID
     const intervals = [slot, ...slot.appointments]
     const conflicts = await this.findConflicts({
       from: new Date(Math.min(...intervals.map((i) => i.startDate.getTime()))),
       to: new Date(Math.max(...intervals.map((i) => i.endDate.getTime()))),
     })
-    return conflicts.filter((conflict) => conflict.slotIDs.includes(slotID))
+    return conflicts.filter((conflict) => conflict.slotIDs.includes(slot.id))
   }
 
   create(slotCreateParams: SlotCreateEntityDomain): Promise<SlotDTODomain> {
