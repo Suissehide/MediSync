@@ -1,0 +1,34 @@
+-- Pose le modele de reference des documents patient : le PdfDesignPreset
+-- « Programme SMCV » (`preset-smcv-reference`), que tout service duplique pour composer
+-- son propre document.
+--
+-- Pourquoi un script : c'est `prisma/seed/pdfDesignPreset.ts` qui le cree en
+-- dev, mais le seed NE TOURNE PAS en production (l'image lance
+-- `start:migrate:production`, soit `prisma migrate deploy` puis `node`). Une
+-- base de prod n'a donc jamais recu ce modele.
+--
+--   docker exec -i <conteneur-postgres> psql -U postgres -d medisync \
+--     -f - < deploy/scripts/preset-pdf-reference.sql
+--
+-- Le contenu est copie de `back/src/main/utils/pdf-design/reference-preset.ts`,
+-- la seule source qui fasse foi, et valide contre `pdfDesignContentSchema`.
+-- Regenerer ce fichier si le modele de reference change dans le code.
+--
+-- Idempotent, et volontairement sans mise a jour : un rejeu ne reecrit pas un
+-- modele que le super-admin a retouche depuis. Meme choix que l'`update: {}`
+-- du seed.
+
+\set ON_ERROR_STOP on
+
+INSERT INTO "PdfDesignPreset" (id, name, content, "publishedAt", "sortOrder", "createdAt", "updatedAt")
+VALUES (
+  'preset-smcv-reference',
+  'Programme SMCV',
+  '{"version":1,"pages":[{"kind":"canvas","id":"cover","elements":[{"id":"cover-lines-tr","kind":"image","source":{"builtin":"lines"},"x":475.28,"y":-160,"w":280,"h":343.558282208589,"rotation":45},{"id":"cover-lines-br","kind":"image","source":{"builtin":"lines"},"x":215.27999999999997,"y":682.8715950920246,"w":260,"h":319.0184049079755,"rotation":220},{"id":"cover-circle","kind":"ellipse","x":-60,"y":641.89,"w":380,"h":380,"fill":{"token":"pathway.color","fallback":"#e6aff6"}},{"id":"cover-logo","kind":"image","source":{"builtin":"logo-chu"},"x":36,"y":36,"w":140,"h":71.83908045977012},{"id":"cover-title","kind":"text","x":0,"y":342,"w":595.28,"h":86,"runs":[{"text":"SMCV"}],"fontSize":72,"bold":true,"color":"#e05a5a","align":"center"},{"id":"cover-underline","kind":"rect","x":237.64,"y":432,"w":120,"h":4,"fill":"#e05a5a"},{"id":"cover-program","kind":"text","x":0,"y":445,"w":595.28,"h":34,"runs":[{"field":"pathway.name"}],"fontSize":28,"bold":true,"color":"#7c3aed","align":"center"},{"id":"cover-dates","kind":"text","x":0,"y":503,"w":595.28,"h":20,"runs":[{"field":"program.dates"}],"fontSize":16,"bold":true,"color":"#221755","align":"center"},{"id":"cover-patient","kind":"text","x":36,"y":715.89,"w":523.28,"h":78,"runs":[{"field":"patient.name"}],"fontSize":32,"bold":true,"color":"#221755","vAlign":"bottom"}]},{"kind":"calendar","id":"calendar"},{"kind":"canvas","id":"tips","elements":[{"id":"tips-lines-tr","kind":"image","source":{"builtin":"lines"},"x":475.28,"y":-160,"w":280,"h":343.558282208589,"rotation":45},{"id":"tips-title","kind":"text","x":36,"y":96,"w":523.28,"h":101,"runs":[{"text":"Comment\nréussir\nson programme ?"}],"fontSize":28,"bold":true,"color":"#221755","lineHeight":1.2},{"id":"tip-1-box","kind":"rect","x":36,"y":221,"w":523.28,"h":65,"fill":"#fce7f3","radius":6},{"id":"tip-1-dot","kind":"ellipse","x":48,"y":235,"w":10,"h":10,"fill":"#ec4899"},{"id":"tip-1-title","kind":"text","x":68,"y":233,"w":479.28,"h":14,"runs":[{"text":"Soyez ponctuel·le"}],"fontSize":11,"bold":true,"color":"#1f2937"},{"id":"tip-1-body","kind":"text","x":68,"y":249,"w":479.28,"h":37,"runs":[{"text":"La ponctualité est essentielle au bon déroulement des séances. Cela permet de respecter le travail de l''équipe soignante, mais aussi celui des autres patients. Merci d''arriver à l''heure indiquée pour chaque activité."}],"fontSize":9,"color":"#4b5563","lineHeight":1.4},{"id":"tip-2-box","kind":"rect","x":36,"y":298,"w":523.28,"h":78,"fill":"#fce7f3","radius":6},{"id":"tip-2-dot","kind":"ellipse","x":48,"y":312,"w":10,"h":10,"fill":"#ec4899"},{"id":"tip-2-title","kind":"text","x":68,"y":310,"w":479.28,"h":14,"runs":[{"text":"Ce qu''il faut apporter chaque jour"}],"fontSize":11,"bold":true,"color":"#1f2937"},{"id":"tip-2-body","kind":"text","x":68,"y":326,"w":479.28,"h":50,"runs":[{"text":"Pour pratiquer une activité physique en toute sécurité et dans de bonnes conditions, il est important de porter des vêtements et des chaussures confortables et adaptés à l''effort. Des casiers sont à votre disposition dans les vestiaires. Merci d''apporter un cadenas ! Pensez à prendre une gourde d''eau pour vous hydrater pendant et après l''effort."}],"fontSize":9,"color":"#4b5563","lineHeight":1.4},{"id":"tip-3-box","kind":"rect","x":36,"y":388,"w":523.28,"h":65,"fill":"#fce7f3","radius":6},{"id":"tip-3-dot","kind":"ellipse","x":48,"y":402,"w":10,"h":10,"fill":"#ec4899"},{"id":"tip-3-title","kind":"text","x":68,"y":400,"w":479.28,"h":14,"runs":[{"text":"Prenez un petit-déjeuner avant de venir"}],"fontSize":11,"bold":true,"color":"#1f2937"},{"id":"tip-3-body","kind":"text","x":68,"y":416,"w":479.28,"h":37,"runs":[{"text":"Il est essentiel de manger le matin avant votre venue. Un petit-déjeuner équilibré vous donnera l''énergie nécessaire pour participer activement à votre programme."}],"fontSize":9,"color":"#4b5563","lineHeight":1.4},{"id":"tip-4-box","kind":"rect","x":36,"y":465,"w":523.28,"h":65,"fill":"#fce7f3","radius":6},{"id":"tip-4-dot","kind":"ellipse","x":48,"y":479,"w":10,"h":10,"fill":"#ec4899"},{"id":"tip-4-title","kind":"text","x":68,"y":477,"w":479.28,"h":14,"runs":[{"text":"Soyez reposé·e"}],"fontSize":11,"bold":true,"color":"#1f2937"},{"id":"tip-4-body","kind":"text","x":68,"y":493,"w":479.28,"h":37,"runs":[{"text":"Un bon repos est indispensable pour votre récupération et pour profiter pleinement de chaque activité. Essayez de venir reposé·e, en forme, et l''écoute de votre corps."}],"fontSize":9,"color":"#4b5563","lineHeight":1.4},{"id":"closing-box","kind":"rect","x":36,"y":739.89,"w":523.28,"h":66,"fill":"#fce7f3","radius":6},{"id":"closing-text","kind":"text","x":48,"y":751.89,"w":499.28,"h":26,"runs":[{"text":"Souvenez-vous que ce programme est fait pour vous, et que chaque effort vous fait vous rapprocher d''un meilleur équilibre de vie. ","bold":true},{"text":"Toute l''équipe SMCV est là pour vous accompagner."}],"fontSize":9,"color":"#1f2937","lineHeight":1.4},{"id":"closing-contact","kind":"text","x":48,"y":781.89,"w":499.28,"h":14,"runs":[{"text":"En cas de doute ou d''absence, merci de contacter le service au "},{"text":"05 57 62 32 91","bold":true}],"fontSize":9,"color":"#1f2937","lineHeight":1.4}]}]}'::jsonb,
+  -- TERMINE des sa creation : c'est le modele que tout service doit pouvoir dupliquer.
+  now(), 0, now(), now()
+)
+ON CONFLICT (id) DO NOTHING;
+
+SELECT id, name, "publishedAt" IS NOT NULL AS termine, "sortOrder"
+FROM "PdfDesignPreset" ORDER BY "sortOrder", "createdAt";
