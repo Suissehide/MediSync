@@ -42,11 +42,7 @@ export function BarreCalendrier({
             onValueChange={(type) => type && controller.changeView(type)}
           >
             {vues.map(({ type, libelle }) => (
-              <ToggleGroupItem
-                key={type}
-                value={type}
-                className="h-[26px] rounded-lg px-3 text-[13px] font-medium data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
-              >
+              <ToggleGroupItem key={type} value={type}>
                 {libelle ?? etat[type]?.text ?? type}
               </ToggleGroupItem>
             ))}
