@@ -9,6 +9,8 @@ export type MailableNotification = {
 
 const CTA = 'Ouvrir MediSync'
 const FOOTER = 'Vous recevez cet e-mail selon vos préférences de notification.'
+const ROOM_UNKNOWN = 'salle non précisée'
+const COLLEAGUE_UNKNOWN = 'Un collègue'
 
 const DATE_ONLY = new Intl.DateTimeFormat('fr-FR', {
   timeZone: 'UTC',
@@ -23,14 +25,30 @@ const asRecord = (v: unknown): Record<string, unknown> =>
   v && typeof v === 'object' ? (v as Record<string, unknown>) : {}
 const toDate = (v: unknown): Date =>
   v instanceof Date ? v : new Date(asString(v))
+const isValidDate = (d: Date): boolean => !Number.isNaN(d.getTime())
 
 // Heure stockee = heure de Paris ecrite en UTC : afficher en UTC, jamais reconvertir.
-const dateOnly = (v: unknown): string => DATE_ONLY.format(toDate(v))
-const dateTime = (v: unknown): string => {
-  const d = toDate(v)
+const formatDateOnly = (d: Date): string => DATE_ONLY.format(d)
+const formatDateTime = (d: Date): string => {
   const hh = String(d.getUTCHours()).padStart(2, '0')
   const mm = String(d.getUTCMinutes()).padStart(2, '0')
-  return `${dateOnly(d)} à ${hh}:${mm}`
+  return `${formatDateOnly(d)} à ${hh}:${mm}`
+}
+
+// Date manquante ou invalide : jamais de throw ni de "Invalid Date", `null` pour degrader la phrase.
+const safeDateTime = (v: unknown): string | null => {
+  const d = toDate(v)
+  return isValidDate(d) ? formatDateTime(d) : null
+}
+const safeDateOnly = (v: unknown): string | null => {
+  const d = toDate(v)
+  return isValidDate(d) ? formatDateOnly(d) : null
+}
+
+// Accole un connecteur ("du"/"le") a la date si elle est connue, sinon une formule neutre.
+const withDate = (connector: string, v: unknown): string => {
+  const date = safeDateTime(v)
+  return date ? `${connector} ${date}` : 'prochainement'
 }
 
 const SUBJECTS: Record<NotificationType, string> = {
@@ -57,39 +75,49 @@ export const notificationLine = ({
   switch (type) {
     case 'REMINDER': {
       const room = asString(payload.locationName)
-      return `Rappel : vous avez une séance le ${dateTime(payload.startDate)}${room ? `, ${room}` : ''}.`
+      return `Rappel : vous avez une séance ${withDate('le', payload.startDate)}${room ? `, ${room}` : ''}.`
     }
     case 'PATIENT_ADDED': {
       const count = asNumber(payload.count)
-      const date = dateTime(payload.firstStartDate)
       return count > 1
-        ? `Un patient a été ajouté à ${count} de vos séances, la première le ${date}.`
-        : `Un patient a été ajouté à votre séance du ${date}.`
+        ? `Un patient a été ajouté à ${count} de vos séances, la première ${withDate('le', payload.firstStartDate)}.`
+        : `Un patient a été ajouté à votre séance ${withDate('du', payload.firstStartDate)}.`
     }
     case 'APPOINTMENT_MOVED': {
       const before = asRecord(payload.before)
       const after = asRecord(payload.after)
       const beforeDate = toDate(before.startDate)
       const afterDate = toDate(after.startDate)
-      if (beforeDate.getTime() !== afterDate.getTime()) {
-        return `Votre séance du ${dateTime(beforeDate)} est déplacée au ${dateTime(afterDate)}.`
+      // Date absente ou invalide d'un cote ou de l'autre : jamais de comparaison NaN, phrase neutre.
+      if (!isValidDate(beforeDate) || !isValidDate(afterDate)) {
+        return 'Votre séance est modifiée.'
       }
-      return `Votre séance du ${dateTime(afterDate)} change de salle : ${asString(after.locationName)}.`
+      if (beforeDate.getTime() !== afterDate.getTime()) {
+        return `Votre séance du ${formatDateTime(beforeDate)} est déplacée au ${formatDateTime(afterDate)}.`
+      }
+      const room = asString(after.locationName) || ROOM_UNKNOWN
+      return `Votre séance du ${formatDateTime(afterDate)} change de salle : ${room}.`
     }
     case 'APPOINTMENT_CANCELLED':
-      return `Votre séance du ${dateTime(payload.startDate)} est annulée.`
+      return `Votre séance ${withDate('du', payload.startDate)} est annulée.`
     case 'ABSENT':
-      return `Un patient était absent à votre séance du ${dateTime(payload.startDate)}, sans justification.`
+      return `Un patient était absent à votre séance ${withDate('du', payload.startDate)}, sans justification.`
     case 'SLOT_ALMOST_FULL':
-      return `Il ne reste qu'une place sur votre séance du ${dateTime(payload.startDate)}.`
-    case 'DIAGNOSTIC_DUE':
-      return `Un diagnostic éducatif est à réaliser pour un patient inclus le ${dateOnly(payload.entryDate)}.`
+      return `Il ne reste qu'une place sur votre séance ${withDate('du', payload.startDate)}.`
+    case 'DIAGNOSTIC_DUE': {
+      const entry = safeDateOnly(payload.entryDate)
+      return entry
+        ? `Un diagnostic éducatif est à réaliser pour un patient inclus le ${entry}.`
+        : 'Un diagnostic éducatif est à réaliser pour un patient inclus.'
+    }
     case 'PATHWAY_END':
       return 'Un patient a terminé son parcours : bilan de fin à réaliser.'
     case 'TASK_DUE':
       return "Une de vos tâches arrive à échéance aujourd'hui."
-    case 'MENTION':
-      return `${asString(payload.actorName)} vous a mentionné dans une tâche.`
+    case 'MENTION': {
+      const actor = asString(payload.actorName) || COLLEAGUE_UNKNOWN
+      return `${actor} vous a mentionné dans une tâche.`
+    }
     default:
       return ''
   }
@@ -116,9 +144,13 @@ export const digestMail = (
   frontUrl: string,
 ): Mail => {
   const lines = items.map(notificationLine)
+  const daySuffix = safeDateOnly(day)
+  const subject = daySuffix
+    ? `MediSync : vos notifications du ${daySuffix}`
+    : 'MediSync : vos notifications'
   return {
     to,
-    subject: `MediSync : vos notifications du ${dateOnly(day)}`,
+    subject,
     text: `${lines.join('\n')}\n\n${frontUrl}\n\n${FOOTER}`,
     html: layout([...lines.map(escapeHtml), escapeHtml(FOOTER)], frontUrl, CTA),
   }

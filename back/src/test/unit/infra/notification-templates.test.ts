@@ -12,56 +12,50 @@ const AFTER = new Date('2026-10-23T10:00:00.000Z') // ven. 23/10 à 10:00
 
 const TYPES = Object.values(NotificationType)
 
-// Un payload par type, qui porte a la fois des champs utiles et les donnees de sante interdites.
-const PIEGE: Record<string, Record<string, unknown>> = {
-  REMINDER: {
-    startDate: START,
-    locationName: 'Bureau 2',
-    thematicName: 'Diagnostic éducatif cardio',
-  },
-  PATIENT_ADDED: {
-    startDate: START,
-    firstStartDate: START,
-    count: 1,
-    patientId: 'p1',
-    patientName: 'DUBOIS Marie',
-    thematicName: 'Diagnostic éducatif cardio',
-  },
-  APPOINTMENT_MOVED: {
-    before: { startDate: START, locationName: 'Bureau 1' },
-    after: { startDate: AFTER, locationName: 'Bureau 2' },
-  },
-  APPOINTMENT_CANCELLED: {
-    startDate: START,
-    patients: [{ id: 'p1', name: 'DUBOIS Marie' }],
-  },
-  ABSENT: { startDate: START, patientId: 'p1', patientName: 'DUBOIS Marie' },
-  SLOT_ALMOST_FULL: {
-    startDate: START,
-    thematicName: 'Diagnostic éducatif cardio',
-  },
-  DIAGNOSTIC_DUE: {
-    entryDate: '2026-10-22',
-    patientId: 'p1',
-    patientName: 'DUBOIS Marie',
-  },
-  PATHWAY_END: {
-    patientId: 'p1',
-    patientName: 'DUBOIS Marie',
-    pathwayId: 'pw1',
-    lastDate: START,
-  },
-  TASK_DUE: {
-    taskId: 't1',
-    text: 'Rappeler DUBOIS Marie',
-    dueDate: '2026-10-22',
-  },
-  MENTION: {
-    taskId: 't1',
-    authorId: 'u1',
-    text: 'Rappeler DUBOIS Marie',
-    actorName: 'Camille Durand',
-  },
+// Piege unique, reutilise partout : si un gabarit l'interpole, un des quatre mots apparait.
+const TRAP = {
+  patientName: 'DUBOIS Marie',
+  patients: [{ id: 'p', name: 'DUBOIS Marie' }],
+  thematicName: 'Diagnostic éducatif cardio',
+  text: 'Rappeler DUBOIS Marie',
+}
+const FORBIDDEN = ['DUBOIS', 'Marie', 'Diagnostic éducatif cardio', 'Rappeler']
+
+// Champs utiles par type (ceux que la spec autorise a lire), le piege est ajoute a part.
+const USEFUL: Record<string, Record<string, unknown>> = {
+  REMINDER: { startDate: START, locationName: 'Bureau 2' },
+  PATIENT_ADDED: { firstStartDate: START, count: 1 },
+  APPOINTMENT_CANCELLED: { startDate: START },
+  ABSENT: { startDate: START },
+  SLOT_ALMOST_FULL: { startDate: START },
+  DIAGNOSTIC_DUE: { entryDate: '2026-10-22' },
+  PATHWAY_END: {},
+  TASK_DUE: { dueDate: '2026-10-22' },
+  MENTION: { actorName: 'Camille Durand' },
+}
+
+// Le piege est pose a la fois au niveau du payload et dans before/after pour APPOINTMENT_MOVED.
+const piegeFor = (type: string): Record<string, unknown> => {
+  if (type === 'APPOINTMENT_MOVED') {
+    return {
+      ...TRAP,
+      before: { startDate: START, locationName: 'Bureau 1', ...TRAP },
+      after: { startDate: AFTER, locationName: 'Bureau 2', ...TRAP },
+    }
+  }
+  return { ...USEFUL[type], ...TRAP }
+}
+
+const assertNoLeak = (mail: {
+  subject: string
+  text: string
+  html: string
+}) => {
+  for (const part of [mail.subject, mail.text, mail.html]) {
+    for (const forbidden of FORBIDDEN) {
+      expect(part).not.toContain(forbidden)
+    }
+  }
 }
 
 describe('notification-templates', () => {
@@ -70,18 +64,39 @@ describe('notification-templates', () => {
     (type) => {
       const mail = notificationMail(
         'a@t.fr',
-        { type, payload: PIEGE[type] as Record<string, unknown> },
+        { type, payload: piegeFor(type) },
         FRONT_URL,
       )
-      for (const part of [mail.subject, mail.text, mail.html]) {
-        expect(part).not.toContain('DUBOIS')
-        expect(part).not.toContain('Marie')
-        expect(part).not.toContain('Diagnostic éducatif cardio')
-        expect(part).not.toContain('Rappeler')
-      }
+      assertNoLeak(mail)
       expect(mail.text).toContain(FRONT_URL)
     },
   )
+
+  it("digest : aucune donnee de sante sur l'ensemble des types", () => {
+    const items = TYPES.map((type) => ({ type, payload: piegeFor(type) }))
+    const mail = digestMail('a@t.fr', items, START, FRONT_URL)
+    assertNoLeak(mail)
+    expect(mail.text).toContain(FRONT_URL)
+  })
+
+  // Sanity check du piege (verifiee a la main, non laissee dans le code) : voir le rapport de fix —
+  // APPOINTMENT_CANCELLED a ete temporairement modifie pour interpoler thematicName, ce qui a bien
+  // fait echouer le test ci-dessus, avant d'etre revert.
+
+  it.each([
+    ['REMINDER', 'MediSync : rappel de séance'],
+    ['PATIENT_ADDED', 'MediSync : patient ajouté'],
+    ['APPOINTMENT_MOVED', 'MediSync : séance modifiée'],
+    ['APPOINTMENT_CANCELLED', 'MediSync : séance annulée'],
+    ['ABSENT', 'MediSync : absence'],
+    ['SLOT_ALMOST_FULL', 'MediSync : créneau presque complet'],
+    ['DIAGNOSTIC_DUE', 'MediSync : diagnostic à réaliser'],
+    ['PATHWAY_END', 'MediSync : fin de parcours'],
+    ['TASK_DUE', 'MediSync : tâche à échéance'],
+    ['MENTION', 'MediSync : mention dans une tâche'],
+  ])('sujet verbatim de %s', (type, expected) => {
+    expect(notificationSubject(type as (typeof TYPES)[number])).toBe(expected)
+  })
 
   it('REMINDER : phrase avec salle si connue', () => {
     expect(
@@ -144,6 +159,20 @@ describe('notification-templates', () => {
     ).toBe('Votre séance du jeu. 22/10 à 09:00 change de salle : Bureau 2.')
   })
 
+  it('APPOINTMENT_MOVED : salle retiree (locationName vide) -> salle non precisee', () => {
+    expect(
+      notificationLine({
+        type: 'APPOINTMENT_MOVED',
+        payload: {
+          before: { startDate: START, locationName: 'Bureau 1' },
+          after: { startDate: START, locationName: null },
+        },
+      }),
+    ).toBe(
+      'Votre séance du jeu. 22/10 à 09:00 change de salle : salle non précisée.',
+    )
+  })
+
   it('APPOINTMENT_CANCELLED', () => {
     expect(
       notificationLine({
@@ -202,8 +231,10 @@ describe('notification-templates', () => {
     ).toBe('Camille Durand vous a mentionné dans une tâche.')
   })
 
-  it.each(TYPES)('%s : le sujet correspond au type', (type) => {
-    expect(notificationSubject(type)).toMatch(/^MediSync : /)
+  it('MENTION : sans actorName -> collegue generique', () => {
+    expect(notificationLine({ type: 'MENTION', payload: {} })).toBe(
+      'Un collègue vous a mentionné dans une tâche.',
+    )
   })
 
   it('notificationMail : lien et pied presents', () => {
@@ -241,5 +272,96 @@ describe('notification-templates', () => {
       'Un patient était absent à votre séance du ven. 23/10 à 10:00, sans justification.',
     )
     expect(mail.text).toContain(FRONT_URL)
+  })
+
+  describe('dates manquantes ou invalides : jamais de throw, jamais "Invalid"', () => {
+    const NO_DATE_PAYLOAD: Record<string, Record<string, unknown>> = {
+      REMINDER: { locationName: 'Bureau 2' },
+      PATIENT_ADDED: { count: 1 },
+      APPOINTMENT_MOVED: {
+        before: { locationName: 'Bureau 1' },
+        after: { locationName: 'Bureau 2' },
+      },
+      APPOINTMENT_CANCELLED: {},
+      ABSENT: {},
+      SLOT_ALMOST_FULL: {},
+      DIAGNOSTIC_DUE: {},
+      PATHWAY_END: {},
+      TASK_DUE: {},
+      MENTION: {},
+    }
+
+    it.each(TYPES)(
+      '%s : aucun champ date -> pas d\'exception, pas "Invalid"',
+      (type) => {
+        let line = ''
+        expect(() => {
+          line = notificationLine({ type, payload: NO_DATE_PAYLOAD[type] })
+        }).not.toThrow()
+        expect(line).not.toContain('Invalid')
+        expect(line.length).toBeGreaterThan(0)
+      },
+    )
+
+    it('REMINDER : chaine de date invalide -> prochainement', () => {
+      expect(
+        notificationLine({
+          type: 'REMINDER',
+          payload: { startDate: 'pas-une-date' },
+        }),
+      ).toBe('Rappel : vous avez une séance prochainement.')
+    })
+
+    it("APPOINTMENT_MOVED : date manquante d'un seul cote -> pas de comparaison NaN, phrase neutre", () => {
+      expect(
+        notificationLine({
+          type: 'APPOINTMENT_MOVED',
+          payload: {
+            before: { startDate: START, locationName: 'Bureau 1' },
+            after: { locationName: 'Bureau 2' },
+          },
+        }),
+      ).toBe('Votre séance est modifiée.')
+    })
+
+    it('APPOINTMENT_MOVED : les deux dates manquantes -> phrase neutre', () => {
+      expect(
+        notificationLine({
+          type: 'APPOINTMENT_MOVED',
+          payload: { before: {}, after: {} },
+        }),
+      ).toBe('Votre séance est modifiée.')
+    })
+
+    it("DIAGNOSTIC_DUE : entryDate manquante -> date d'entree omise", () => {
+      expect(notificationLine({ type: 'DIAGNOSTIC_DUE', payload: {} })).toBe(
+        'Un diagnostic éducatif est à réaliser pour un patient inclus.',
+      )
+    })
+
+    it('digest : un item sans date ne fait pas echouer le resume', () => {
+      expect(() =>
+        digestMail(
+          'a@t.fr',
+          [
+            { type: 'REMINDER', payload: { startDate: START } },
+            { type: 'APPOINTMENT_CANCELLED', payload: {} },
+          ],
+          START,
+          FRONT_URL,
+        ),
+      ).not.toThrow()
+      const mail = digestMail(
+        'a@t.fr',
+        [
+          { type: 'REMINDER', payload: { startDate: START } },
+          { type: 'APPOINTMENT_CANCELLED', payload: {} },
+        ],
+        START,
+        FRONT_URL,
+      )
+      expect(mail.text).not.toContain('Invalid')
+      expect(mail.text).toContain('Votre séance prochainement est annulée.')
+    })
   })
 })
