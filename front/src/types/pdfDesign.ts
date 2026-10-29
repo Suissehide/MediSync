@@ -14,8 +14,8 @@ export type PdfBuiltinImage = (typeof PDF_BUILTIN_IMAGES)[number]
 export type PdfFill = string | { token: 'pathway.color'; fallback: string }
 
 export type PdfTextRun =
-  | { text: string; bold: boolean; italic: boolean }
-  | { field: PdfFieldKey; bold: boolean; italic: boolean }
+  | { id: string; text: string; bold: boolean; italic: boolean }
+  | { id: string; field: PdfFieldKey; bold: boolean; italic: boolean }
 
 type Geometry = {
   id: string

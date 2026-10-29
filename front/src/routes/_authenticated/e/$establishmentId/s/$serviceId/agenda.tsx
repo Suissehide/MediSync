@@ -292,14 +292,12 @@ function Agenda() {
           </div>
         )}
 
-        {openedRow?.appointmentId && (
-          <AppointmentSheet
-            open={!!openedRow}
-            setOpen={() => setOpenedRow(null)}
-            eventID={openedRow.appointmentId}
-            soignants={openedRow.soignants}
-          />
-        )}
+        <AppointmentSheet
+          open={!!openedRow?.appointmentId}
+          setOpen={() => setOpenedRow(null)}
+          eventID={openedRow?.appointmentId ?? ''}
+          soignants={openedRow?.soignants}
+        />
 
         {addPatientTarget?.appointmentId && !addPatientTarget.isIndividual && (
           <AddPatientToAppointmentForm

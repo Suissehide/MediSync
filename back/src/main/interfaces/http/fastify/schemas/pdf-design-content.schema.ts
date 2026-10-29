@@ -17,7 +17,9 @@ const fill = z.union([
   z.strictObject({ token: z.literal('pathway.color'), fallback: hex }),
 ])
 
+// L'id ne sert qu'a l'editeur et aux rendus, pour suivre un run quand on en coupe ou en retire.
 const runStyle = {
+  id: z.string().min(1),
   bold: z.boolean().default(false),
   italic: z.boolean().default(false),
 }

@@ -59,7 +59,9 @@ describe('preset de reference', () => {
   // Epinglage : une retouche ulterieure ne peut pas deplacer le titre en silence.
   it('garde le titre de couverture a sa place et a sa taille', () => {
     const titre = texte(0, 'cover-title')
-    expect(titre.runs).toEqual([{ text: 'SMCV', bold: false, italic: false }])
+    expect(titre.runs).toEqual([
+      { id: 'r1', text: 'SMCV', bold: false, italic: false },
+    ])
     expect(titre.fontSize).toBe(72)
     expect(titre.color).toBe('#e05a5a')
     expect(titre.align).toBe('center')
@@ -101,7 +103,7 @@ describe('preset de reference', () => {
   it('ancre le nom du patient en bas de sa boite', () => {
     const nom = texte(0, 'cover-patient')
     expect(nom.runs).toEqual([
-      { field: 'patient.name', bold: false, italic: false },
+      { id: 'r1', field: 'patient.name', bold: false, italic: false },
     ])
     expect(nom.vAlign).toBe('bottom')
     expect(nom.fontSize).toBe(32)
@@ -111,10 +113,10 @@ describe('preset de reference', () => {
 
   it('porte le sous-titre du parcours et les dates du programme', () => {
     expect(texte(0, 'cover-program').runs).toEqual([
-      { field: 'pathway.name', bold: false, italic: false },
+      { id: 'r1', field: 'pathway.name', bold: false, italic: false },
     ])
     expect(texte(0, 'cover-dates').runs).toEqual([
-      { field: 'program.dates', bold: false, italic: false },
+      { id: 'r1', field: 'program.dates', bold: false, italic: false },
     ])
   })
 
@@ -148,6 +150,7 @@ describe('preset de reference', () => {
   it('garde le numero du service en gras, dans la phrase de contact', () => {
     const contact = texte(2, 'closing-contact')
     expect(contact.runs.at(-1)).toEqual({
+      id: 'r2',
       text: '05 57 62 32 91',
       bold: true,
       italic: false,
