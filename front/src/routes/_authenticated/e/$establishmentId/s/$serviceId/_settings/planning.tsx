@@ -1019,8 +1019,8 @@ function Planning() {
                   timeZone="UTC"
                   weekends={true}
                   headerToolbar={false}
-                  // Pas de trait au-dessus de la grille, la barre d'outils est juste au-dessus.
-                  viewClass="rounded-t-none border-t-0"
+                  // Pas de cadre autour de la grille, la carte de l'écran l'entoure déjà.
+                  viewClass="rounded-none border-0"
                   // Le thème ne fait que teinter les événements : parcours et semaines interdites
                   // gardent leur couleur, pleine.
                   backgroundEventClass="bg-[var(--fc-event-color)] opacity-100"

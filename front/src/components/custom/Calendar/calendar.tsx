@@ -479,10 +479,10 @@ function Calendar({
         // La hauteur d'une demi-heure de la v6 : plus serrés, les créneaux tronquent leur texte.
         slotMinHeight={35}
         dayLaneClass={(info) => (info.isToday ? 'bg-primary/8' : undefined)}
-        // Pas de trait au-dessus des jours, la barre d'outils est juste au-dessus. En mode
+        // Pas de cadre autour du calendrier, la carte de l'écran l'entoure déjà. En mode
         // édition, la vue s'encadre de rouge.
         viewClass={cn(
-          'rounded-t-none border-t-0',
+          'rounded-none border-0',
           editMode &&
             'relative before:pointer-events-none before:absolute before:inset-0 before:z-[1] before:rounded-md before:shadow-[inset_0_0_0_2px_var(--color-destructive)]',
         )}
