@@ -1,4 +1,4 @@
-import { type ReactNode, useLayoutEffect, useRef, useState } from 'react'
+import { type ReactNode, useCallback, useState } from 'react'
 
 import { cn } from '../../../libs/utils.ts'
 import {
@@ -23,12 +23,10 @@ type TronqueProps = {
  */
 export const Tronque = ({ texte, className, children }: TronqueProps) => {
   const [coupe, setCoupe] = useState(false)
-  const mesure = useRef<HTMLSpanElement>(null)
-  // Pas de ref de rappel : le Slot du déclencheur la recompose à chaque rendu, d'où une boucle.
-  useLayoutEffect(() => {
-    const element = mesure.current
+  // Mesure au montage : la ligne est remontée à chaque passage du virtualiseur.
+  const mesure = useCallback((element: HTMLElement | null) => {
     setCoupe(!!element && element.scrollWidth > element.clientWidth)
-  }, [texte])
+  }, [])
 
   const contenu = (
     <span ref={mesure} className={cn('min-w-0 truncate', className)}>
