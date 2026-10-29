@@ -150,10 +150,13 @@ describe('colonnes optionnelles des patients', () => {
       clinicalData: { diag: 'AVC' },
     }
     const valeur = (id: string) => {
-      const colonne = colonnes.find((c) => c.id === id) as {
-        accessorFn: (row: typeof ligne, index: number) => unknown
+      const colonne = colonnes.find((c) => c.id === id)
+      const lire: unknown =
+        colonne && 'accessorFn' in colonne ? colonne.accessorFn : undefined
+      if (typeof lire !== 'function') {
+        throw new Error(`colonne ${id} sans accessorFn`)
       }
-      return colonne.accessorFn(ligne, 0)
+      return lire(ligne, 0)
     }
     expect(valeur('hba1c')).toBe(7.2)
     expect(valeur('fumeur')).toBe('false')

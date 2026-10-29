@@ -21,11 +21,14 @@ const DEFAULT_WEEK_COUNT = 4
 interface PlanningExportModalProps {
   /** Date affichée dans le planning, utilisée comme semaine de départ. */
   initialDate?: string
+  /** Parcours masqués dans le planning, repris comme exclusions de départ. */
+  initialExcludedPathwayIds?: Set<string>
   onClose: () => void
 }
 
 export default function PlanningExportModal({
   initialDate,
+  initialExcludedPathwayIds,
   onClose,
 }: PlanningExportModalProps) {
   const [weekStart, setWeekStart] = useState<Dayjs>(() =>
@@ -37,9 +40,9 @@ export default function PlanningExportModal({
   const [weekCount, setWeekCount] = useState(DEFAULT_WEEK_COUNT)
 
   // On raisonne en parcours *exclus* plutôt que sélectionnés : les modèles
-  // arrivent de façon asynchrone, et tout est coché par défaut.
+  // arrivent de façon asynchrone.
   const [excludedPathwayIds, setExcludedPathwayIds] = useState<Set<string>>(
-    new Set(),
+    () => new Set(initialExcludedPathwayIds),
   )
 
   const { pathwayTemplates } = usePathwayTemplateQueries()

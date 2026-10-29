@@ -1272,6 +1272,7 @@ function Planning() {
             weekDate={duplicateWeekDate}
             onWeekChange={setDuplicateWeekDate}
             planningCycle={planningCycle}
+            forbiddenWeeks={forbiddenWeeks ?? []}
             onConfirm={() => {
               if (duplicateWeekDate) {
                 handleBulkSlotOperation(duplicateWeekDate, 'duplicate')
@@ -1312,6 +1313,7 @@ function Planning() {
             weekDate={moveWeekDate}
             onWeekChange={setMoveWeekDate}
             planningCycle={planningCycle}
+            forbiddenWeeks={forbiddenWeeks ?? []}
             onConfirm={() => {
               if (moveWeekDate) {
                 handleBulkSlotOperation(moveWeekDate, 'move')
@@ -1348,6 +1350,7 @@ function Planning() {
         {exportOpen && (
           <PlanningExportModal
             initialDate={usePlanningStore.getState().viewStart}
+            initialExcludedPathwayIds={hiddenPathwayIds}
             onClose={() => setExportOpen(false)}
           />
         )}

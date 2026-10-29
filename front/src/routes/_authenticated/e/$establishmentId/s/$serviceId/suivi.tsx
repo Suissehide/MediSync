@@ -348,9 +348,9 @@ function SuiviPage() {
                             ? parseInt(cell.column.id.slice(4), 10)
                             : null
                           const apt =
-                            dayNum != null
-                              ? row.original.days.get(dayNum)
-                              : null
+                            dayNum == null
+                              ? null
+                              : row.original.days.get(dayNum)
                           const isToday = dayNum === today
 
                           return (

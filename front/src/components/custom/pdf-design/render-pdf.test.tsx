@@ -28,8 +28,8 @@ const texte: PdfElement = {
   ...geometry,
   kind: 'text',
   runs: [
-    { text: 'Bonjour ', bold: true, italic: false },
-    { field: 'patient.name', bold: false, italic: false },
+    { id: 'r1', text: 'Bonjour ', bold: true, italic: false },
+    { id: 'r2', field: 'patient.name', bold: false, italic: false },
   ],
   fontSize: 12,
   bold: false,

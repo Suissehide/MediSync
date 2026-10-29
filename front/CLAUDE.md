@@ -321,7 +321,7 @@ because they look like real tests:
   `await act(() => router.load())` before returning.
 - asserting two numbers without binding each to its label — swapping the two labels left nine
   tests green while the screen announced the wrong figure next to the wrong sentence. One
-  assertion was even tautological (`getByText('5') !== getByText('2')`). `src/test/setup-dom.ts` reassigns `globalThis.localStorage`/`sessionStorage` to jsdom's real implementations — this works around Node's own global Web Storage (active by default since Node 25) shadowing jsdom's; don't "simplify" this by reading `window.localStorage` instead, `window === globalThis` in this test environment so it's the same shadowed property.
+  assertion was even tautological (`getByText('5') !== getByText('2')`).
 
 **Le budget d'attente asynchrone est a 5 s, pas au defaut de 1 s** (`configure({ asyncUtilTimeout })`
 dans `src/test/setup-dom.ts`, avec `testTimeout: 20000` dans `vitest.config.ts` pour lui laisser la

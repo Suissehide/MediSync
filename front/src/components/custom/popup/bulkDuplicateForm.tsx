@@ -1,6 +1,7 @@
-import type { Dayjs } from 'dayjs'
+import dayjs, { type Dayjs } from 'dayjs'
 import { Copy, Minus, Plus, X } from 'lucide-react'
 
+import type { ForbiddenWeek } from '../../../types/forbiddenWeek.ts'
 import type { PlanningCycle } from '../../../types/planningCycle.ts'
 import { cycleWeekNumber } from '../../../utils/weekCycle.ts'
 import { Button } from '../../ui/button.tsx'
@@ -28,6 +29,7 @@ interface NormalModeProps extends BulkDuplicateFormBaseProps {
   weekDate: Dayjs | null
   onWeekChange: (value: Dayjs | null) => void
   planningCycle?: PlanningCycle | null
+  forbiddenWeeks: ForbiddenWeek[]
   targetWeekNumber?: never
   onTargetWeekNumberChange?: never
 }
@@ -38,12 +40,21 @@ interface EditModeProps extends BulkDuplicateFormBaseProps {
   onTargetWeekNumberChange: (value: number) => void
   weekDate?: never
   onWeekChange?: never
+  forbiddenWeeks?: never
 }
 
 type BulkDuplicateFormProps = NormalModeProps | EditModeProps
 
 export function BulkDuplicateForm(props: BulkDuplicateFormProps) {
   const { open, setOpen, count, onConfirm, editMode } = props
+  const forbiddenWeekStarts = new Set(
+    (props.forbiddenWeeks ?? []).map((w) =>
+      dayjs.utc(w.startOfWeek).format('YYYY-MM-DD'),
+    ),
+  )
+  const isForbiddenTarget =
+    !!props.weekDate &&
+    forbiddenWeekStarts.has(props.weekDate.isoWeekday(1).format('YYYY-MM-DD'))
 
   return (
     <Popup modal open={open} onOpenChange={setOpen}>
@@ -71,6 +82,8 @@ export function BulkDuplicateForm(props: BulkDuplicateFormProps) {
               weekDate={props.weekDate}
               onWeekChange={props.onWeekChange}
               planningCycle={props.planningCycle}
+              forbiddenWeekStarts={forbiddenWeekStarts}
+              isForbiddenTarget={isForbiddenTarget}
             />
           )}
         </PopupBody>
@@ -83,7 +96,7 @@ export function BulkDuplicateForm(props: BulkDuplicateFormProps) {
           <Button
             variant="default"
             onClick={onConfirm}
-            disabled={!editMode && !props.weekDate}
+            disabled={!editMode && (!props.weekDate || isForbiddenTarget)}
           >
             <Copy className="w-4 h-4" />
             Dupliquer
@@ -98,10 +111,14 @@ function NormalModeContent({
   weekDate,
   onWeekChange,
   planningCycle,
+  forbiddenWeekStarts,
+  isForbiddenTarget,
 }: {
   weekDate: Dayjs | null
   onWeekChange: (value: Dayjs | null) => void
   planningCycle?: PlanningCycle | null
+  forbiddenWeekStarts: Set<string>
+  isForbiddenTarget: boolean
 }) {
   const weekStart = weekDate?.isoWeekday(1) ?? null
   const weekStartLabel = weekStart ? weekStart.format('DD MMMM YYYY') : ''
@@ -111,7 +128,7 @@ function NormalModeContent({
   const cycleWeek =
     weekStart && planningCycle ? cycleWeekNumber(weekStart, planningCycle) : 0
   const cycleLabel =
-    cycleWeek === null
+    isForbiddenTarget || cycleWeek === null
       ? 'Semaine interdite — '
       : cycleWeek
         ? `S${cycleWeek} — `
@@ -121,7 +138,11 @@ function NormalModeContent({
     <>
       <FormField>
         <Label>Semaine cible</Label>
-        <WeekPicker value={weekDate} onChange={onWeekChange} />
+        <WeekPicker
+          value={weekDate}
+          onChange={onWeekChange}
+          forbiddenWeekStarts={forbiddenWeekStarts}
+        />
       </FormField>
 
       {weekStart && (

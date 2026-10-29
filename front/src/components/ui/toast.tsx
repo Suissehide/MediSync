@@ -104,12 +104,12 @@ type ToastProps = React.HTMLAttributes<HTMLDivElement> &
 type ToastActionElement = React.ReactElement
 
 export {
-  type ToastProps,
-  type ToastActionElement,
-  toastProgressVariants,
-  ToastProvider,
   Toast,
-  ToastTitle,
-  ToastDescription,
+  type ToastActionElement,
   ToastClose,
+  ToastDescription,
+  type ToastProps,
+  ToastProvider,
+  ToastTitle,
+  toastProgressVariants,
 }

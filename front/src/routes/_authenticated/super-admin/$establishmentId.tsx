@@ -186,7 +186,7 @@ function SuperAdminEstablishmentDetail() {
                   </span>
                   <span className="text-text-light">
                     {ESTABLISHMENT_ROLE_LABEL[member.role] ?? member.role}
-                    {member.deactivatedAt !== null ? ' — désactivé' : ''}
+                    {member.deactivatedAt === null ? '' : ' — désactivé'}
                   </span>
                 </li>
               ))}

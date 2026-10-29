@@ -51,10 +51,19 @@ interface AppointmentSheetProps {
 export default function AppointmentSheet({
   open,
   setOpen,
-  eventID,
-  soignants = [],
+  eventID: requestedID,
+  soignants: requestedSoignants = [],
 }: AppointmentSheetProps) {
   const navigate = useNavigate()
+  // Garde le dernier rendez-vous affiché pendant l'animation de fermeture.
+  const [shown, setShown] = useState({
+    eventID: requestedID,
+    soignants: requestedSoignants,
+  })
+  if (open && requestedID !== shown.eventID) {
+    setShown({ eventID: requestedID, soignants: requestedSoignants })
+  }
+  const { eventID, soignants } = shown
 
   const { isPending, appointment, refetch, isError } = useAppointmentByIDQuery(
     eventID,

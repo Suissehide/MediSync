@@ -130,7 +130,7 @@ const texte = (over: Partial<PdfTextElement>): PdfTextElement => ({
   w: A4_WIDTH - 72,
   h: 20,
   rotation: 0,
-  runs: [{ text: 'Bonjour', bold: false, italic: false }],
+  runs: [{ id: 'r1', text: 'Bonjour', bold: false, italic: false }],
   fontSize: 12,
   bold: false,
   italic: false,
@@ -157,7 +157,7 @@ describe('rendu reel', () => {
       fontSize: 32,
       bold: true,
       vAlign: 'bottom',
-      runs: [{ field: 'patient.name', bold: false, italic: false }],
+      runs: [{ id: 'r1', field: 'patient.name', bold: false, italic: false }],
     })
     const lignes = await rendre(
       [nom],
@@ -185,7 +185,7 @@ describe('rendu reel', () => {
       fontSize: 28,
       bold: true,
       align: 'center',
-      runs: [{ field: 'pathway.name', bold: false, italic: false }],
+      runs: [{ id: 'r1', field: 'pathway.name', bold: false, italic: false }],
     })
     const lignes = await rendre(
       [parcours],

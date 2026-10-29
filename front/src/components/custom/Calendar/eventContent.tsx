@@ -124,10 +124,10 @@ export const EventContent = ({
       style={{
         color: event.textColor || undefined,
         backgroundColor:
-          event.display !== 'background'
-            ? event.backgroundColor || event.borderColor
-            : undefined,
-        borderRadius: event.display !== 'background' ? '4px' : undefined,
+          event.display === 'background'
+            ? undefined
+            : event.backgroundColor || event.borderColor,
+        borderRadius: event.display === 'background' ? undefined : '4px',
       }}
     >
       {onToggleSelect &&
@@ -334,9 +334,9 @@ export const EventContent = ({
               )}
             >
               <span className="absolute top-0 right-0 z-20 rounded-bl rounded-tr bg-black/40 px-1 text-[0.55rem] font-semibold leading-tight text-white pointer-events-none">
-                {capacity != null
-                  ? `${appointment.appointmentPatients?.length ?? 0}/${capacity}`
-                  : (appointment.appointmentPatients?.length ?? 0)}
+                {capacity == null
+                  ? (appointment.appointmentPatients?.length ?? 0)
+                  : `${appointment.appointmentPatients?.length ?? 0}/${capacity}`}
               </span>
               <div
                 className={clsx(

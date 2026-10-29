@@ -33,7 +33,8 @@
 }
 
 /* Les boutons dans le pill du sélecteur de vue n'ont pas de bordure propre */
-.fc .fc-header-toolbar
+.fc
+  .fc-header-toolbar
   .fc-toolbar-chunk:nth-child(2)
   .fc-button-group
   .fc-button-primary {

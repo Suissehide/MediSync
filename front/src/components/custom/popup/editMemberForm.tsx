@@ -265,9 +265,9 @@ function EditMemberForm({ member }: EditMemberFormProps) {
                       {(role) =>
                         sortedServices.map((service) => {
                           const label =
-                            service.deactivatedAt !== null
-                              ? `${service.name} (désactivé)`
-                              : service.name
+                            service.deactivatedAt === null
+                              ? service.name
+                              : `${service.name} (désactivé)`
                           return (
                             <div key={service.id}>
                               {role === 'ADMIN' ? (

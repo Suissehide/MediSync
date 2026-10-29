@@ -61,9 +61,9 @@ const buildUpdatePayload = (
   id: field.id,
   label: value.label,
   ...(value.type === 'number' ? { unit: value.unit || null } : {}),
-  ...(value.categoryId !== field.categoryId
-    ? { categoryId: value.categoryId }
-    : {}),
+  ...(value.categoryId === field.categoryId
+    ? {}
+    : { categoryId: value.categoryId }),
 })
 
 const buildCreatePayload = (

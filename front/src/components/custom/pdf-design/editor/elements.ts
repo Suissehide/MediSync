@@ -33,7 +33,14 @@ export const nouvelElement = (kind: KindElement): PdfElement => {
         id,
         kind: 'text',
         // Jamais `runs: []` : le schema le refuse, et un texte vide serait invisible.
-        runs: [{ text: 'Nouveau texte', bold: false, italic: false }],
+        runs: [
+          {
+            id: crypto.randomUUID(),
+            text: 'Nouveau texte',
+            bold: false,
+            italic: false,
+          },
+        ],
         fontSize: 14,
         bold: false,
         italic: false,

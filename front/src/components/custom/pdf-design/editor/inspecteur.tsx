@@ -296,7 +296,7 @@ const Remplissage = ({
 
 const estTexte = (
   run: PdfTextRun,
-): run is { text: string; bold: boolean; italic: boolean } => 'text' in run
+): run is Extract<PdfTextRun, { text: string }> => 'text' in run
 
 // Les runs dans UNE zone, comme ils se liront : les textes en clair, les donnees en etiquettes.
 // Une pile de champs separes ne montrait pas l'ordre des morceaux, qui est tout le contenu.
@@ -325,14 +325,19 @@ const Contenu = ({
     onModifier({
       runs: restants.length
         ? restants
-        : [{ text: '', bold: false, italic: false }],
+        : [{ id: crypto.randomUUID(), text: '', bold: false, italic: false }],
     })
   }
 
   // A LA POSITION DU CURSEUR : le run de texte courant est coupe en deux et la donnee se
   // glisse entre les morceaux. Hors d'un champ (rien n'a le curseur), on ajoute a la fin.
   const inserer = (cle: PdfFieldKey) => {
-    const donnee: PdfTextRun = { field: cle, bold: false, italic: false }
+    const donnee: PdfTextRun = {
+      id: crypto.randomUUID(),
+      field: cle,
+      bold: false,
+      italic: false,
+    }
     const point = curseur.current
     const vise = point ? element.runs[point.rang] : undefined
     if (!point || !vise || !estTexte(vise)) {
@@ -346,7 +351,8 @@ const Contenu = ({
         ...element.runs.slice(0, point.rang),
         ...(avant ? [{ ...vise, text: avant }] : []),
         donnee,
-        ...(apres ? [{ ...vise, text: apres }] : []),
+        // Le morceau d'apres est un nouveau run : deux runs ne partagent jamais un id.
+        ...(apres ? [{ ...vise, id: crypto.randomUUID(), text: apres }] : []),
         ...element.runs.slice(point.rang + 1),
       ],
     })
@@ -358,8 +364,7 @@ const Contenu = ({
         {element.runs.map((run, rang) =>
           estTexte(run) ? (
             <input
-              // Un run n'a pas d'identite propre : son rang est sa cle.
-              key={`${element.id}-${rang}`}
+              key={run.id}
               aria-label={`Texte ${rang + 1}`}
               value={run.text}
               onChange={(e) => changerRun(rang, e.target.value)}
@@ -376,7 +381,7 @@ const Contenu = ({
             />
           ) : (
             <span
-              key={`${element.id}-${rang}`}
+              key={run.id}
               className="h-6 pl-2 pr-1 rounded-[5px] bg-blue-100 text-primary-dark text-[13px] font-semibold inline-flex items-center gap-1"
             >
               {LIBELLES_DONNEES[run.field]}

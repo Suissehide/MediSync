@@ -114,13 +114,13 @@ function PopoverSubGroup({
 }
 
 export {
-  PopoverRoot,
-  PopoverTrigger,
-  PopoverContent,
   PopoverAnchor,
   PopoverArrow,
   PopoverClose,
+  PopoverContent,
   PopoverMenuItem,
+  PopoverRoot,
   PopoverSeparator,
   PopoverSubGroup,
+  PopoverTrigger,
 }

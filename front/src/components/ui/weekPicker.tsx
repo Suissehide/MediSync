@@ -31,15 +31,19 @@ function weekRowsInMonth(month: Dayjs): number {
 interface WeekPickerProps {
   value: Dayjs | null
   onChange: (date: Dayjs | null) => void
+  /** Lundis (YYYY-MM-DD) des semaines affichées en rouge et non sélectionnables. */
+  forbiddenWeekStarts?: Set<string>
 }
 
 interface WeekDayExtraProps {
   selectedWeekStart: Dayjs | null
   hoveredWeekStart: Dayjs | null
+  isForbidden: boolean
 }
 
 function WeekDay(props: PickersDayProps & WeekDayExtraProps) {
-  const { day, selectedWeekStart, hoveredWeekStart, ...other } = props
+  const { day, selectedWeekStart, hoveredWeekStart, isForbidden, ...other } =
+    props
 
   const isInSelectedWeek =
     selectedWeekStart && day.isSame(selectedWeekStart, 'week')
@@ -70,6 +74,10 @@ function WeekDay(props: PickersDayProps & WeekDayExtraProps) {
           borderTopRightRadius: '20%',
           borderBottomRightRadius: '20%',
         }),
+        ...(isForbidden &&
+          !isWeekend && {
+            backgroundColor: 'rgba(239, 68, 68, 0.20)',
+          }),
         ...(isInSelectedWeek &&
           !isWeekend && {
             backgroundColor:
@@ -102,7 +110,11 @@ function WeekDay(props: PickersDayProps & WeekDayExtraProps) {
   )
 }
 
-export function WeekPicker({ value, onChange }: WeekPickerProps) {
+export function WeekPicker({
+  value,
+  onChange,
+  forbiddenWeekStarts,
+}: WeekPickerProps) {
   const [hoveredDay, setHoveredDay] = useState<Dayjs | null>(null)
 
   // Le mois affiché change de deux façons : par les flèches du calendrier
@@ -116,6 +128,9 @@ export function WeekPicker({ value, onChange }: WeekPickerProps) {
       setVisibleMonth(value)
     }
   }, [value])
+
+  const isForbiddenDay = (day: Dayjs) =>
+    !!forbiddenWeekStarts?.has(day.isoWeekday(1).format('YYYY-MM-DD'))
 
   const selectedWeekStart = value ? value.isoWeekday(1) : null
   const hoveredWeekStart = hoveredDay ? hoveredDay.isoWeekday(1) : null
@@ -138,11 +153,13 @@ export function WeekPicker({ value, onChange }: WeekPickerProps) {
         timezone="UTC"
         onMonthChange={setVisibleMonth}
         showDaysOutsideCurrentMonth
+        shouldDisableDate={isForbiddenDay}
         slots={{ day: WeekDay as React.ComponentType<PickersDayProps> }}
         slotProps={{
           day: ((ownerState: PickersDayProps) => ({
             selectedWeekStart,
             hoveredWeekStart,
+            isForbidden: isForbiddenDay(ownerState.day),
             onPointerEnter: () => setHoveredDay(ownerState.day),
             onPointerLeave: () => setHoveredDay(null),
           })) as never,

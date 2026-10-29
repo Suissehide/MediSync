@@ -37,4 +37,4 @@ const TooltipContent = React.forwardRef<
 ))
 TooltipContent.displayName = Tooltip.Content.displayName
 
-export { TooltipProvider, TooltipRoot, TooltipTrigger, TooltipContent }
+export { TooltipContent, TooltipProvider, TooltipRoot, TooltipTrigger }

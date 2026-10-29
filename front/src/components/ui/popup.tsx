@@ -177,11 +177,11 @@ PopupFooter.displayName = 'PopupFooter'
 
 export {
   Popup,
-  PopupHeader,
-  PopupFooter,
-  PopupTitle,
-  PopupDescription,
-  PopupContent,
   PopupBody,
+  PopupContent,
+  PopupDescription,
+  PopupFooter,
+  PopupHeader,
+  PopupTitle,
   PopupTrigger,
 }

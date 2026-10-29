@@ -117,10 +117,9 @@ const contenu = (
       // <Text>, donc en ligne.
       return (
         <span style={{ display: 'block' }}>
-          {element.runs.map((run, rang) => (
+          {element.runs.map((run) => (
             <span
-              // Un run n'a pas d'identite propre : son rang est sa cle, comme dans render-pdf.
-              key={`${element.id}-${rang}`}
+              key={run.id}
               style={{
                 fontWeight: run.bold ? 700 : undefined,
                 fontStyle: run.italic ? 'italic' : undefined,

@@ -18,7 +18,7 @@ export function parseRGBA(rgbaStr: string): string {
     Number.parseInt(r),
     Number.parseInt(g),
     Number.parseInt(b),
-    a !== undefined ? Number.parseFloat(a) : 1,
+    a === undefined ? 1 : Number.parseFloat(a),
   )
 }
 

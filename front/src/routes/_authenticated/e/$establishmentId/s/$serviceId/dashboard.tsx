@@ -208,13 +208,14 @@ function Dashboard() {
     if (!event || eventID.startsWith('appointment_')) {
       return
     }
-    if (event.extendedProps?.locked || event.extendedProps?.archived) {
-      return
-    }
     if (
       containsKeyword(event.extendedProps?.states ?? [], ['multiple']) &&
       event.extendedProps?.appointments?.length
     ) {
+      handleOpenEvent(`appointment_${event.extendedProps.appointments[0].id}`)
+      return
+    }
+    if (event.extendedProps?.locked || event.extendedProps?.archived) {
       return
     }
 
@@ -400,14 +401,12 @@ function Dashboard() {
           />
         )}
 
-        {isAppointment && (
-          <AppointmentSheet
-            open={isAppointment}
-            setOpen={setOpenEventId}
-            eventID={appointmentId}
-            soignants={slotSoignants}
-          />
-        )}
+        <AppointmentSheet
+          open={isAppointment}
+          setOpen={setOpenEventId}
+          eventID={isAppointment ? appointmentId : ''}
+          soignants={slotSoignants}
+        />
       </div>
     </DashboardLayout>
   )

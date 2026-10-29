@@ -135,10 +135,10 @@ SheetTitle.displayName = Dialog.Title.displayName
 
 export {
   Sheet,
-  SheetTrigger,
   SheetClose,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetDescription,
+  SheetTrigger,
 }

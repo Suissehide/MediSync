@@ -67,16 +67,20 @@ export function JournalActivite({ services }: Props) {
 
   const [userApplique, setUserApplique] = useState('')
   useEffect(() => {
+    // Sans cette garde, le minuteur du montage ramenait a la page 1 une page choisie entre-temps.
+    const saisie = filters.userSearch.trim()
+    if (saisie === userApplique) {
+      return
+    }
     const minuteur = setTimeout(() => {
-      // Les deux mises a jour partent ensemble : une seule requete, sur la premiere page. Cet
-      // effet ne tourne que si la saisie a change ; au montage, la page est deja la premiere.
-      setUserApplique(filters.userSearch.trim())
+      // Les deux mises a jour partent ensemble : une seule requete, sur la premiere page.
+      setUserApplique(saisie)
       setPagination((courant) =>
         courant.pageIndex === 0 ? courant : { ...courant, pageIndex: 0 },
       )
     }, DELAI_SAISIE_MS)
     return () => clearTimeout(minuteur)
-  }, [filters.userSearch])
+  }, [filters.userSearch, userApplique])
 
   // Calculee une fois par periode choisie, et non a chaque rendu : l'instant fait partie de la
   // cle de requete, et une cle qui change a chaque rendu relancerait la requete a chaque reponse.
