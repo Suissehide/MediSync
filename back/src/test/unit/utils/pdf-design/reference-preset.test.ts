@@ -176,6 +176,10 @@ describe('preset de reference', () => {
   it('garde la geometrie relevee du bloc centre de la couverture', () => {
     expect(element(0, 'cover-underline').y).toBe(432)
     expect(texte(0, 'cover-program').y).toBe(445)
+    expect(texte(0, 'cover-program').color).toEqual({
+      token: 'pathway.color',
+      fallback: '#7c3aed',
+    })
     expect(texte(0, 'cover-dates').y).toBe(503)
   })
 
