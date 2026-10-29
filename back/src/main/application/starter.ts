@@ -44,9 +44,9 @@ const scheduleActivityLogCleanup = (instances: IocContainer): void => {
 //
 // SECOND APPEL du PREMIER emploi déclaré de `runAsSystem` — l'entrée
 // `application/starter.ts` de `runAsSystem-unicite.test.ts` porte
-// `appels: 2`. La convention du fichier cité compte SIX emplois déclarés —
-// un par fichier, avec sa raison — pour HUIT appels au total ; ce site-ci
-// n'en ouvre aucun septième, il s'ajoute au premier.
+// `appels: 3` (le troisième : `scheduleNotifications`). La convention du fichier cité compte SEPT emplois déclarés —
+// un par fichier, avec sa raison — pour ONZE appels au total ; ce site-ci
+// n'en ouvre aucun nouveau, il s'ajoute au premier.
 //
 // RAPPEL `async` AVEC UN `await` INTERNE, et non le rappel synchrone nu de la
 // purge ci-dessus. Ce n'est PAS parce que l'enrobage `async` tiendrait la
@@ -84,6 +84,30 @@ const schedulePatientAccessLogCleanup = (instances: IocContainer): void => {
   run()
 }
 
+const FIFTEEN_MIN_MS = 15 * 60 * 1000
+
+// Planification des notifications (rappels, diagnostic, fin de parcours, echeances, purge) — troisieme appel de runAsSystem de ce fichier.
+const scheduleNotifications = (instances: IocContainer): void => {
+  const { notificationScheduler, logger, tenantContext } = instances
+  const run = (): void => {
+    tenantContext
+      .runAsSystem(async () => {
+        return await notificationScheduler.runOnce(new Date())
+      })
+      .then(({ created, purged }) =>
+        logger.info(`Notifications: ${created} créées, ${purged} purgées`),
+      )
+      .catch((err) => {
+        const errorClass =
+          err instanceof Error ? err.constructor.name : typeof err
+        logger.error(`Notifications schedule failed [${errorClass}]`)
+      })
+  }
+  const timer = setInterval(run, FIFTEEN_MIN_MS)
+  timer.unref?.()
+  run()
+}
+
 const startApp = async (): Promise<IocContainer> => {
   const config = loadConfig()
   const iocContainer = startIocContainer(config)
@@ -94,6 +118,7 @@ const startApp = async (): Promise<IocContainer> => {
 
   scheduleActivityLogCleanup(iocContainer.instances)
   schedulePatientAccessLogCleanup(iocContainer.instances)
+  scheduleNotifications(iocContainer.instances)
 
   return iocContainer.instances
 }
@@ -103,4 +128,5 @@ export {
   startIocContainer,
   scheduleActivityLogCleanup,
   schedulePatientAccessLogCleanup,
+  scheduleNotifications,
 }

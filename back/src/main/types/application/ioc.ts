@@ -15,6 +15,8 @@ import type { IndicatorSetDomainInterface } from '../domain/indicatorSet.domain.
 import type { LocationDomainInterface } from '../domain/location.domain.interface'
 import type { MembershipDomainInterface } from '../domain/membership.domain.interface'
 import type { NotificationDomainInterface } from '../domain/notification.domain.interface'
+import type { NotificationDispatcherInterface } from '../domain/notification-dispatcher.interface'
+import type { NotificationSchedulerInterface } from '../domain/notification-scheduler.interface'
 import type { PathwayDomainInterface } from '../domain/pathway.domain.interface'
 import type { PathwayTemplateDomainInterface } from '../domain/pathwayTemplate.domain.interface'
 import type { PatientDomainInterface } from '../domain/patient.domain.interface'
@@ -53,6 +55,8 @@ import type { IndicatorSetRepositoryInterface } from '../infra/orm/repositories/
 import type { LocationRepositoryInterface } from '../infra/orm/repositories/location.repository.interface'
 import type { MembershipRepositoryInterface } from '../infra/orm/repositories/membership.repository.interface'
 import type { NotificationRepositoryInterface } from '../infra/orm/repositories/notification.repository.interface'
+import type { NotificationContextRepositoryInterface } from '../infra/orm/repositories/notification-context.repository.interface'
+import type { NotificationScheduleRepositoryInterface } from '../infra/orm/repositories/notification-schedule.repository.interface'
 import type { PathwayRepositoryInterface } from '../infra/orm/repositories/pathway.repository.interface'
 import type { PathwayTemplateRepositoryInterface } from '../infra/orm/repositories/pathwayTemplate.repository.interface'
 import type { PatientRepositoryInterface } from '../infra/orm/repositories/patient.repository.interface'
@@ -191,4 +195,8 @@ export interface IocContainer {
   // Notification
   readonly notificationDomain: NotificationDomainInterface
   readonly notificationRepository: NotificationRepositoryInterface
+  readonly notificationContextRepository: NotificationContextRepositoryInterface
+  readonly notificationDispatcher: NotificationDispatcherInterface
+  readonly notificationScheduleRepository: NotificationScheduleRepositoryInterface
+  readonly notificationScheduler: NotificationSchedulerInterface
 }

@@ -656,6 +656,7 @@ export const NO_CONTEXT_GLOBAL_OPERATIONS: Readonly<
     // `AccessGrantRepository.findForUser` relit le drapeau `isSuperAdmin` HORS de
     // `runAsSuperAdmin`, à dessein (voir son commentaire) : `POST /auth/sign-in`, `GET /me`,
     // `PATCH /me`, `POST /auth/refresh`.
+    // `UserRepository.findNotificationPrefs` : `GET /me/notification-preferences`.
     'findUnique',
     // `UserRepository.findByID` / `.findIdentity` / `.findByEmail` : le crochet `onRequest` de
     // `routes/index.ts` (via `cookie.plugin.ts`, donc TOUTE requête authentifiée),
@@ -664,6 +665,7 @@ export const NO_CONTEXT_GLOBAL_OPERATIONS: Readonly<
     'findUniqueOrThrow',
     // `UserRepository.recordLogin` (`POST /auth/sign-in`, pose `lastLoginAt`),
     // `.updatePassword` (`POST /auth/access-link/consume`), `.updateProfile` (`PATCH /me`).
+    // `.setNotificationPrefs` : `PUT /me/notification-preferences`.
     'update',
     // `UserRepository.create` depuis `AuthDomain.register` : `POST /auth/register`. Le seul
     // couple qu'aucun test e2e n'exerçait — voir le paragraphe ci-dessus.

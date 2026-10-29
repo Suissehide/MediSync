@@ -12,7 +12,9 @@ import type {
   TaskEntityRepo,
   TaskRepositoryInterface,
 } from '../types/infra/orm/repositories/task.repository.interface'
+import type { UserRepositoryInterface } from '../types/infra/orm/repositories/user.repository.interface'
 import type { TenantContextInterface } from '../types/utils/tenant-context'
+import { allows } from '../utils/notification-prefs'
 
 const DONE_WINDOW_MS = 30 * 86_400_000
 
@@ -20,17 +22,20 @@ class TaskDomain implements TaskDomainInterface {
   private readonly taskRepository: TaskRepositoryInterface
   private readonly membershipRepository: MembershipRepositoryInterface
   private readonly soignantRepository: SoignantRepositoryInterface
+  private readonly userRepository: UserRepositoryInterface
   private readonly tenantContext: TenantContextInterface
 
   constructor({
     taskRepository,
     membershipRepository,
     soignantRepository,
+    userRepository,
     tenantContext,
   }: IocContainer) {
     this.taskRepository = taskRepository
     this.membershipRepository = membershipRepository
     this.soignantRepository = soignantRepository
+    this.userRepository = userRepository
     this.tenantContext = tenantContext
   }
 
@@ -91,9 +96,17 @@ class TaskDomain implements TaskDomainInterface {
           requestedSoignants.includes(m.soignantId),
       )
       .map((m) => m.establishmentMembership.user.id)
-    const notifyUserIds = [
+    const candidateIds = [
       ...new Set([...requestedAssignees, ...soignantRecipientIds]),
     ].filter((id) => id !== userId)
+    // MENTION obeit aussi a la preference `mention` (spec etape 2).
+    const { serviceId } = this.tenantContext.scope()
+    const prefs =
+      await this.userRepository.findNotificationPrefsMany(candidateIds)
+    const notifyUserIds = candidateIds.filter((id) => {
+      const p = prefs.get(id)
+      return p ? allows(p, 'MENTION', serviceId) : true
+    })
     const task = await this.taskRepository.createWithMentions({
       text: input.text,
       authorId: userId,
