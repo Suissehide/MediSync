@@ -1,11 +1,14 @@
-import type { DateSelectArg, EventDropArg } from '@fullcalendar/core'
-import frLocale from '@fullcalendar/core/locales/fr'
-import dayGridPlugin from '@fullcalendar/daygrid'
-import interactionPlugin, {
-  type EventResizeDoneArg,
-} from '@fullcalendar/interaction'
-import multiMonthPlugin from '@fullcalendar/multimonth'
-import FullCalendar from '@fullcalendar/react'
+import FullCalendar, {
+  type DateSelectInfo,
+  type EventDropInfo,
+  type EventResizeDoneInfo,
+  useCalendarController,
+} from '@fullcalendar/react'
+import dayGridPlugin from '@fullcalendar/react/daygrid'
+import interactionPlugin from '@fullcalendar/react/interaction'
+import frLocale from '@fullcalendar/react/locales/fr'
+import multiMonthPlugin from '@fullcalendar/react/multimonth'
+import breezyTheme from '@fullcalendar/react/themes/breezy'
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import dayjs from 'dayjs'
 import {
@@ -22,6 +25,7 @@ import {
 import { DropdownMenu } from 'radix-ui'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import { BarreCalendrier } from '@/components/custom/Calendar/barreCalendrier.tsx'
 import Calendar, {
   type CalendarEvent,
 } from '@/components/custom/Calendar/calendar.tsx'
@@ -130,6 +134,7 @@ function Planning() {
   const { instantiatePathway, deletePathway } = usePathwayMutations()
   const { toast } = useToast()
   const lastDropTimeRef = useRef<number>(0)
+  const controleurAnnee = useCalendarController()
   const { createSlotTemplate, updateSlotTemplate, deleteSlotTemplate } =
     useSlotTemplateMutations()
   const { forbiddenWeeks } = useForbiddenWeekQueries()
@@ -177,7 +182,7 @@ function Planning() {
     string | null
   >(null)
   const [openCreateSlotModal, setOpenCreateSlotModal] = useState(false)
-  const [selectedDate, setSelectedDate] = useState<DateSelectArg | null>(null)
+  const [selectedDate, setSelectedDate] = useState<DateSelectInfo | null>(null)
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [eventTemplates, setEventTemplates] = useState<CalendarEvent[]>([])
   const [selectedSlotIds, setSelectedSlotIds] = useState<Set<string>>(new Set())
@@ -318,7 +323,7 @@ function Planning() {
     })
   }
 
-  const handleSelectSlot = (dateSelectArg: DateSelectArg) => {
+  const handleSelectSlot = (dateSelectArg: DateSelectInfo) => {
     setSelectedDate(dateSelectArg)
     setOpenCreateSlotModal(true)
   }
@@ -375,7 +380,9 @@ function Planning() {
     }
   }
 
-  const handleEditSlot = (eventDropArg: EventDropArg | EventResizeDoneArg) => {
+  const handleEditSlot = (
+    eventDropArg: EventDropInfo | EventResizeDoneInfo,
+  ) => {
     const {
       id,
       startStr: start,
@@ -749,8 +756,7 @@ function Planning() {
       start: dayjs.utc(fw.startOfWeek).format('YYYY-MM-DD'),
       end: dayjs.utc(fw.startOfWeek).add(7, 'day').format('YYYY-MM-DD'),
       display: 'background' as const,
-      backgroundColor: 'rgba(239, 68, 68, 0.20)',
-      classNames: ['forbidden-week-bg'],
+      color: 'rgba(239, 68, 68, 0.20)',
     }))
   }, [forbiddenWeeks])
 
@@ -989,34 +995,46 @@ function Planning() {
                 showSecondaryTags={false}
                 weekAnchorDate={editMode ? startDate : undefined}
                 planningCycle={editMode ? undefined : planningCycle}
-                headerToolbar={
-                  editMode ? { left: 'title', right: 'prev,next' } : undefined
-                }
+                barre={editMode ? 'minimale' : 'complete'}
               />
             ) : (
-              <div
-                className={`h-full ${isForbiddenWeekMode ? 'forbidden-week-mode' : ''}`}
-              >
+              <div className="flex h-full flex-col">
+                <BarreCalendrier
+                  controller={controleurAnnee}
+                  vues={[
+                    { type: 'multiMonthYear', libelle: 'Grille' },
+                    { type: 'dayGridYear', libelle: 'Liste' },
+                  ]}
+                />
                 <FullCalendar
-                  plugins={[dayGridPlugin, multiMonthPlugin, interactionPlugin]}
+                  controller={controleurAnnee}
+                  plugins={[
+                    breezyTheme,
+                    dayGridPlugin,
+                    multiMonthPlugin,
+                    interactionPlugin,
+                  ]}
                   initialView="multiMonthYear"
                   locale={frLocale}
                   timeZone="UTC"
                   weekends={true}
-                  headerToolbar={{
-                    left: 'title',
-                    center: 'multiMonthYear,dayGridYear',
-                    right: 'today prev,next',
-                  }}
-                  buttonText={{
-                    multiMonthYear: 'Grille',
-                    dayGridYear: 'Liste',
-                  }}
-                  multiMonthMinWidth={600}
+                  headerToolbar={false}
+                  // Le thème ne fait que teinter les événements : parcours et semaines interdites
+                  // gardent leur couleur, pleine.
+                  backgroundEventClass="bg-[var(--fc-event-color)] opacity-100"
+                  rowEventClass="bg-[var(--fc-event-color)]"
+                  rowEventTitleClass="text-[var(--fc-event-contrast-color)] opacity-100"
+                  // Planifier une semaine interdite : la semaine survolée s'annonce en rouge.
+                  dayRowClass={
+                    isForbiddenWeekMode
+                      ? 'cursor-pointer hover:bg-red-500/20'
+                      : undefined
+                  }
+                  singleMonthMinWidth={600}
                   weekNumbers={true}
                   weekNumberFormat={{ week: 'numeric' }}
                   // 0 = semaine interdite, hors cycle : pas de numéro.
-                  weekNumberContent={(arg) => (arg.num ? arg.text : '')}
+                  inlineWeekNumberContent={(arg) => (arg.num ? arg.text : '')}
                   // FullCalendar transmet ici dateEnv.toDate(marker), pas le
                   // marker interne : le Date obtenu porte ses champs dans le
                   // fuseau de dateEnv. Le dayjs.utc(date) ci-dessous ne donne

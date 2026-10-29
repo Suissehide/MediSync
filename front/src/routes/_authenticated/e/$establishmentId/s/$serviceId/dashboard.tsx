@@ -1,4 +1,4 @@
-import type { DateSelectArg } from '@fullcalendar/core'
+import type { DateSelectInfo } from '@fullcalendar/react'
 import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import dayjs from 'dayjs'
@@ -193,7 +193,7 @@ function Dashboard() {
     conflictLabels,
   ])
 
-  const handleSelectAppointment = (dateSelectArg: DateSelectArg) => {
+  const handleSelectAppointment = (dateSelectArg: DateSelectInfo) => {
     setSelectedDate({
       startStr: dateSelectArg.startStr,
       endStr: dateSelectArg.endStr,
@@ -315,7 +315,7 @@ function Dashboard() {
             )}
           </div>
 
-          <div className="fc-dashboard flex-1 min-h-0 overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-hidden">
             <Calendar
               events={events}
               editable={false}

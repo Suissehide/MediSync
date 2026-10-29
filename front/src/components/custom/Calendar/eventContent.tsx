@@ -1,4 +1,4 @@
-import type { EventContentArg } from '@fullcalendar/core'
+import type { EventDisplayInfo } from '@fullcalendar/react'
 import { clsx } from 'clsx'
 import dayjs from 'dayjs'
 import {
@@ -27,7 +27,7 @@ import { ConflictBadge } from '../conflictBadge.tsx'
 
 type Props = {
   setOpenEventId?: (eventId: string) => void
-  eventContent: EventContentArg
+  eventContent: EventDisplayInfo
   editMode?: boolean
   onDuplicate?: (eventId: string) => void
   onDelete?: (eventId: string) => void
@@ -70,7 +70,7 @@ export const EventContent = ({
   const isSelected = selectedSlotIds?.has(event.id) ?? false
   const isSelectionMode = selectedSlotIds && selectedSlotIds.size > 0
 
-  const slotColor = event.backgroundColor || event.borderColor || '#2563eb'
+  const slotColor = event.color || '#2563eb'
   const appointmentColor = darkenHex(slotColor, 0.3)
   const durationMinutes = event.end
     ? dayjs(event.end).diff(dayjs(event.start), 'minute')
@@ -122,11 +122,9 @@ export const EventContent = ({
         },
       )}
       style={{
-        color: event.textColor || undefined,
+        color: event.contrastColor || undefined,
         backgroundColor:
-          event.display === 'background'
-            ? undefined
-            : event.backgroundColor || event.borderColor,
+          event.display === 'background' ? undefined : event.color,
         borderRadius: event.display === 'background' ? undefined : '4px',
       }}
     >

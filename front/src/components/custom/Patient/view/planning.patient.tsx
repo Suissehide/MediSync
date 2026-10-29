@@ -1,4 +1,4 @@
-import type { DateSelectArg } from '@fullcalendar/core'
+import type { DateSelectInfo } from '@fullcalendar/react'
 import { useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 import { useCallback, useMemo, useRef, useState } from 'react'
@@ -216,7 +216,7 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
     }
   }
 
-  const handleSelectPatientSlot = (dateSelectArg: DateSelectArg) => {
+  const handleSelectPatientSlot = (dateSelectArg: DateSelectInfo) => {
     setSelectedSlotStart(dateSelectArg.startStr)
     setSelectedSlotEnd(dateSelectArg.endStr)
     setSelectedSlotType('individual')
@@ -318,7 +318,7 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-hidden [&_.fc_.fc-header-toolbar]:!p-0 [&_.fc_.fc-header-toolbar]:!pr-[16.5rem]">
+      <div className="flex-1 min-h-0 overflow-hidden">
         {slots && (
           <Calendar
             key={selectedTag}
@@ -349,10 +349,8 @@ export default function PlanningPatient({ patient }: PlanningPatientProps) {
             onRangeChange={handleRangeChange}
             saveDates={false}
             showSecondaryTags={false}
-            headerToolbar={{
-              left: 'title',
-              right: 'today selectDateButton prev,next',
-            }}
+            barre="navigation"
+            classeBarre="px-0 pr-[16.5rem]"
           />
         )}
       </div>

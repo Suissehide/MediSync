@@ -86,7 +86,7 @@ export const buildCalendarEventsFromSlots = (
       start: slot.startDate,
       end: slot.endDate,
       color: slotColor,
-      textColor: getContrastTextColor(slotColor),
+      contrastColor: getContrastTextColor(slotColor),
       display,
       className: 'fc-slot',
       editable: !containsKeyword(slotStates, ['editable']) && !slot.locked,
@@ -254,7 +254,7 @@ export const buildCalendarEventsFromSlotTemplates = (
       start: start.toISOString(),
       end: end.toISOString(),
       color: templateColor,
-      textColor: getContrastTextColor(templateColor),
+      contrastColor: getContrastTextColor(templateColor),
       extendedProps: {
         type: 'template',
         thematic: slotTemplate.thematic,

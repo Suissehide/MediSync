@@ -1,295 +1,53 @@
-.fc .fc-scrollgrid {
-  border: none !important;
+/* Dans la couche components : hors couche, le thème l'emporterait sur toute classe Tailwind
+   passée aux options *Class, qui vivent dans la couche utilities. */
+@import "@fullcalendar/react/skeleton.css" layer(components);
+@import "@fullcalendar/react/themes/breezy/theme.css" layer(components);
+
+/* Le thème Breezy branché sur les jetons de l'application. Sa palette sombre n'est pas reprise :
+   rien n'active encore le mode sombre de l'app. Le DOM de la v7 n'a plus de classes .fc-* :
+   le reste se règle par les options *Class des calendriers. */
+:root {
+  --fc-breezy-primary: var(--primary);
+  --fc-breezy-primary-over: var(--primary-dark);
+  --fc-breezy-primary-foreground: var(--primary-foreground);
+
+  --fc-breezy-secondary: var(--fc-breezy-background);
+  --fc-breezy-secondary-over: var(--fc-breezy-faint);
+  --fc-breezy-secondary-border: var(--fc-breezy-strong-border);
+  --fc-breezy-secondary-foreground: var(--fc-breezy-strong-foreground);
+  --fc-breezy-secondary-icon: var(--fc-breezy-faint-foreground);
+  --fc-breezy-secondary-icon-over: var(--fc-breezy-muted-foreground);
+
+  --fc-breezy-event: var(--primary);
+  --fc-breezy-event-contrast: #fff;
+  --fc-breezy-background-event: var(--primary);
+  --fc-breezy-highlight: color-mix(in srgb, var(--primary) 10%, transparent);
+  --fc-breezy-now: var(--secondary);
+
+  --fc-breezy-selected: var(--fc-breezy-strong);
+  --fc-breezy-popover: var(--fc-breezy-background);
+  --fc-breezy-popover-border: var(--fc-breezy-strong-border);
+
+  --fc-breezy-background: var(--background);
+  --fc-breezy-faint: #00000005;
+  --fc-breezy-muted: #0000000d;
+  --fc-breezy-strong: #0000001a;
+  --fc-breezy-stronger: #00000024;
+  --fc-breezy-strongest: #0000002e;
+
+  --fc-breezy-foreground: var(--text-dark);
+  --fc-breezy-faint-foreground: var(--text);
+  --fc-breezy-muted-foreground: var(--text-light);
+  --fc-breezy-strong-foreground: var(--foreground);
+
+  --fc-breezy-border: var(--border);
+  --fc-breezy-muted-border: color-mix(in srgb, var(--border) 50%, transparent);
+  --fc-breezy-strong-border: var(--border-dark);
 }
 
-/* TOOLBAR */
-
-.fc .fc-header-toolbar {
-  flex-wrap: wrap;
-  gap: 1em;
-}
-
-.fc .fc-header-toolbar {
-  padding: 0 24px;
-}
-
-.fc .fc-header-toolbar .fc-toolbar-chunk {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  gap: 4px;
-}
-
-.fc .fc-header-toolbar .fc-toolbar-chunk:nth-child(2) {
-  justify-content: center;
-}
-
-.fc .fc-header-toolbar .fc-toolbar-chunk:nth-child(2) .fc-button-group {
-  padding: 3px;
-  gap: 2px;
-  background: var(--card);
-  border-radius: 10px;
-  border: 1px solid var(--border);
-}
-
-/* Les boutons dans le pill du sélecteur de vue n'ont pas de bordure propre */
-.fc
-  .fc-header-toolbar
-  .fc-toolbar-chunk:nth-child(2)
-  .fc-button-group
-  .fc-button-primary {
-  --fc-button-border-color: transparent;
-  border-radius: 8px;
-}
-
-.fc .fc-header-toolbar .fc-toolbar-chunk:last-child {
-  justify-content: flex-end;
-}
-
-/* Navigation de date : mêmes boutons que l'Agenda (Button outline, 36px, séparés). */
-.fc .fc-header-toolbar .fc-toolbar-chunk:last-child,
-.fc .fc-header-toolbar .fc-toolbar-chunk:last-child .fc-button-group {
-  gap: 8px;
-}
-
-/* FullCalendar espace ses groupes de boutons par une marge, en plus du gap. */
-.fc .fc-header-toolbar .fc-toolbar-chunk:last-child > * {
-  margin-left: 0;
-}
-
-.fc
-  .fc-header-toolbar
-  .fc-toolbar-chunk:last-child
-  .fc-button.fc-button-primary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 36px;
-  margin-left: 0;
-  border-radius: 6px;
-  background-color: transparent;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.fc .fc-header-toolbar .fc-toolbar-chunk:last-child .fc-button.fc-prev-button,
-.fc .fc-header-toolbar .fc-toolbar-chunk:last-child .fc-button.fc-next-button,
-.fc
-  .fc-header-toolbar
-  .fc-toolbar-chunk:last-child
-  .fc-button.fc-selectDateButton-button {
-  width: 36px;
-  padding: 0;
-  border-radius: 8px;
-}
-
-/* Icône CalendarDays de lucide en CSS : FullCalendar réécrit le contenu du bouton à chaque rendu de la barre. */
-.fc .fc-button.fc-selectDateButton-button::before {
-  content: "";
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  vertical-align: middle;
-  background-color: currentColor;
-  mask:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 2v4M16 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01'/%3E%3Crect width='18' height='18' x='3' y='4' rx='2'/%3E%3C/svg%3E")
-    center / contain no-repeat;
-}
-
-.fc
-  .fc-header-toolbar
-  .fc-toolbar-chunk:last-child
-  .fc-button.fc-button-primary:hover {
-  background-color: var(--card);
-}
-
-/* Comme l'Agenda : « Aujourd'hui » disparaît quand on y est déjà, sans décaler les autres. */
-.fc .fc-today-button:disabled {
-  visibility: hidden;
-}
-
-.fc .fc-toolbar-title {
-  color: var(--text-dark);
-  font-size: 15px;
-  font-weight: 600;
-}
-
-/* ── Surcharge des variables CSS de FullCalendar ──────────────────────────
-   Les variables sont résolues au moment du paint : elles s'appliquent
-   quelle que soit l'ordre de chargement du CSS de FullCalendar. */
-.fc {
-  --fc-button-text-color: var(--text-dark);
-  --fc-button-bg-color: var(--card);
-  --fc-button-border-color: var(--border);
-  --fc-button-hover-bg-color: color-mix(
-    in srgb,
-    var(--primary) 10%,
-    transparent
-  );
-  --fc-button-hover-border-color: color-mix(
-    in srgb,
-    var(--primary) 30%,
-    transparent
-  );
-  --fc-button-active-bg-color: var(--primary);
-  --fc-button-active-border-color: var(--primary);
-}
-
-/* Propriétés non couvertes par les variables FC (font, radius, transition, text hover/actif) */
-.fc .fc-button-primary {
-  font-size: 13px;
-  font-weight: 500;
-  border-radius: 8px;
-  height: 32px;
-  padding: 0 12px;
-  transition:
-    background 0.15s ease,
-    color 0.15s ease,
-    border-color 0.15s ease;
-}
-
-/* Boutons à l'intérieur d'un pill : la hauteur du pill est 40px (3px padding + 1px border × 2) */
-.fc .fc-button-group .fc-button-primary {
-  height: 26px;
-}
-
-.fc .fc-button-group .fc-button-primary.fc-prev-button,
-.fc .fc-button-group .fc-button-primary.fc-next-button {
-  height: 32px;
-}
-
-.fc .fc-button-primary:hover {
-  color: var(--primary);
-}
-
-.fc .fc-button-primary:active {
-  background-color: color-mix(
-    in srgb,
-    var(--primary) 20%,
-    transparent
-  ) !important;
-  border-color: var(--primary) !important;
-  color: var(--primary) !important;
-  box-shadow: none !important;
-  outline: none !important;
-}
-
-.fc .fc-button-primary:focus,
-.fc .fc-button-primary:not(:disabled).fc-button-active:focus {
-  box-shadow: none;
-}
-
-.fc .fc-button-primary:not(:disabled).fc-button-active,
-.fc .fc-button-primary:not(:disabled).fc-button-active:hover {
-  color: var(--primary-foreground);
-}
-
-thead .fc-theme-standard th {
-  border: none !important;
-}
-
-.fc .fc-col-header-cell-cushion {
-  font-weight: 600;
-  text-transform: uppercase;
-  font-size: 12px;
-  padding-bottom: 8px;
-}
-
-.fc .fc-day-today .fc-col-header-cell-cushion {
-  color: var(--primary);
-}
-
-.fc .fc-timegrid-cols .fc-day-today {
-  background-color: color-mix(in srgb, var(--primary) 8%, transparent);
-}
-
-.fc .fc-timegrid-slot-label-cushion {
-  color: var(--text-light);
-  font-size: 12px;
-  padding: 0 8px;
-}
-
-.fc .fc-timegrid-slot {
-  height: 2.5em;
-}
-
-.fc .fc-timegrid-slot.fc-timegrid-slot-label {
-  vertical-align: top;
-  border-top: none !important;
-  border-right-width: 2px;
-}
-
-.fc .fc-timegrid-slot.fc-timegrid-slot-label .fc-timegrid-slot-label-frame {
-  margin-top: -13px;
-}
-
-.fc-theme-standard th {
-  border-left: none !important;
-  border-right: none !important;
-}
-
-.fc-theme-standard th,
-.fc-theme-standard td {
-  border-color: var(--border);
-}
-
-.fc-event {
-  border-radius: 5px;
-}
-.fc-timegrid-event-harness-inset .fc-timegrid-event {
-  box-shadow: 0 0 0 1px var(--border);
-}
-
-/* ── Slot borders — visual separation between adjacent slots ────────────── */
-.fc .fc-bg-event.fc-slot {
-  border: 1.5px solid rgba(0, 0, 0, 0.1);
-  border-radius: 5px;
-}
-
-.fc .fc-timegrid-event.fc-slot {
-  border: 1.5px solid rgba(0, 0, 0, 0.1);
-}
-
-.fc-timegrid-slots tr:first-child td:first-child .fc-timegrid-slot-label-frame {
-  display: none;
-}
-
-/* ── Forbidden weeks ─────────────────────────────────────────────────────── */
-
-/* FullCalendar applies opacity: 0.3 to all .fc-bg-event — override for
-   forbidden week events so the color is fully visible at the specified alpha */
-.fc .fc-bg-event.forbidden-week-bg {
+/* Créneaux (className « fc-slot » de buildSlotEvents), séparés de leurs voisins. */
+.fc-slot {
   opacity: 1 !important;
-}
-
-/* Hover preview: highlight the hovered week row when in forbidden-week-mode.
-   Use child combinator (>) so only the week-level <tr>'s direct td.fc-day
-   children are colored — prevents the outer month-level <tr> (which also
-   receives :hover) from highlighting the entire month in dayGridYear. */
-.forbidden-week-mode tr:hover > td.fc-day {
-  background-color: rgba(239, 68, 68, 0.2) !important;
-}
-
-/* Pointer cursor on day cells when in forbidden-week-mode */
-.forbidden-week-mode td.fc-day {
-  cursor: pointer;
-}
-
-/* ── Selected slots ─────────────────────────────────────────────────────── */
-
-/* The ring/outline on a selected event is clipped by adjacent harness
-   containers that FullCalendar stacks on top.  Elevate the harness when
-   it contains a selected event so the ring stays visible. */
-.fc-timegrid-event-harness:has(.slot-selected) {
-  z-index: 99 !important;
-}
-
-/* ── Empty state - vue Planning (listWeek) ───────────────────────────────── */
-.fc .fc-list-empty {
-  background-color: var(--background);
-}
-
-.fc .fc-list-empty-cushion {
-  padding: 0;
-  margin: 0;
+  border: 1.5px solid rgb(0 0 0 / 0.1);
+  border-radius: 5px;
 }

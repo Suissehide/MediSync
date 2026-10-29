@@ -1,16 +1,17 @@
-import type {
-  DateSelectArg,
-  DateSpanApi,
-  EventDropArg,
-  ToolbarInput,
-} from '@fullcalendar/core'
-import frLocale from '@fullcalendar/core/locales/fr'
-import interactionPlugin, {
-  type EventResizeDoneArg,
-} from '@fullcalendar/interaction'
-import listPlugin from '@fullcalendar/list'
-import FullCalendar from '@fullcalendar/react'
-import timeGridPlugin from '@fullcalendar/timegrid'
+import FullCalendar, {
+  type CalendarRef,
+  type DateSelectInfo,
+  type DateSpanApi,
+  type EventDisplayInfo,
+  type EventDropInfo,
+  type EventResizeDoneInfo,
+  useCalendarController,
+} from '@fullcalendar/react'
+import interactionPlugin from '@fullcalendar/react/interaction'
+import listPlugin from '@fullcalendar/react/list'
+import frLocale from '@fullcalendar/react/locales/fr'
+import breezyTheme from '@fullcalendar/react/themes/breezy'
+import timeGridPlugin from '@fullcalendar/react/timegrid'
 import dayjs, { type Dayjs } from 'dayjs'
 import { CalendarOff } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -19,6 +20,7 @@ import { usePlanningStore } from '../../../store/usePlanningStore.ts'
 import type { Appointment } from '../../../types/appointment.ts'
 import type { PlanningCycle } from '../../../types/planningCycle.ts'
 import { cycleWeekNumber } from '../../../utils/weekCycle.ts'
+import { BarreCalendrier } from './barreCalendrier.tsx'
 import CalendarDatePickerButton from './calendarDatePickerButton.tsx'
 import { EventContent } from './eventContent.tsx'
 
@@ -103,9 +105,8 @@ export interface CalendarEvent {
   start: string
   end: string
   color?: string
-  textColor?: string
-  backgroundColor?: string
-  borderColor?: string
+  contrastColor?: string
+  className?: string
   display?: string
   editable?: boolean
   extendedProps?: {
@@ -126,14 +127,16 @@ export interface CalendarEvent {
 
 interface CalendarProps {
   events: CalendarEvent[]
-  handleSelectEvent?: (arg: DateSelectArg) => void
-  handleEditEvent?: (arg: EventDropArg | EventResizeDoneArg) => void
+  handleSelectEvent?: (arg: DateSelectInfo) => void
+  handleEditEvent?: (arg: EventDropInfo | EventResizeDoneInfo) => void
   handleClickEvent?: (eventID: string) => void
   handleDropEvent?: (pathwayTemplateID: string, startDate: string) => void
   handleOpenEvent?: (eventId: string) => void
   selectAllow?: (selectInfo: DateSpanApi) => boolean
   editMode?: boolean
-  headerToolbar?: ToolbarInput
+  /** complete : vues, aujourd'hui, date ; navigation : sans les vues ; minimale : précédent/suivant. */
+  barre?: 'complete' | 'navigation' | 'minimale'
+  classeBarre?: string
   editable?: boolean
   /** false : les créneaux simultanés se partagent la colonne au lieu de se recouvrir. */
   overlap?: boolean
@@ -169,7 +172,8 @@ function Calendar({
   handleOpenEvent,
   selectAllow,
   editMode,
-  headerToolbar,
+  barre = 'complete',
+  classeBarre,
   editable = false,
   overlap = true,
   initialDate,
@@ -198,7 +202,8 @@ function Calendar({
     [weekAnchorDate],
   )
   const lastDropTimeRef = useRef<number>(0)
-  const calendarRef = useRef<FullCalendar | null>(null)
+  const calendarRef = useRef<CalendarRef | null>(null)
+  const controller = useCalendarController()
 
   useEffect(() => {
     if (unselectRef) {
@@ -275,18 +280,9 @@ function Calendar({
       start: fw.startOfWeek,
       end: dayjs(fw.startOfWeek).add(7, 'day').toISOString(),
       display: 'background' as const,
-      backgroundColor: 'rgba(239, 68, 68, 0.15)',
-      borderColor: 'transparent',
-      classNames: ['forbidden-week-bg'],
+      color: 'rgba(239, 68, 68, 0.15)',
     }))
   }, [forbiddenWeeks])
-
-  const handleOpenDatePicker = (ev: MouseEvent) => {
-    const target = ev.currentTarget
-    if (target instanceof HTMLElement) {
-      setAnchorEl(target)
-    }
-  }
 
   const handleDateChange = (date: Dayjs | null) => {
     if (!date) {
@@ -298,15 +294,15 @@ function Calendar({
     setAnchorEl(null)
   }
 
-  const handleSelect = (dateSelectArg: DateSelectArg) => {
+  const handleSelect = (dateSelectArg: DateSelectInfo) => {
     handleSelectEvent?.(dateSelectArg)
   }
 
-  const handleEventDrop = (eventDropArg: EventDropArg) => {
+  const handleEventDrop = (eventDropArg: EventDropInfo) => {
     handleEditEvent?.(eventDropArg)
   }
 
-  const handleResize = (eventResizeStopArg: EventResizeDoneArg) => {
+  const handleResize = (eventResizeStopArg: EventResizeDoneInfo) => {
     handleEditEvent?.(eventResizeStopArg)
   }
 
@@ -367,11 +363,56 @@ function Calendar({
     }
   }, [handleClickEvent])
 
+  // La v7 sépare le rendu des événements de fond : les créneaux en sont, et portent le même contenu.
+  const renduEvenement = (eventContent: EventDisplayInfo) => {
+    const contenu = (
+      <EventContent
+        setOpenEventId={handleOpenEvent}
+        eventContent={eventContent}
+        editMode={editMode}
+        onDuplicate={onDuplicate}
+        onDelete={onDelete}
+        onToggleLock={onToggleLock}
+        selectedSlotIds={selectedSlotIds}
+        onToggleSelect={onToggleSelect}
+        showSecondaryTags={showSecondaryTags}
+      />
+    )
+    // En vue liste, le contenu remplace toute la ligne : l'horaire n'y est plus que s'il est rendu ici.
+    if (!eventContent.view.type.startsWith('list')) {
+      return contenu
+    }
+    return (
+      <div className="flex w-full items-center gap-4">
+        <span className="w-28 shrink-0 text-sm text-text-light">
+          {eventContent.timeText}
+        </span>
+        <div className="min-w-0 flex-1">{contenu}</div>
+      </div>
+    )
+  }
+
   return (
-    <div className={`${editMode ? 'edit-mode' : ''} h-full relative`}>
+    <div className="relative flex h-full flex-col">
+      <BarreCalendrier
+        controller={controller}
+        vues={
+          barre === 'complete'
+            ? [
+                { type: 'timeGridWeek' },
+                { type: 'timeGridDay' },
+                { type: 'listWeek' },
+              ]
+            : undefined
+        }
+        aujourdhui={barre !== 'minimale'}
+        onChoisirDate={barre === 'minimale' ? undefined : setAnchorEl}
+        className={classeBarre}
+      />
       <FullCalendar
         ref={calendarRef}
-        plugins={[timeGridPlugin, listPlugin, interactionPlugin]}
+        controller={controller}
+        plugins={[breezyTheme, timeGridPlugin, listPlugin, interactionPlugin]}
         initialView={initialView}
         initialDate={
           initialDate || anchorMonday?.toISOString() || dayjs().toISOString()
@@ -387,19 +428,7 @@ function Calendar({
         selectOverlap={true}
         unselectAuto={true}
         nowIndicator={true}
-        customButtons={{
-          selectDateButton: {
-            text: '',
-            click: handleOpenDatePicker,
-          },
-        }}
-        headerToolbar={
-          headerToolbar ?? {
-            left: 'title',
-            center: 'timeGridWeek,timeGridDay,listWeek',
-            right: 'today selectDateButton prev,next',
-          }
-        }
+        headerToolbar={false}
         titleFormat={(arg) => {
           const start = dayjs.utc(arg.start.marker)
           if (anchorMonday) {
@@ -435,7 +464,21 @@ function Calendar({
             ? { weekday: 'long' }
             : { weekday: 'short', day: 'numeric' }
         }
-        slotLabelFormat={(arg) => {
+        // Le thème met les heures en capitales : « 7H » au lieu de « 7h ».
+        slotHeaderInnerClass="normal-case"
+        // La hauteur d'une demi-heure de la v6 : plus serrés, les créneaux tronquent leur texte.
+        slotMinHeight={35}
+        dayLaneClass={(info) => (info.isToday ? 'bg-primary/8' : undefined)}
+        // Mode édition : la vue s'encadre de rouge.
+        viewClass={
+          editMode
+            ? 'relative before:pointer-events-none before:absolute before:inset-0 before:z-[1] before:rounded-md before:shadow-[inset_0_0_0_2px_var(--color-destructive)]'
+            : undefined
+        }
+        // Vue liste : sur toute la largeur, et seul notre bloc porte la couleur, pas la ligne.
+        listDaysClass="max-w-none"
+        listItemEventClass="bg-transparent p-1"
+        slotHeaderFormat={(arg) => {
           const hour = arg.date.hour.toString()
           const minute = arg.date.minute.toString().padStart(2, '0')
           return minute === '00' ? `${hour}h` : `${hour}:${minute}`
@@ -444,7 +487,7 @@ function Calendar({
         scrollTimeReset={false}
         slotMinTime="06:00:00"
         slotDuration="00:30:00"
-        slotLabelInterval="01:00"
+        slotHeaderInterval="01:00"
         snapDuration="00:15:00"
         editable={editable}
         select={handleSelect}
@@ -486,19 +529,14 @@ function Calendar({
         }}
         events={[...viewEvents, ...forbiddenWeekEvents]}
         slotEventOverlap={overlap}
-        eventContent={(eventContent) => (
-          <EventContent
-            setOpenEventId={handleOpenEvent}
-            eventContent={eventContent}
-            editMode={editMode}
-            onDuplicate={onDuplicate}
-            onDelete={onDelete}
-            onToggleLock={onToggleLock}
-            selectedSlotIds={selectedSlotIds}
-            onToggleSelect={onToggleSelect}
-            showSecondaryTags={showSecondaryTags}
-          />
-        )}
+        eventContent={renduEvenement}
+        backgroundEventContent={renduEvenement}
+        // Le thème teinte les événements à partir de leur couleur : créneaux, rendez-vous et
+        // semaines interdites gardent la leur, pleine (elle porte son alpha quand il en faut un).
+        backgroundEventClass="bg-[var(--fc-event-color)] opacity-100"
+        // Sans les marges du thème : notre contenu a les siennes, et une demi-heure en a besoin.
+        columnEventClass="m-0 bg-[var(--fc-event-color)]"
+        columnEventInnerClass="p-0"
         noEventsContent={() => (
           <NoEventsState label="Aucune séance planifiée cette semaine" />
         )}
@@ -537,12 +575,10 @@ function Calendar({
             handleDropEvent?.(pathwayId, weekStart.toISOString())
           }
         }}
-        eventDidMount={(info) => {
-          if (info.event.display === 'background') {
-            info.el.setAttribute('data-slot-id', info.event.id)
-            // Repose aussi les colonnes des voisins déjà montés du groupe.
-            applySlotLayout()
-          }
+        backgroundEventDidMount={(info) => {
+          info.el.setAttribute('data-slot-id', info.event.id)
+          // Repose aussi les colonnes des voisins déjà montés du groupe.
+          applySlotLayout()
         }}
       />
 

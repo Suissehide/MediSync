@@ -1,4 +1,4 @@
-import { Draggable } from '@fullcalendar/interaction'
+import { Draggable } from '@fullcalendar/react/interaction'
 import {
   ChevronDown,
   ChevronUp,
