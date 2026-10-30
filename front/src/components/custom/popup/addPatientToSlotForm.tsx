@@ -18,6 +18,7 @@ import { useAppForm } from '../../../hooks/formConfig.tsx'
 import { useToast } from '../../../hooks/useToast.ts'
 import {
   type FreeInterval,
+  getTrancheChoice,
   getUpcomingSlotSuggestions,
   type SlotSuggestion,
 } from '../../../libs/slotAvailability.ts'
@@ -324,6 +325,28 @@ const formatSoignants = (slot: Slot) =>
     ? slot.slotTemplate.soignants.map((soignant) => soignant.name).join(', ')
     : 'Aucun soignant associé'
 
+/** Horaire du rendez-vous créé : la tranche retenue, sinon l'heure et la durée saisies (individuel), sinon le créneau entier. */
+const getAppointmentRange = (
+  selected: SlotSuggestion,
+  tranche: FreeInterval | undefined,
+  startTime: Dayjs,
+  duration: string,
+) => {
+  if (tranche) {
+    return { start: dayjs.utc(tranche.start), end: dayjs.utc(tranche.end) }
+  }
+  if (selected.isIndividual) {
+    return {
+      start: startTime,
+      end: startTime.add(Number.parseInt(duration, 10), 'minute'),
+    }
+  }
+  return {
+    start: dayjs.utc(selected.slot.startDate),
+    end: dayjs.utc(selected.slot.endDate),
+  }
+}
+
 const roundDownToStep = (minutes: number) =>
   Math.max(15, Math.floor(minutes / 15) * 15)
 
@@ -480,6 +503,53 @@ const buildJoinPayload = (target: Appointment, patientID: string) => ({
   ],
 })
 
+/** Créneau individuel découpé en tranches : on choisit la tranche, la durée est celle de la tranche. Sans tranches, les champs libres (`children`). */
+function TrancheTimeFields({
+  tranches,
+  tranche,
+  onStartChange,
+  children,
+}: {
+  tranches?: FreeInterval[]
+  tranche?: FreeInterval
+  onStartChange: (value: Dayjs) => void
+  children: React.ReactNode
+}) {
+  if (!tranches) {
+    return children
+  }
+  const minutes = tranche
+    ? dayjs.utc(tranche.end).diff(dayjs.utc(tranche.start), 'minute')
+    : 0
+  return (
+    <>
+      <FormField>
+        <Label>Début</Label>
+        <Select
+          options={tranches.map((t) => ({
+            value: t.start,
+            label: dayjs.utc(t.start).format('HH:mm'),
+          }))}
+          value={tranche?.start}
+          onValueChange={(value) => onStartChange(dayjs.utc(value))}
+          clearable={false}
+          placeholder="Aucune tranche libre"
+        />
+      </FormField>
+      <FormField>
+        <Label htmlFor="appointment-duration">Durée</Label>
+        <Select
+          id="appointment-duration"
+          options={[{ label: `${minutes} min`, value: String(minutes) }]}
+          value={String(minutes)}
+          disabled
+          clearable={false}
+        />
+      </FormField>
+    </>
+  )
+}
+
 function AddPatientToSlotForm({
   trigger,
   patientID,
@@ -560,6 +630,7 @@ function AddPatientToSlotContent({
   const [defaultValues] = useState(() => ({
     patientID: initialPatientID ?? '',
     thematicID: '',
+    subThematicID: '',
     startTime: dayjs.utc(),
     duration: '',
     appointmentType: '',
@@ -575,6 +646,10 @@ function AddPatientToSlotContent({
   const thematicID = useStore(form.store, (state) => state.values.thematicID)
   const startTime = useStore(form.store, (state) => state.values.startTime)
   const motif = useStore(form.store, (state) => state.values.motif)
+  const subThematicID = useStore(
+    form.store,
+    (state) => state.values.subThematicID,
+  )
 
   const patientOptions = useMemo(
     () =>
@@ -605,8 +680,9 @@ function AddPatientToSlotContent({
         patientID,
         fromDate.toISOString(),
         Number.POSITIVE_INFINITY,
+        thematics?.find((thematic) => thematic.id === thematicID)?.duration,
       ),
-    [slots, thematicID, patientID, fromDate],
+    [slots, thematicID, patientID, fromDate, thematics],
   )
   const hasMore = !isWindowExhausted(
     beforeLoad,
@@ -636,6 +712,16 @@ function AddPatientToSlotContent({
   const isJoining = !!joinedAppointment
   const missingMotif = isMotifMissing(selected, motif)
   const areTimeFieldsDisabled = isJoining || !selected?.isIndividual
+
+  // Individuel : débuts calés sur des tranches de la durée de la sous-thématique (à défaut, de la thématique).
+  const { tranches, tranche } = getTrancheChoice(
+    selected?.slot,
+    [
+      thematics?.find((thematic) => thematic.id === subThematicID)?.duration,
+      selectedThematic?.duration,
+    ],
+    startTime,
+  )
 
   const {
     freeInterval: individualFreeInterval,
@@ -672,6 +758,7 @@ function AddPatientToSlotContent({
     form.setFieldValue('duration', defaults.duration)
     form.setFieldValue('appointmentType', defaults.appointmentType)
     form.setFieldValue('motif', '')
+    form.setFieldValue('subThematicID', thematicID)
 
     setSelected(suggestion)
     setStep(2)
@@ -702,11 +789,17 @@ function AddPatientToSlotContent({
     patientID: string
     thematicID: string
     startTime: Dayjs
+    subThematicID: string
     duration: string
     appointmentType: string
     motif: string
   }) {
-    if (!selected || !value.patientID || missingMotif) {
+    if (
+      !selected ||
+      !value.patientID ||
+      missingMotif ||
+      (tranches && !tranche)
+    ) {
       return
     }
 
@@ -733,19 +826,19 @@ function AddPatientToSlotContent({
       return
     }
 
-    const start = selected.isIndividual
-      ? value.startTime
-      : dayjs.utc(selected.slot.startDate)
-    const end = selected.isIndividual
-      ? start.add(Number.parseInt(value.duration, 10), 'minute')
-      : dayjs.utc(selected.slot.endDate)
+    const { start, end } = getAppointmentRange(
+      selected,
+      tranche,
+      value.startTime,
+      value.duration,
+    )
 
     createAppointment.mutate(
       {
         startDate: start.toISOString(),
         endDate: end.toISOString(),
         slotID: selected.slot.id,
-        thematicId: value.thematicID,
+        thematicId: value.subThematicID || value.thematicID,
         type: value.appointmentType,
         // Le motif ne concerne que les créneaux individuels ; ailleurs le
         // champ n'est pas affiché et rien ne doit être enregistré.
@@ -755,6 +848,51 @@ function AddPatientToSlotContent({
       { onSuccess: booked },
     )
   }
+
+  const timeFields = (
+    <TrancheTimeFields
+      tranches={tranches}
+      tranche={tranche}
+      onStartChange={(value) => form.setFieldValue('startTime', value)}
+    >
+      <FormField>
+        <Label>Début</Label>
+        <TimePicker
+          value={startTime}
+          onChange={(time) => handleStartTimeChange(time ?? dayjs.utc())}
+          minTime={minTime}
+          maxTime={maxTime}
+        />
+      </FormField>
+      <form.Subscribe selector={(state) => state.values.duration}>
+        {(duration) => (
+          <FormField>
+            <Label htmlFor="appointment-duration">Durée</Label>
+            <Select
+              id="appointment-duration"
+              options={durationOptions}
+              value={duration}
+              onValueChange={(next) => form.setFieldValue('duration', next)}
+              clearable={false}
+            />
+          </FormField>
+        )}
+      </form.Subscribe>
+    </TrancheTimeFields>
+  )
+
+  const subThematicField = (
+    <form.AppField name="subThematicID">
+      {(field) => (
+        <field.Select
+          label="Sous-thématique"
+          options={thematicOptions}
+          searchable
+          clearable={false}
+        />
+      )}
+    </form.AppField>
+  )
 
   const patientLabel = selectedPatient
     ? `${selectedPatient.lastName} ${selectedPatient.firstName}`
@@ -878,34 +1016,9 @@ function AddPatientToSlotContent({
           les créneaux individuels exposent début, durée et motif. */}
           {!areTimeFieldsDisabled && (
             <>
+              {subThematicField}
               <div className="grid grid-cols-3 gap-3">
-                <FormField>
-                  <Label>Début</Label>
-                  <TimePicker
-                    value={startTime}
-                    onChange={(time) =>
-                      handleStartTimeChange(time ?? dayjs.utc())
-                    }
-                    minTime={minTime}
-                    maxTime={maxTime}
-                  />
-                </FormField>
-                <form.Subscribe selector={(state) => state.values.duration}>
-                  {(duration) => (
-                    <FormField>
-                      <Label htmlFor="appointment-duration">Durée</Label>
-                      <Select
-                        id="appointment-duration"
-                        options={durationOptions}
-                        value={duration}
-                        onValueChange={(next) =>
-                          form.setFieldValue('duration', next)
-                        }
-                        clearable={false}
-                      />
-                    </FormField>
-                  )}
-                </form.Subscribe>
+                {timeFields}
                 <form.AppField name="appointmentType">
                   {(field) => (
                     <field.Select
@@ -941,11 +1054,17 @@ function AddPatientToSlotContent({
 
           {/* Collectif encore vide : seul le type reste à choisir. */}
           {areTimeFieldsDisabled && !isJoining && (
-            <form.AppField name="appointmentType">
-              {(field) => (
-                <field.Select label="Type" options={APPOINTMENT_TYPE_OPTIONS} />
-              )}
-            </form.AppField>
+            <>
+              {subThematicField}
+              <form.AppField name="appointmentType">
+                {(field) => (
+                  <field.Select
+                    label="Type"
+                    options={APPOINTMENT_TYPE_OPTIONS}
+                  />
+                )}
+              </form.AppField>
+            </>
           )}
         </PopupBody>
       )}

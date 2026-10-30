@@ -1,8 +1,10 @@
+import { useStore } from '@tanstack/react-form'
 import dayjs from 'dayjs'
 import { Check, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { useAppForm } from '../../../hooks/formConfig.tsx'
+import { getTrancheChoice } from '../../../libs/slotAvailability.ts'
 import { generateDurationOptions } from '../../../libs/utils.ts'
 import { usePatientQueries } from '../../../queries/usePatient.tsx'
 import { useSlotByIDQuery } from '../../../queries/useSlot.ts'
@@ -69,8 +71,6 @@ function AddAppointmentForm({
       .sort((a, b) => a.sortKey.localeCompare(b.sortKey, 'fr'))
       .map(({ value, label }) => ({ value, label })) ?? []
 
-  const durationOptions = generateDurationOptions(startDate, maxDate)
-
   const form = useAppForm({
     defaultValues: {
       startTime: startDate ? dayjs.utc(startDate) : today,
@@ -83,11 +83,17 @@ function AddAppointmentForm({
       patientIDs: (defaultPatientIDs ?? []) as string[],
     },
     onSubmit: ({ value }) => {
+      const start = tranche ? dayjs.utc(tranche.start) : value.startTime
+      if (tranches && !tranche) {
+        return
+      }
       const newAppointment: CreateAppointmentParams = {
-        startDate: value.startTime.toISOString(),
-        endDate: value.startTime
-          .add(Number.parseInt(value.duration, 10), 'minute')
-          .toISOString(),
+        startDate: start.toISOString(),
+        endDate: tranche
+          ? tranche.end
+          : start
+              .add(Number.parseInt(value.duration, 10), 'minute')
+              .toISOString(),
         slotID,
         thematicId: value.thematicId,
         type: value.type,
@@ -119,6 +125,25 @@ function AddAppointmentForm({
 
   const capacity = slot?.slotTemplate.capacity ?? 1
 
+  // Individuel : débuts calés sur des tranches de la durée de la sous-thématique (à défaut, de la thématique).
+  const subThematicID = useStore(form.store, (state) => state.values.thematicId)
+  const startTime = useStore(form.store, (state) => state.values.startTime)
+  const {
+    tranches,
+    tranche,
+    minutes: trancheMinutes,
+  } = getTrancheChoice(
+    slot,
+    [
+      thematics?.find((t) => t.id === subThematicID)?.duration,
+      thematics?.find((t) => t.id === slot?.slotTemplate?.thematicId)?.duration,
+    ],
+    startTime,
+  )
+  const durationOptions = tranches
+    ? [{ label: `${trancheMinutes} min`, value: String(trancheMinutes) }]
+    : generateDurationOptions(startDate, maxDate)
+
   return (
     <Popup modal={true} open={open} onOpenChange={setOpen}>
       <PopupContent>
@@ -141,16 +166,25 @@ function AddAppointmentForm({
                   {(durationField) => (
                     <AppointmentTimeFields
                       date={startDate}
-                      startTime={startTimeField.state.value}
+                      startTime={tranche ? dayjs.utc(tranche.start) : startTime}
+                      startTimeOptions={tranches?.map((t) => ({
+                        value: t.start,
+                        label: dayjs.utc(t.start).format('HH:mm'),
+                      }))}
                       onStartTimeChange={(time) =>
                         startTimeField.handleChange(time)
                       }
-                      duration={durationField.state.value}
+                      duration={
+                        tranches
+                          ? String(trancheMinutes)
+                          : durationField.state.value
+                      }
                       onDurationChange={(value) =>
                         durationField.handleChange(value)
                       }
                       durationOptions={durationOptions}
                       disabled={type === 'multiple'}
+                      durationDisabled={!!tranches}
                       durationFieldId={durationField.name}
                       startTimeInfo={<FieldInfo field={startTimeField} />}
                       durationInfo={<FieldInfo field={durationField} />}
@@ -180,6 +214,14 @@ function AddAppointmentForm({
             </FormField>
 
             <FormField>
+              <Label>Thématique</Label>
+              <Input
+                value={slot?.slotTemplate?.thematic ?? 'Aucune thématique'}
+                disabled
+              />
+            </FormField>
+
+            <FormField>
               <Label>Salle</Label>
               <Input
                 value={
@@ -193,12 +235,12 @@ function AddAppointmentForm({
               {(field) => (
                 <field.Select
                   options={thematicOptions}
-                  label="Thématique"
+                  label="Sous-thématique"
                   disabled={thematicOptions.length === 0}
                   placeholder={
                     thematicOptions.length === 0
-                      ? 'Aucune thématique associée'
-                      : 'Sélectionnez une thématique'
+                      ? 'Aucune sous-thématique associée'
+                      : 'Sélectionnez une sous-thématique'
                   }
                 />
               )}

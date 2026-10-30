@@ -263,16 +263,27 @@ export default function AppointmentSheet({
                 />
               </FormField>
 
+              <FormField>
+                <Label>Thématique</Label>
+                <Input
+                  value={
+                    appointment?.slot?.slotTemplate?.thematic ??
+                    'Aucune thématique'
+                  }
+                  disabled
+                />
+              </FormField>
+
               <form.AppField name="thematicId">
                 {(field) => (
                   <field.Select
                     options={thematicOptions}
-                    label="Thématique"
+                    label="Sous-thématique"
                     disabled={thematicOptions.length === 0}
                     placeholder={
                       thematicOptions.length === 0
-                        ? 'Aucune thématique associée'
-                        : 'Sélectionnez une thématique'
+                        ? 'Aucune sous-thématique associée'
+                        : 'Sélectionnez une sous-thématique'
                     }
                   />
                 )}

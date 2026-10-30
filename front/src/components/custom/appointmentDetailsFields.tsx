@@ -18,6 +18,7 @@ interface AppointmentTimeFieldsProps {
   onDurationChange: (value: string) => void
   durationOptions: SelectOption[]
   disabled?: boolean
+  durationDisabled?: boolean
   durationFieldId?: string
   startTimeInfo?: ReactNode
   durationInfo?: ReactNode
@@ -25,6 +26,8 @@ interface AppointmentTimeFieldsProps {
   minTime?: Dayjs
   /** Borne supérieure du TimePicker — restreint le choix à un intervalle libre. */
   maxTime?: Dayjs
+  /** Débuts permis (dates ISO) : remplacent le TimePicker par une liste. */
+  startTimeOptions?: SelectOption[]
 }
 
 export function AppointmentTimeFields({
@@ -36,11 +39,13 @@ export function AppointmentTimeFields({
   onDurationChange,
   durationOptions,
   disabled = false,
+  durationDisabled = false,
   durationFieldId,
   startTimeInfo,
   durationInfo,
   minTime,
   maxTime,
+  startTimeOptions,
 }: AppointmentTimeFieldsProps) {
   return (
     <div className="flex flex-wrap gap-2 items-center">
@@ -56,13 +61,24 @@ export function AppointmentTimeFields({
       <FormField className="flex-row items-center gap-2">
         <div className="text-sm text-text-light font-medium mb-0">à</div>
         <div>
-          <TimePicker
-            value={startTime}
-            onChange={(time) => onStartTimeChange(time ?? dayjs.utc())}
-            disabled={disabled}
-            minTime={minTime}
-            maxTime={maxTime}
-          />
+          {startTimeOptions ? (
+            <Select
+              options={startTimeOptions}
+              value={startTime.toISOString()}
+              onValueChange={(value) => onStartTimeChange(dayjs.utc(value))}
+              disabled={disabled}
+              clearable={false}
+              placeholder="Aucune tranche libre"
+            />
+          ) : (
+            <TimePicker
+              value={startTime}
+              onChange={(time) => onStartTimeChange(time ?? dayjs.utc())}
+              disabled={disabled}
+              minTime={minTime}
+              maxTime={maxTime}
+            />
+          )}
           {startTimeInfo}
         </div>
       </FormField>
@@ -75,7 +91,7 @@ export function AppointmentTimeFields({
             options={durationOptions}
             value={duration}
             onValueChange={onDurationChange}
-            disabled={disabled}
+            disabled={disabled || durationDisabled}
             clearable={false}
           />
           {durationInfo}

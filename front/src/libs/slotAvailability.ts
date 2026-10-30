@@ -1,4 +1,4 @@
-import dayjs from 'dayjs'
+import dayjs, { type Dayjs } from 'dayjs'
 
 import type { Slot } from '../types/slot.ts'
 
@@ -66,6 +66,60 @@ export const getFreeIntervals = (slot: Slot): FreeInterval[] => {
   )
 }
 
+/** Tranches libres d'un créneau découpé depuis son début en pas de `minutes` : on n'y laisse aucun trou. */
+export const getFreeTranches = (
+  slot: Slot,
+  minutes: number,
+): FreeInterval[] => {
+  if (minutes <= 0) {
+    return []
+  }
+  const booked = slot.appointments ?? []
+  const slotEnd = dayjs.utc(slot.endDate)
+  const tranches: FreeInterval[] = []
+  for (
+    let start = dayjs.utc(slot.startDate);
+    !start.add(minutes, 'minute').isAfter(slotEnd);
+    start = start.add(minutes, 'minute')
+  ) {
+    const end = start.add(minutes, 'minute')
+    const taken = booked.some(
+      (appointment) =>
+        start.isBefore(dayjs.utc(appointment.endDate)) &&
+        end.isAfter(dayjs.utc(appointment.startDate)),
+    )
+    if (!taken) {
+      tranches.push({ start: start.toISOString(), end: end.toISOString() })
+    }
+  }
+  return tranches
+}
+
+/** Tranches libres d'un créneau individuel, à la première durée connue de `durations`, et celle retenue pour `time` : qui le contient, sinon la suivante, sinon la première. Sans durée : rien, l'horaire reste libre. */
+export const getTrancheChoice = (
+  slot: Slot | undefined,
+  durations: (number | null | undefined)[],
+  time: Dayjs,
+): { tranches?: FreeInterval[]; tranche?: FreeInterval; minutes?: number } => {
+  const minutes = durations.find(Boolean)
+  if (!slot?.slotTemplate?.isIndividual || !minutes) {
+    return {}
+  }
+  const tranches = getFreeTranches(slot, minutes)
+  return {
+    tranches,
+    tranche:
+      tranches.find((t) => dayjs.utc(t.end).isAfter(time)) ?? tranches[0],
+    minutes,
+  }
+}
+
+/** Intervalles libres, ou tranches libres quand la durée de la thématique est connue. */
+const getBookableIntervals = (slot: Slot, trancheMinutes?: number | null) =>
+  trancheMinutes
+    ? getFreeTranches(slot, trancheMinutes)
+    : getFreeIntervals(slot)
+
 /** Nombre total de patients inscrits sur le créneau, tous rendez-vous confondus. */
 export const getBookedPatientCount = (slot: Slot): number =>
   (slot.appointments ?? []).reduce(
@@ -94,9 +148,12 @@ export const isPatientBookedOnSlot = (slot: Slot, patientID: string): boolean =>
  * Un créneau individuel est disponible s'il reste un intervalle libre ;
  * un créneau collectif l'est tant que sa capacité n'est pas atteinte.
  */
-export const hasSlotAvailability = (slot: Slot): boolean =>
+export const hasSlotAvailability = (
+  slot: Slot,
+  trancheMinutes?: number | null,
+): boolean =>
   slot.slotTemplate?.isIndividual
-    ? getFreeIntervals(slot).length > 0
+    ? getBookableIntervals(slot, trancheMinutes).length > 0
     : getBookedPatientCount(slot) < getSlotCapacity(slot)
 
 /**
@@ -115,6 +172,7 @@ export const getUpcomingSlotSuggestions = (
   patientID: string,
   from?: string,
   limit: number = UPCOMING_SLOT_LIMIT,
+  trancheMinutes?: number | null,
 ): SlotSuggestion[] => {
   if (!slots || !thematicID || !patientID) {
     return []
@@ -141,11 +199,13 @@ export const getUpcomingSlotSuggestions = (
       return {
         slot,
         alreadyBooked: isPatientBookedOnSlot(slot, patientID),
-        isFull: !hasSlotAvailability(slot),
+        isFull: !hasSlotAvailability(slot, trancheMinutes),
         bookedCount: getBookedPatientCount(slot),
         capacity: getSlotCapacity(slot),
         isIndividual,
-        freeInterval: isIndividual ? getFreeIntervals(slot)[0] : undefined,
+        freeInterval: isIndividual
+          ? getBookableIntervals(slot, trancheMinutes)[0]
+          : undefined,
         joinableAppointmentID:
           !isIndividual && existingAppointment
             ? existingAppointment.id

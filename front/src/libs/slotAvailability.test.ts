@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import type { Slot } from '../types/slot.ts'
 import {
   ecartEnJours,
+  getFreeTranches,
   getPathwayProgress,
   getPathwayStartDates,
   getUpcomingSlotSuggestions,
@@ -331,5 +332,38 @@ describe('getUpcomingSlotSuggestions', () => {
     )
 
     expect(suggestions.map((s) => s.slot.id)).toEqual(['vivant'])
+  })
+})
+
+describe('getFreeTranches', () => {
+  const creneau = (appointments: { start: string; end: string }[]) =>
+    ({
+      id: 'slot-1',
+      startDate: '2026-11-02T09:00:00.000Z',
+      endDate: '2026-11-02T12:00:00.000Z',
+      appointments: appointments.map((a, i) => ({
+        id: `apt-${i}`,
+        startDate: a.start,
+        endDate: a.end,
+      })),
+    }) as unknown as Slot
+
+  it('decoupe le creneau en tranches de la duree depuis son debut', () => {
+    expect(
+      getFreeTranches(creneau([]), 60).map((t) => t.start.slice(11, 16)),
+    ).toEqual(['09:00', '10:00', '11:00'])
+  })
+
+  it('ecarte les tranches qui chevauchent un rendez-vous, sans en decaler aucune', () => {
+    const tranches = getFreeTranches(
+      creneau([
+        { start: '2026-11-02T09:00:00.000Z', end: '2026-11-02T09:30:00.000Z' },
+      ]),
+      60,
+    )
+    expect(tranches.map((t) => t.start.slice(11, 16))).toEqual([
+      '10:00',
+      '11:00',
+    ])
   })
 })
