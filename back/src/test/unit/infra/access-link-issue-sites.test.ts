@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
-import ts from 'typescript'
+import ts from 'typescript5'
 
 // ARBITRAGE n°1 : la garde porte sur LE JETON, pas sur la route.
 //

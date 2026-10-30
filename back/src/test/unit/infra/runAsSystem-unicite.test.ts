@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
-import ts from 'typescript'
+import ts from 'typescript5'
 
 // `runAsSystem` (utils/tenant-context.ts) retire l'exigence du garde-fou d'ORM plutot que de la
 // deplacer : sous ce mode, une requete peut lire N'IMPORTE QUEL etablissement et service, le

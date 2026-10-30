@@ -19,7 +19,7 @@ Node/npm versions are pinned by Volta in `package.json` (Node 24, npm 11).
 
 NPM scripts are orchestrated by [wireit](https://github.com/google/wireit) (see the `wireit` block in `package.json`); wireit handles caching and dependency between scripts, so you usually don't need to chain things manually.
 
-- `npm run dev` — start with watch (`@swc-node/register`, no transpile step).
+- `npm run dev` — start with watch (`tsx`, no transpile step).
 - `npm run start:development` / `npm run start:production` — `npm start` picks one via `per-env` from `NODE_ENV`.
 - `npm run build` — `prisma generate` → `tsc --noemit` typecheck → SWC transpile `src` → `lib`. **The typecheck is
   scoped to `src/main/tsconfig.json` (plus `prisma/tsconfig.json`) — it does not check `src/test`.** A deliberate
