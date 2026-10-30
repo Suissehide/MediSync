@@ -4,7 +4,7 @@ import type {
   FastifyListenOptions,
   FastifyServerOptions,
 } from 'fastify'
-import Fastify from 'fastify'
+import Fastify, { LogController } from 'fastify'
 import {
   serializerCompiler,
   validatorCompiler,
@@ -46,7 +46,7 @@ class FastifyHttpServer implements HttpServer {
 
     const fastifyOptions: FastifyServerOptions = {
       loggerInstance: pino.pinoLogger,
-      disableRequestLogging: true,
+      logController: new LogController({ disableRequestLogging: true }),
       exposeHeadRoutes: false,
       forceCloseConnections: 'idle',
       requestTimeout: 3000,

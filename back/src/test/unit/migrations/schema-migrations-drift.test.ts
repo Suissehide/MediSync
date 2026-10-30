@@ -160,7 +160,7 @@ const runMigrateDiff = (conn: PgConn): DiffResult => {
       ],
       {
         cwd: PRISMA_DIR,
-        env: { ...process.env, DATABASE_URL: url, SHADOW_DATABASE_URL: url },
+        env: { ...process.env, SHADOW_DATABASE_URL: url },
         encoding: 'utf8',
       },
     )

@@ -52,6 +52,7 @@ type AvecDetail = { detail?: string }
 
 class AppEventBus {
   private emitter = new EventEmitter()
+  private pending = new Set<Promise<void>>()
 
   emit<K extends keyof AppEvents>(
     event: K,
@@ -62,9 +63,19 @@ class AppEventBus {
 
   on<K extends keyof AppEvents>(
     event: K,
-    handler: (payload: AppEvents[K] & AvecDetail) => void,
+    handler: (payload: AppEvents[K] & AvecDetail) => void | Promise<void>,
   ): void {
-    this.emitter.on(event, handler)
+    this.emitter.on(event, (payload: AppEvents[K] & AvecDetail) => {
+      const done = Promise.resolve(handler(payload)).finally(() =>
+        this.pending.delete(done),
+      )
+      this.pending.add(done)
+    })
+  }
+
+  // Attendu avant de fermer l'ORM : un abonne encore en vol ecrirait sur une base deconnectee.
+  async idle(): Promise<void> {
+    await Promise.allSettled([...this.pending])
   }
 }
 

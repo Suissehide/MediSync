@@ -4,11 +4,12 @@ import fastifyPlugin from 'fastify-plugin'
 
 const ormPlugin: FastifyPluginAsync = fastifyPlugin(
   (fastify: FastifyInstance) => {
-    const { postgresOrm } = fastify.iocContainer
+    const { postgresOrm, appEventBus } = fastify.iocContainer
     fastify.addHook('onReady', async () => {
       await postgresOrm.start()
     })
     fastify.addHook('onClose', async () => {
+      await appEventBus.idle()
       await postgresOrm.stop()
     })
     return Promise.resolve()

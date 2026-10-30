@@ -1,4 +1,4 @@
-import Fastify, { type FastifyInstance } from 'fastify'
+import Fastify, { type FastifyInstance, LogController } from 'fastify'
 import {
   serializerCompiler,
   validatorCompiler,
@@ -273,7 +273,10 @@ const buildApp = (
     accessLinkDomain: buildRealAccessLinkDomain(outcome, loggerInstance),
   } as unknown as IocContainer
 
-  const app = Fastify({ loggerInstance, disableRequestLogging: true })
+  const app = Fastify({
+    loggerInstance,
+    logController: new LogController({ disableRequestLogging: true }),
+  })
   app.setValidatorCompiler(validatorCompiler)
   app.setSerializerCompiler(serializerCompiler)
   app.withTypeProvider<ZodTypeProvider>()
@@ -567,7 +570,10 @@ describe("le lien d'acces (POST /super-admin/users/:userId/access-link) ne fait 
       appEventBus,
     } as unknown as IocContainer)
 
-    const app = Fastify({ loggerInstance, disableRequestLogging: true })
+    const app = Fastify({
+      loggerInstance,
+      logController: new LogController({ disableRequestLogging: true }),
+    })
     app.setValidatorCompiler(validatorCompiler)
     app.setSerializerCompiler(serializerCompiler)
     app.withTypeProvider<ZodTypeProvider>()
