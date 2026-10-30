@@ -14,6 +14,7 @@ import {
   type ServiceFieldChoiceParams,
   serviceFieldResponseSchema,
   serviceFieldsResponseSchema,
+  toServiceFieldDto,
   type UpdateServiceFieldBody,
   type UpdateServiceFieldChoiceBody,
   type UpdateServiceFieldParams,
@@ -32,7 +33,7 @@ const serviceFieldRouter: FastifyPluginAsync = (fastify) => {
       schema: { response: { 200: serviceFieldsResponseSchema } },
       config: { permission: 'referentials:read' },
     },
-    () => serviceFieldDomain.findAll(),
+    async () => (await serviceFieldDomain.findAll()).map(toServiceFieldDto),
   )
 
   // Create
@@ -48,7 +49,7 @@ const serviceFieldRouter: FastifyPluginAsync = (fastify) => {
     async (request, reply) => {
       const created = await serviceFieldDomain.create(request.body)
       reply.code(201)
-      return created
+      return toServiceFieldDto(created)
     },
   )
 
@@ -68,9 +69,11 @@ const serviceFieldRouter: FastifyPluginAsync = (fastify) => {
       },
       config: { permission: 'referentials:write' },
     },
-    (request) => {
+    async (request) => {
       const { fieldID } = request.params
-      return serviceFieldDomain.update(fieldID, request.body)
+      return toServiceFieldDto(
+        await serviceFieldDomain.update(fieldID, request.body),
+      )
     },
   )
 
@@ -97,7 +100,7 @@ const serviceFieldRouter: FastifyPluginAsync = (fastify) => {
         request.body.label,
       )
       reply.code(201)
-      return updated
+      return toServiceFieldDto(updated)
     },
   )
 
@@ -117,9 +120,11 @@ const serviceFieldRouter: FastifyPluginAsync = (fastify) => {
       },
       config: { permission: 'referentials:write' },
     },
-    (request) => {
+    async (request) => {
       const { fieldID, choiceID } = request.params
-      return serviceFieldDomain.updateChoice(fieldID, choiceID, request.body)
+      return toServiceFieldDto(
+        await serviceFieldDomain.updateChoice(fieldID, choiceID, request.body),
+      )
     },
   )
 

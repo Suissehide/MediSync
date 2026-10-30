@@ -1,6 +1,7 @@
 import { z } from 'zod/v4'
 
 import { filterConditionSchema } from '../../../../utils/indicators/filters'
+import { withArchived } from './index'
 
 const codeField = z.string().trim().min(1).max(40)
 const labelField = z.string().trim().min(1).max(200)
@@ -53,27 +54,22 @@ export const updateIndicatorSchema = z
   })
   .strict()
 
-const indicatorDtoSchema = z
-  .object({
-    id: z.cuid(),
-    code: z.string(),
-    label: z.string(),
-    group: z.string(),
-    order: z.number(),
-    nature: z.string(),
-    measure: z.string().nullable(),
-    options: z.unknown(),
-    filters: z.unknown(),
-    breakdownField: z.string().nullable(),
-    input: z.string().nullable(),
-    note: z.string().nullable(),
-    parentId: z.string().nullable(),
-    archivedAt: z.date().nullable(),
-  })
-  .transform(({ archivedAt, ...rest }) => ({
-    ...rest,
-    archived: archivedAt !== null,
-  }))
+const indicatorDtoSchema = z.object({
+  id: z.cuid(),
+  code: z.string(),
+  label: z.string(),
+  group: z.string(),
+  order: z.number(),
+  nature: z.string(),
+  measure: z.string().nullable(),
+  options: z.unknown(),
+  filters: z.unknown(),
+  breakdownField: z.string().nullable(),
+  input: z.string().nullable(),
+  note: z.string().nullable(),
+  parentId: z.string().nullable(),
+  archived: z.boolean(),
+})
 
 export const indicatorResponseSchema = indicatorDtoSchema
 
@@ -90,18 +86,22 @@ export const updateIndicatorSetSchema = z
 
 export const reorderSchema = z.object({ ids: z.array(z.cuid()) }).strict()
 
-export const indicatorSetDtoSchema = z
-  .object({
-    id: z.cuid(),
-    name: z.string(),
-    order: z.number(),
-    archivedAt: z.date().nullable(),
-    indicators: z.array(indicatorDtoSchema),
-  })
-  .transform(({ archivedAt, ...rest }) => ({
-    ...rest,
-    archived: archivedAt !== null,
-  }))
+export const indicatorSetDtoSchema = z.object({
+  id: z.cuid(),
+  name: z.string(),
+  order: z.number(),
+  archived: z.boolean(),
+  indicators: z.array(indicatorDtoSchema),
+})
+
+export const toIndicatorSetDto = <
+  T extends {
+    archivedAt: Date | null
+    indicators: { archivedAt: Date | null }[]
+  },
+>(
+  set: T,
+) => withArchived({ ...set, indicators: set.indicators.map(withArchived) })
 
 export const indicatorSetsResponseSchema = z.array(indicatorSetDtoSchema)
 

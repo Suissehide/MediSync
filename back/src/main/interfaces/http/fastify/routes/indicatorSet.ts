@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod/v4'
 
 import { MEASURE_CATALOG } from '../../../../utils/indicators/catalog'
+import { withArchived } from '../schemas/index'
 import {
   type AnswerBody,
   type AnswerParams,
@@ -28,6 +29,7 @@ import {
   resultsResponseSchema,
   type SetIdParams,
   setIdParamsSchema,
+  toIndicatorSetDto,
   type UpdateIndicatorBody,
   type UpdateIndicatorSetBody,
   updateIndicatorSchema,
@@ -47,7 +49,7 @@ const indicatorSetRouter: FastifyPluginAsync = (fastify) => {
       schema: { response: { 200: indicatorSetsResponseSchema } },
       config: { permission: 'stats:read' },
     },
-    () => indicatorSetDomain.findAll(),
+    async () => (await indicatorSetDomain.findAll()).map(toIndicatorSetDto),
   )
 
   fastify.post<{ Body: CreateIndicatorSetBody }>(
@@ -62,7 +64,7 @@ const indicatorSetRouter: FastifyPluginAsync = (fastify) => {
     async (request, reply) => {
       const created = await indicatorSetDomain.create(request.body)
       reply.code(201)
-      return created
+      return toIndicatorSetDto(created)
     },
   )
 
@@ -76,7 +78,10 @@ const indicatorSetRouter: FastifyPluginAsync = (fastify) => {
       },
       config: { permission: 'stats:write' },
     },
-    (request) => indicatorSetDomain.update(request.params.setId, request.body),
+    async (request) =>
+      toIndicatorSetDto(
+        await indicatorSetDomain.update(request.params.setId, request.body),
+      ),
   )
 
   fastify.put<{ Body: ReorderBody }>(
@@ -107,7 +112,7 @@ const indicatorSetRouter: FastifyPluginAsync = (fastify) => {
         request.body,
       )
       reply.code(201)
-      return created
+      return withArchived(created)
     },
   )
 
@@ -121,11 +126,13 @@ const indicatorSetRouter: FastifyPluginAsync = (fastify) => {
       },
       config: { permission: 'stats:write' },
     },
-    (request) =>
-      indicatorSetDomain.updateIndicator(
-        request.params.setId,
-        request.params.indicatorId,
-        request.body,
+    async (request) =>
+      withArchived(
+        await indicatorSetDomain.updateIndicator(
+          request.params.setId,
+          request.params.indicatorId,
+          request.body,
+        ),
       ),
   )
 

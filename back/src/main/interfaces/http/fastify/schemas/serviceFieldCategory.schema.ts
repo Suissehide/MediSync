@@ -2,18 +2,13 @@ import { z } from 'zod/v4'
 
 import { CATEGORY_DATE_FIELDS } from '../../../../utils/service-field-types'
 
-export const serviceFieldCategoryResponseSchema = z
-  .object({
-    id: z.cuid(),
-    label: z.string(),
-    order: z.number(),
-    dateField: z.enum(CATEGORY_DATE_FIELDS).nullable(),
-    archivedAt: z.date().nullable(),
-  })
-  .transform(({ archivedAt, ...category }) => ({
-    ...category,
-    archived: archivedAt !== null,
-  }))
+export const serviceFieldCategoryResponseSchema = z.object({
+  id: z.cuid(),
+  label: z.string(),
+  order: z.number(),
+  dateField: z.enum(CATEGORY_DATE_FIELDS).nullable(),
+  archived: z.boolean(),
+})
 
 export const serviceFieldCategoriesResponseSchema = z.array(
   serviceFieldCategoryResponseSchema,

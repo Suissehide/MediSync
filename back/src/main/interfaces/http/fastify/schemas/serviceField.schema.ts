@@ -1,38 +1,34 @@
 import { z } from 'zod/v4'
 
 import { SERVICE_FIELD_TYPES } from '../../../../utils/service-field-types'
+import { withArchived } from './index'
 
-// Aplatit `archivedAt` en `archived: boolean`, comme `thematicNameFromRelation` (schemas/index.ts).
-const serviceFieldChoiceResponseSchema = z
-  .object({
-    id: z.cuid(),
-    key: z.string(),
-    label: z.string(),
-    order: z.number(),
-    archivedAt: z.date().nullable(),
-  })
-  .transform(({ archivedAt, ...choice }) => ({
-    ...choice,
-    archived: archivedAt !== null,
-  }))
+const serviceFieldChoiceResponseSchema = z.object({
+  id: z.cuid(),
+  key: z.string(),
+  label: z.string(),
+  order: z.number(),
+  archived: z.boolean(),
+})
 
-export const serviceFieldResponseSchema = z
-  .object({
-    id: z.cuid(),
-    key: z.string(),
-    label: z.string(),
-    type: z.enum(SERVICE_FIELD_TYPES),
-    categoryId: z.cuid(),
-    order: z.number(),
-    clinical: z.boolean(),
-    unit: z.string().nullable(),
-    archivedAt: z.date().nullable(),
-    choices: z.array(serviceFieldChoiceResponseSchema),
-  })
-  .transform(({ archivedAt, ...field }) => ({
-    ...field,
-    archived: archivedAt !== null,
-  }))
+export const serviceFieldResponseSchema = z.object({
+  id: z.cuid(),
+  key: z.string(),
+  label: z.string(),
+  type: z.enum(SERVICE_FIELD_TYPES),
+  categoryId: z.cuid(),
+  order: z.number(),
+  clinical: z.boolean(),
+  unit: z.string().nullable(),
+  archived: z.boolean(),
+  choices: z.array(serviceFieldChoiceResponseSchema),
+})
+
+export const toServiceFieldDto = <
+  T extends { archivedAt: Date | null; choices: { archivedAt: Date | null }[] },
+>(
+  field: T,
+) => withArchived({ ...field, choices: field.choices.map(withArchived) })
 
 export const serviceFieldsResponseSchema = z.array(serviceFieldResponseSchema)
 

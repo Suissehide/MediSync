@@ -4,27 +4,40 @@ import { locationResponseSchema } from './location.schema'
 import { patientSchema } from './patient.schema'
 import { soignantSchema } from './soignant.schema'
 
-// Les formulaires front initialisent ces champs à '' ; on le traite comme
-// "non renseigné" (null) avant la validation par enum.
-const emptyToNull = <T extends z.ZodTypeAny>(schema: T) =>
-  z.preprocess((value) => (value === '' ? null : value), schema)
+// Les référentiels exposent `archived`, jamais la date : appelé par les routes avant d'envoyer.
+export const withArchived = <T extends { archivedAt: Date | null }>({
+  archivedAt,
+  ...rest
+}: T): Omit<T, 'archivedAt'> & { archived: boolean } => ({
+  ...rest,
+  archived: archivedAt !== null,
+})
+
+// Les formulaires front initialisent ces champs à '' : lu comme null, jamais renvoyé tel quel.
+const emptyToNull = <T extends z.ZodType<string, string>>(schema: T) => {
+  const value = schema.nullish()
+  // Entrée et sortie de T sont la même chaîne, ce qu'un T générique ne laisse pas voir.
+  return z.codec(z.union([z.literal(''), value]), value, {
+    decode: (v) => (v === '' ? null : v) as z.input<T> | null | undefined,
+    encode: (v) => v as z.output<T> | null | undefined,
+  })
+}
 
 export const appointmentTypeSchema = emptyToNull(
-  z.enum(['ambulatory', 'hospital', 'telephonic']).nullish(),
+  z.enum(['ambulatory', 'hospital', 'telephonic']),
 )
-export const appointmentStatusSchema = emptyToNull(
-  z.enum(['yes', 'no']).nullish(),
-)
-// En écriture, les formulaires envoient '' quand aucune thématique n'est
-// choisie : on le convertit en null avant la validation cuid.
-export const thematicIdInputSchema = emptyToNull(z.cuid().nullish())
+export const appointmentStatusSchema = emptyToNull(z.enum(['yes', 'no']))
+export const thematicIdInputSchema = emptyToNull(z.cuid())
 
-// En réponse, `thematic` est aplati depuis la relation Thematic vers son nom
-// (le contrat d'API reste une string) ; l'écriture se fait via `thematicId`.
-const thematicNameFromRelation = z
-  .object({ name: z.string() })
-  .nullish()
-  .transform((value) => value?.name ?? null)
+// En réponse, `thematic` est le nom de la relation Thematic ; l'écriture passe par `thematicId`.
+const thematicNameFromRelation = z.codec(
+  z.string().nullish(),
+  z.object({ name: z.string() }).nullish(),
+  {
+    decode: (name) => (name == null ? null : { name }),
+    encode: (relation) => relation?.name ?? null,
+  },
+)
 
 export const appointmentSchema = z.object({
   startDate: z.coerce.date(),

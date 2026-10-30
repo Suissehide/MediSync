@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod/v4'
 
+import { withArchived } from '../schemas/index'
 import {
   type CreateServiceFieldCategoryBody,
   createServiceFieldCategorySchema,
@@ -24,7 +25,7 @@ const serviceFieldCategoryRouter: FastifyPluginAsync = (fastify) => {
       schema: { response: { 200: serviceFieldCategoriesResponseSchema } },
       config: { permission: 'referentials:read' },
     },
-    () => serviceFieldCategoryDomain.findAll(),
+    async () => (await serviceFieldCategoryDomain.findAll()).map(withArchived),
   )
 
   // Create (en fin d'ordre)
@@ -42,7 +43,7 @@ const serviceFieldCategoryRouter: FastifyPluginAsync = (fastify) => {
         request.body.label,
       )
       reply.code(201)
-      return created
+      return withArchived(created)
     },
   )
 
@@ -62,9 +63,11 @@ const serviceFieldCategoryRouter: FastifyPluginAsync = (fastify) => {
       },
       config: { permission: 'referentials:write' },
     },
-    (request) => {
+    async (request) => {
       const { categoryID } = request.params
-      return serviceFieldCategoryDomain.update(categoryID, request.body)
+      return withArchived(
+        await serviceFieldCategoryDomain.update(categoryID, request.body),
+      )
     },
   )
 
