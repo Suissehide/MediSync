@@ -246,7 +246,7 @@ function AddPatientForm({ trigger }: AddPatientFormProps) {
                                 {dayjs(match.birthDate).format('DD/MM/YYYY')}
                               </span>
                             )}
-                            {!match.inCurrentService && (
+                            {match.inCurrentService === false && (
                               <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
                                 Autre service
                               </span>
