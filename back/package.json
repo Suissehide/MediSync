@@ -463,7 +463,7 @@
     "@fastify/cors": "11.3.1",
     "@fastify/helmet": "13.2.0",
     "@fastify/jwt": "10.2.6",
-    "@fastify/rate-limit": "10.3.0",
+    "@fastify/rate-limit": "11.2.1",
     "@hapi/boom": "10.0.1",
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
