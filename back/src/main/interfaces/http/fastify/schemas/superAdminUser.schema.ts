@@ -1,5 +1,7 @@
 import { z } from 'zod/v4'
 
+import { cuid } from './id.schema'
+
 // `GET /super-admin/users?email=` (spec §3.4, §6.2) : « untel ne voit plus ses
 // patients » se diagnostique avec des rattachements et des dates, jamais un contenu de dossier.
 // Aucune donnée de patient ici — un test le vérifie par recherche de sous-chaîne sur le corps
@@ -45,7 +47,7 @@ export const searchAccountQuerySchema = z.object({
 // déjà de `GET /super-admin/users?email=` pour trouver le compte, et son périmètre est la
 // plateforme entière. Au niveau établissement, au contraire, l'identité visée est toujours
 // déduite d'une appartenance chargée par un repository filtré.
-export const superAdminUserParamsSchema = z.object({ userId: z.cuid() })
+export const superAdminUserParamsSchema = z.object({ userId: cuid() })
 
 export const reissueAccessLinkResponseSchema = z.object({
   // Le jeton en clair, rendu une seule fois — voir `accessLink.domain.ts#issue`.

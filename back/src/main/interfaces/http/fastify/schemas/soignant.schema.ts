@@ -1,5 +1,7 @@
 import { z } from 'zod/v4'
 
+import { cuid } from './id.schema'
+
 const soignantEntity = {
   name: z.string().min(1),
 }
@@ -9,7 +11,7 @@ export const soignantSchema = z.object({
 })
 
 export const soignantResponseSchema = z.object({
-  id: z.cuid(),
+  id: cuid(),
   ...soignantEntity,
 })
 
@@ -20,7 +22,7 @@ export const listSoignantsQuerySchema = z.object({
 })
 
 export const getSoignantByIdParamsSchema = z.object({
-  soignantID: z.cuid(),
+  soignantID: cuid(),
 })
 
 export const createSoignantSchema = z.object(soignantEntity).pick({

@@ -1,5 +1,7 @@
 import { z } from 'zod/v4'
 
+import { cuid } from './id.schema'
+
 // Colonnes fixes du sous-dossier ; les champs configurables vivent dans `data` et `clinicalData`.
 const patientServiceFileEntity = {
   // Referrals & Context
@@ -21,7 +23,7 @@ const patientServiceFileEntity = {
 // `patientDetailResponseSchema`), disponible avant qu'aucun sous-dossier de service n'existe —
 // voir domain/patient.domain.ts, `findByID`.
 export const patientServiceFileResponseSchema = z.object({
-  id: z.cuid(),
+  id: cuid(),
   patientId: z.string(),
   serviceId: z.string(),
   establishmentId: z.string(),
@@ -33,7 +35,7 @@ export const patientServiceFileResponseSchema = z.object({
 })
 
 export const patientServiceFileParamsSchema = z.object({
-  patientID: z.cuid(),
+  patientID: cuid(),
 })
 
 export const upsertPatientServiceFileBodySchema = z.object({
@@ -50,7 +52,7 @@ export const upsertPatientServiceFileBodySchema = z.object({
 // clinique) ni l'identite du patient n'ont a transiter dans cette reponse pour que l'ecran sache
 // quoi faire.
 export const attachPatientToCurrentServiceResponseSchema = z.object({
-  patientId: z.cuid(),
+  patientId: cuid(),
   alreadyFollowedHere: z.boolean(),
 })
 

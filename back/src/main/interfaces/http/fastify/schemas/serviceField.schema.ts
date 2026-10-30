@@ -1,10 +1,11 @@
 import { z } from 'zod/v4'
 
 import { SERVICE_FIELD_TYPES } from '../../../../utils/service-field-types'
+import { cuid } from './id.schema'
 import { withArchived } from './index'
 
 const serviceFieldChoiceResponseSchema = z.object({
-  id: z.cuid(),
+  id: cuid(),
   key: z.string(),
   label: z.string(),
   order: z.number(),
@@ -12,11 +13,11 @@ const serviceFieldChoiceResponseSchema = z.object({
 })
 
 export const serviceFieldResponseSchema = z.object({
-  id: z.cuid(),
+  id: cuid(),
   key: z.string(),
   label: z.string(),
   type: z.enum(SERVICE_FIELD_TYPES),
-  categoryId: z.cuid(),
+  categoryId: cuid(),
   order: z.number(),
   clinical: z.boolean(),
   unit: z.string().nullable(),
@@ -33,13 +34,13 @@ export const toServiceFieldDto = <
 export const serviceFieldsResponseSchema = z.array(serviceFieldResponseSchema)
 
 export const getServiceFieldByIdParamsSchema = z.object({
-  fieldID: z.cuid(),
+  fieldID: cuid(),
 })
 
 export const createServiceFieldSchema = z.object({
   label: z.string().trim().min(1).max(120),
   type: z.enum(SERVICE_FIELD_TYPES),
-  categoryId: z.cuid(),
+  categoryId: cuid(),
   clinical: z.boolean().optional(),
   unit: z.string().trim().max(20).nullable().optional(),
   choices: z.array(z.string().trim().min(1).max(120)).optional(),
@@ -50,7 +51,7 @@ export const updateServiceFieldSchema = z
     label: z.string().trim().min(1).max(120).optional(),
     unit: z.string().trim().max(20).nullable().optional(),
     archived: z.boolean().optional(),
-    categoryId: z.cuid().optional(),
+    categoryId: cuid().optional(),
   })
   .strict()
 
@@ -76,8 +77,8 @@ export const updateServiceFieldChoiceSchema = z
   .strict()
 
 export const getServiceFieldChoiceParamsSchema = z.object({
-  fieldID: z.cuid(),
-  choiceID: z.cuid(),
+  fieldID: cuid(),
+  choiceID: cuid(),
 })
 
 export const updateServiceFieldChoiceByIdSchema = {
@@ -86,12 +87,12 @@ export const updateServiceFieldChoiceByIdSchema = {
 }
 
 export const reorderServiceFieldsSchema = z.object({
-  categoryId: z.cuid(),
-  ids: z.array(z.cuid()),
+  categoryId: cuid(),
+  ids: z.array(cuid()),
 })
 
 export const reorderServiceFieldChoicesSchema = z.object({
-  ids: z.array(z.cuid()),
+  ids: z.array(cuid()),
 })
 
 export const reorderServiceFieldChoicesByIdSchema = {

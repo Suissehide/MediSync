@@ -1,6 +1,7 @@
 import { z } from 'zod/v4'
 
 import { appointmentPatientResponseSchema } from './appointmentPatient.schema'
+import { cuid } from './id.schema'
 import {
   appointmentPatientSchema,
   appointmentSchema,
@@ -9,7 +10,7 @@ import {
 import { planningConflictsSchema } from './planningConflict.schema'
 
 export const appointmentResponseSchema = appointmentSchema.extend({
-  id: z.cuid(),
+  id: cuid(),
   appointmentPatients: z.array(appointmentPatientResponseSchema),
 })
 
@@ -21,7 +22,7 @@ export const appointmentWithConflictsResponseSchema =
   })
 
 export const getAppointmentByIdParamsSchema = z.object({
-  appointmentID: z.cuid(),
+  appointmentID: cuid(),
 })
 
 export const createAppointmentSchema = appointmentSchema
@@ -32,8 +33,8 @@ export const createAppointmentSchema = appointmentSchema
     motif: true,
   })
   .extend({
-    slotID: z.cuid(),
-    patientIDs: z.array(z.cuid()),
+    slotID: cuid(),
+    patientIDs: z.array(cuid()),
     thematicId: thematicIdInputSchema,
   })
 
@@ -45,15 +46,15 @@ export const updateAppointmentByIdSchema = {
     .omit({ slot: true, thematic: true })
     .partial()
     .extend({
-      slotID: z.cuid().optional(),
+      slotID: cuid().optional(),
       thematicId: thematicIdInputSchema,
       // Optionnel : omettre ce champ ne touche pas aux participants ;
       // un tableau vide supprime explicitement le rendez-vous.
       appointmentPatients: z
         .array(
           appointmentPatientSchema.omit({ patient: true }).partial().extend({
-            id: z.cuid().optional(),
-            patientID: z.cuid(),
+            id: cuid().optional(),
+            patientID: cuid(),
           }),
         )
         .optional(),

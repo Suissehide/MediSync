@@ -1,13 +1,14 @@
 import { z } from 'zod/v4'
 
+import { cuid } from './id.schema'
 import { appointmentPatientSchema } from './index'
 import { patientResponseSchema } from './patient.schema'
 
 export const appointmentPatientResponseSchema = appointmentPatientSchema.extend(
   {
-    id: z.cuid(),
+    id: cuid(),
     patient: patientResponseSchema.extend({
-      id: z.cuid(),
+      id: cuid(),
     }),
   },
 )
@@ -17,7 +18,7 @@ export const appointmentPatientsResponseSchema = z.array(
 )
 
 export const getAppointmentPatientByIdParamsSchema = z.object({
-  appointmentID: z.cuid(),
+  appointmentID: cuid(),
 })
 
 export const createAppointmentPatientSchema = appointmentPatientSchema
@@ -29,7 +30,7 @@ export const createAppointmentPatientSchema = appointmentPatientSchema
     convocationSent: true,
   })
   .extend({
-    patientID: z.cuid(),
+    patientID: cuid(),
   })
 
 export const deleteAppointmentPatientByIdParamsSchema =
@@ -38,15 +39,15 @@ export const deleteAppointmentPatientByIdParamsSchema =
 export const updateAppointmentPatientByIdSchema = {
   params: getAppointmentPatientByIdParamsSchema,
   body: appointmentPatientSchema.omit({ patient: true }).partial().extend({
-    id: z.cuid().optional(),
-    patientID: z.cuid(),
+    id: cuid().optional(),
+    patientID: cuid(),
   }),
 }
 
 export const setConvocationSentSchema = {
   params: z.object({
-    appointmentID: z.cuid(),
-    appointmentPatientID: z.cuid(),
+    appointmentID: cuid(),
+    appointmentPatientID: cuid(),
   }),
   body: z.object({ convocationSent: z.boolean() }),
 }

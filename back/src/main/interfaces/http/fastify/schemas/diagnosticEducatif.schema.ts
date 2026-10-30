@@ -1,5 +1,6 @@
 import { z } from 'zod/v4'
 
+import { cuid } from './id.schema'
 import {
   diagnosticEducatifSchema,
   diagnosticEducatifTemplateSchema,
@@ -7,14 +8,14 @@ import {
 
 // Template schemas
 export const diagnosticEducatifTemplateResponseSchema =
-  diagnosticEducatifTemplateSchema.extend({ id: z.cuid() })
+  diagnosticEducatifTemplateSchema.extend({ id: cuid() })
 export const diagnosticEducatifTemplatesResponseSchema = z.array(
   diagnosticEducatifTemplateResponseSchema,
 )
 export const createDiagnosticEducatifTemplateSchema =
   diagnosticEducatifTemplateSchema
 export const updateDiagnosticEducatifTemplateSchema = {
-  params: z.object({ templateId: z.cuid() }),
+  params: z.object({ templateId: cuid() }),
   body: diagnosticEducatifTemplateSchema
     .partial()
     .extend({ archived: z.boolean().optional() }),
@@ -22,7 +23,7 @@ export const updateDiagnosticEducatifTemplateSchema = {
 export const listDiagnosticTemplatesQuerySchema = z.object({
   archived: z.stringbool().default(false),
 })
-export const diagnosticTemplateParamsSchema = z.object({ templateId: z.cuid() })
+export const diagnosticTemplateParamsSchema = z.object({ templateId: cuid() })
 
 export type ListDiagnosticTemplatesQuery = z.infer<
   typeof listDiagnosticTemplatesQuerySchema
@@ -45,7 +46,7 @@ export type DiagnosticTemplateParams = z.infer<
 
 // Diagnostic schemas
 export const diagnosticEducatifResponseSchema = diagnosticEducatifSchema.extend(
-  { id: z.cuid(), createdAt: z.coerce.date() },
+  { id: cuid(), createdAt: z.coerce.date() },
 )
 export const diagnosticEducatifsResponseSchema = z.array(
   diagnosticEducatifResponseSchema,
@@ -54,14 +55,14 @@ export const createDiagnosticEducatifSchema = diagnosticEducatifSchema.omit({
   patientId: true,
 })
 export const updateDiagnosticEducatifSchema = {
-  params: z.object({ patientId: z.cuid(), diagnosticId: z.cuid() }),
+  params: z.object({ patientId: cuid(), diagnosticId: cuid() }),
   body: diagnosticEducatifSchema.omit({ patientId: true }).partial(),
 }
 export const diagnosticParamsSchema = z.object({
-  patientId: z.cuid(),
-  diagnosticId: z.cuid(),
+  patientId: cuid(),
+  diagnosticId: cuid(),
 })
-export const diagnosticPatientParamsSchema = z.object({ patientId: z.cuid() })
+export const diagnosticPatientParamsSchema = z.object({ patientId: cuid() })
 
 export type DiagnosticEducatifResponse = z.infer<
   typeof diagnosticEducatifResponseSchema

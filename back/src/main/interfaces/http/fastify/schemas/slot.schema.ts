@@ -1,6 +1,7 @@
 import { z } from 'zod/v4'
 
 import { appointmentResponseSchema } from './appointment.schema'
+import { cuid } from './id.schema'
 import { slotSchema } from './index'
 import { pathwayResponseSchema } from './pathway.schema'
 import { planningConflictsSchema } from './planningConflict.schema'
@@ -11,19 +12,19 @@ import {
 } from './slotTemplate.schema'
 
 export const slotResponseSchema = slotSchema.extend({
-  id: z.cuid(),
+  id: cuid(),
   slotTemplate: slotTemplateResponseSchema.extend({
-    id: z.cuid(),
+    id: cuid(),
   }),
   pathway: pathwayResponseSchema
     .extend({
-      id: z.cuid(),
+      id: cuid(),
     })
     .optional()
     .nullable(),
   appointments: z.array(
     appointmentResponseSchema.extend({
-      id: z.cuid(),
+      id: cuid(),
     }),
   ),
 })
@@ -35,7 +36,7 @@ export const slotWithConflictsResponseSchema = slotResponseSchema.extend({
 })
 
 export const getSlotByIdParamsSchema = z.object({
-  slotID: z.cuid(),
+  slotID: cuid(),
 })
 
 /**
@@ -50,7 +51,7 @@ export const getSlotsQuerySchema = z.object({
   from: z.coerce.date().optional(),
   to: z.coerce.date().optional(),
   // Seulement les créneaux où ce patient a un rendez-vous.
-  patientID: z.cuid().optional(),
+  patientID: cuid().optional(),
 })
 
 export const createSlotSchemaBase = slotSchema
@@ -59,11 +60,11 @@ export const createSlotSchemaBase = slotSchema
     endDate: true,
   })
   .extend({
-    soignantIDs: z.array(z.cuid()).optional(),
+    soignantIDs: z.array(cuid()).optional(),
   })
 
 const withTemplateID = createSlotSchemaBase.extend({
-  slotTemplateID: z.cuid(),
+  slotTemplateID: cuid(),
 })
 
 const withTemplateData = createSlotSchemaBase.extend({
@@ -80,10 +81,10 @@ export const deleteSlotByIdParamsSchema = getSlotByIdParamsSchema
 export const updateSlotByIdSchema = {
   params: getSlotByIdParamsSchema,
   body: slotSchema.partial().extend({
-    soignantIDs: z.array(z.cuid()).optional(),
+    soignantIDs: z.array(cuid()).optional(),
     slotTemplate: updateSlotTemplateByIdSchema.body
       .extend({
-        id: z.cuid(),
+        id: cuid(),
       })
       .optional(),
   }),

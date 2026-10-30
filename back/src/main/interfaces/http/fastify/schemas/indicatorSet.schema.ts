@@ -1,6 +1,7 @@
 import { z } from 'zod/v4'
 
 import { filterConditionSchema } from '../../../../utils/indicators/filters'
+import { cuid } from './id.schema'
 import { withArchived } from './index'
 
 const codeField = z.string().trim().min(1).max(40)
@@ -15,7 +16,7 @@ const filtersField = z.array(filterConditionSchema).nullable()
 const breakdownFieldField = z.string().min(1).nullable()
 const inputField = z.enum(['number+text', 'yesno']).nullable()
 const noteField = z.string().trim().max(2000).nullable()
-const parentIdField = z.cuid().nullable()
+const parentIdField = cuid().nullable()
 
 // Tous les champs optionnels par défaut à `null` (jamais `undefined`) : la création pose
 // toujours une valeur explicite, que `IndicatorSetDomain` peut comparer sans distinguo.
@@ -55,7 +56,7 @@ export const updateIndicatorSchema = z
   .strict()
 
 const indicatorDtoSchema = z.object({
-  id: z.cuid(),
+  id: cuid(),
   code: z.string(),
   label: z.string(),
   group: z.string(),
@@ -84,10 +85,10 @@ export const updateIndicatorSetSchema = z
   })
   .strict()
 
-export const reorderSchema = z.object({ ids: z.array(z.cuid()) }).strict()
+export const reorderSchema = z.object({ ids: z.array(cuid()) }).strict()
 
 export const indicatorSetDtoSchema = z.object({
-  id: z.cuid(),
+  id: cuid(),
   name: z.string(),
   order: z.number(),
   archived: z.boolean(),
@@ -105,10 +106,10 @@ export const toIndicatorSetDto = <
 
 export const indicatorSetsResponseSchema = z.array(indicatorSetDtoSchema)
 
-export const setIdParamsSchema = z.object({ setId: z.cuid() })
+export const setIdParamsSchema = z.object({ setId: cuid() })
 export const indicatorIdParamsSchema = z.object({
-  setId: z.cuid(),
-  indicatorId: z.cuid(),
+  setId: cuid(),
+  indicatorId: cuid(),
 })
 
 export type CreateIndicatorBody = z.infer<typeof createIndicatorSchema>
@@ -182,9 +183,9 @@ export const resultsResponseSchema = z.object({
 
 // Pas de longueur fixe : les ids posés par la migration font 33 caractères, le domaine renvoie 404 sur un id inconnu.
 export const answerParamsSchema = z.object({
-  setId: z.cuid(),
+  setId: cuid(),
   year: z.coerce.number().int().min(2000).max(2100),
-  indicatorId: z.cuid(),
+  indicatorId: cuid(),
 })
 
 // Le domaine vérifie que la forme reçue est celle de l'indicateur visé.

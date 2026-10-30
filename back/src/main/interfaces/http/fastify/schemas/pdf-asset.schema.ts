@@ -1,5 +1,7 @@
 import { z } from 'zod/v4'
 
+import { cuid } from './id.schema'
+
 // 2 Mo d'image. Le base64 gonfle d'un tiers, d'ou la borne en CARACTERES plus bas : c'est
 // elle que Zod verifie, et c'est elle qui nomme la limite a l'utilisateur.
 export const TAILLE_MAXIMALE_OCTETS = 2 * 1024 * 1024
@@ -43,7 +45,7 @@ export const pdfAssetBytesResponseSchema = z.object({
   base64: z.string(),
 })
 
-export const pdfAssetIdParamsSchema = z.object({ assetID: z.cuid() })
+export const pdfAssetIdParamsSchema = z.object({ assetID: cuid() })
 
 export type CreatePdfAssetBody = z.infer<typeof createPdfAssetSchema>
 export type PdfAssetIdParams = z.infer<typeof pdfAssetIdParamsSchema>

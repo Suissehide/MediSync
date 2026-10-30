@@ -1,6 +1,7 @@
 import { z } from 'zod/v4'
 
 import type { InvitationLinkState } from '../../../../types/domain/accessLink.domain.interface'
+import { cuid } from './id.schema'
 import { invitationStatusSchema, projectUserStatus } from './members.schema'
 
 // Membres d'un service, vus depuis ce service (2026-09-29) : chaque affectation, son role, et le
@@ -25,7 +26,7 @@ export const serviceMemberParamsSchema = z.object({
   serviceMembershipId: z.string().min(1),
 })
 export const setServiceSoignantSchema = z.object({
-  soignantId: z.cuid().nullable(),
+  soignantId: cuid().nullable(),
 })
 
 const serviceRoleSchema = z.enum([
@@ -47,7 +48,7 @@ export const inviteServiceMemberSchema = z.object({
   firstName: z.string().trim().optional(),
   lastName: z.string().trim().optional(),
   role: serviceRoleSchema,
-  soignantId: z.cuid().nullable().optional(),
+  soignantId: cuid().nullable().optional(),
 })
 
 export const setServiceRoleSchema = z.object({ role: serviceRoleSchema })

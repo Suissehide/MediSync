@@ -1,21 +1,23 @@
 import { z } from 'zod/v4'
 
+import { cuid } from './id.schema'
+
 export const planningConflictSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('salle'),
-    slotIDs: z.array(z.cuid()),
-    locationID: z.cuid(),
+    slotIDs: z.array(cuid()),
+    locationID: cuid(),
   }),
   z.object({
     type: z.literal('patient'),
-    slotIDs: z.array(z.cuid()),
-    appointmentIDs: z.array(z.cuid()),
-    patientID: z.cuid(),
+    slotIDs: z.array(cuid()),
+    appointmentIDs: z.array(cuid()),
+    patientID: cuid(),
   }),
   z.object({
     type: z.literal('capacite'),
-    slotIDs: z.array(z.cuid()),
-    appointmentID: z.cuid(),
+    slotIDs: z.array(cuid()),
+    appointmentID: cuid(),
     capacity: z.number(),
     count: z.number(),
   }),

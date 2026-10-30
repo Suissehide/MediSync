@@ -1,6 +1,7 @@
 import { z } from 'zod/v4'
 
 import type { InvitationLinkState } from '../../../../types/domain/accessLink.domain.interface'
+import { cuid } from './id.schema'
 
 type ServiceRole = 'COORDINATEUR' | 'INTERVENANT' | 'SECRETARIAT' | 'LECTURE'
 
@@ -16,7 +17,7 @@ const establishmentRoleSchema = z.enum(['ADMIN', 'MEMBER'])
 const assignmentSchema = z.object({
   serviceId: z.string().min(1),
   role: serviceRoleSchema,
-  soignantId: z.cuid().nullable().optional(),
+  soignantId: cuid().nullable().optional(),
 })
 
 // Un membre n'a qu'un rôle par service : deux affectations au même service

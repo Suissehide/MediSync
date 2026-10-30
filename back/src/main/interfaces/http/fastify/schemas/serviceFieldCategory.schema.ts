@@ -1,9 +1,10 @@
 import { z } from 'zod/v4'
 
 import { CATEGORY_DATE_FIELDS } from '../../../../utils/service-field-types'
+import { cuid } from './id.schema'
 
 export const serviceFieldCategoryResponseSchema = z.object({
-  id: z.cuid(),
+  id: cuid(),
   label: z.string(),
   order: z.number(),
   dateField: z.enum(CATEGORY_DATE_FIELDS).nullable(),
@@ -15,7 +16,7 @@ export const serviceFieldCategoriesResponseSchema = z.array(
 )
 
 export const getServiceFieldCategoryByIdParamsSchema = z.object({
-  categoryID: z.cuid(),
+  categoryID: cuid(),
 })
 
 export const createServiceFieldCategorySchema = z.object({
@@ -35,7 +36,7 @@ export const updateServiceFieldCategoryByIdSchema = {
 }
 
 export const reorderServiceFieldCategoriesSchema = z.object({
-  ids: z.array(z.cuid()),
+  ids: z.array(cuid()),
 })
 
 export type CreateServiceFieldCategoryBody = z.infer<

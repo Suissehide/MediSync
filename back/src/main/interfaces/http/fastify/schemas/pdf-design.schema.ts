@@ -1,5 +1,6 @@
 import { z } from 'zod/v4'
 
+import { cuid } from './id.schema'
 import { pdfDesignContentSchema } from './pdf-design-content.schema'
 
 // L'identifiant d'un preset n'est pas un cuid : le preset de reference porte un id stable
@@ -24,7 +25,7 @@ export const listPdfDesignsQuerySchema = z.object({
 })
 
 export const pdfDesignIdParamsSchema = z.object({
-  designID: z.cuid(),
+  designID: cuid(),
 })
 
 // Aucune source = design vierge. Pas de cuid pour `sourcePresetId` : les presets ont des ids
@@ -34,7 +35,7 @@ export const createPdfDesignSchema = z.object({
   sourcePresetId: z.string().min(1).optional(),
   // Dupliquer un design DU SERVICE. Le domaine le lit en premier : les deux sources a la fois
   // n'ont pas de sens, et il n'y a pas d'ecran qui les envoie ensemble.
-  sourceDesignId: z.cuid().optional(),
+  sourceDesignId: cuid().optional(),
   // `trim()` AVANT `min(1)` : « Mon design   » se stockait avec ses espaces, et un nom fait
   // d'espaces seuls passait pour un nom.
   name: z.string().trim().min(1).optional(),

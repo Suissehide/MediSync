@@ -1,11 +1,13 @@
 import { z } from 'zod/v4'
 
+import { cuid } from './id.schema'
+
 const locationEntity = {
   name: z.string().min(1),
 }
 
 export const locationResponseSchema = z.object({
-  id: z.cuid(),
+  id: cuid(),
   name: z.string(),
 })
 
@@ -16,7 +18,7 @@ export const listLocationsQuerySchema = z.object({
 })
 
 export const getLocationByIdParamsSchema = z.object({
-  locationID: z.cuid(),
+  locationID: cuid(),
 })
 
 export const createLocationSchema = z.object({

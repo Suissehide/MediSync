@@ -1,5 +1,7 @@
 import { z } from 'zod/v4'
 
+import { cuid } from './id.schema'
+
 export const PDF_FIELD_KEYS = [
   'patient.name',
   'pathway.name',
@@ -72,7 +74,7 @@ const imageElement = z.object({
   kind: z.literal('image'),
   source: z.union([
     z.strictObject({ builtin: z.enum(PDF_BUILTIN_IMAGES) }),
-    z.strictObject({ assetId: z.cuid() }),
+    z.strictObject({ assetId: cuid() }),
   ]),
   fit: z.enum(['contain', 'cover', 'fill']).default('contain'),
 })

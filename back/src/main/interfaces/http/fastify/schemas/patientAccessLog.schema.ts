@@ -1,5 +1,7 @@
 import { z } from 'zod/v4'
 
+import { cuid } from './id.schema'
+
 // Les deux premieres LECTURES du journal
 // des consultations. Le schema de reponse porte l'auteur, l'action, la date, le service, ET
 // `accesParOctroi` — jamais `patientId`, `exportCount` ni `exportFilters`, meme si le depot les
@@ -17,7 +19,7 @@ import { z } from 'zod/v4'
 // contenu potentiellement clinique) — ce champ-ci n'a jamais porte l'une ou l'autre de ces
 // raisons.
 export const patientAccessLogEntryResponseSchema = z.object({
-  id: z.cuid(),
+  id: cuid(),
   action: z.string(),
   createdAt: z.coerce.date(),
   serviceId: z.string(),
@@ -58,7 +60,7 @@ export type PatientAccessLogQuery = z.infer<typeof patientAccessLogQuerySchema>
 // (`assertPatientReadLogged`, `EXEMPTED_PATIENT_ROUTES`) l'exige et l'attend sous ce nom — voir
 // utils/access-log-routes.ts.
 export const patientAccessLogServiceParamsSchema = z.object({
-  patientID: z.cuid(),
+  patientID: cuid(),
 })
 
 export type PatientAccessLogServiceParams = z.infer<
@@ -72,7 +74,7 @@ export type PatientAccessLogServiceParams = z.infer<
 // `EXEMPTED_ADMIN_PATIENT_ROUTES` (utils/access-log-routes.ts) — voir le commentaire dans
 // interfaces/http/fastify/routes/patientAccessLog.ts pour le detail.
 export const patientAccessLogAdminParamsSchema = z.object({
-  patientID: z.cuid(),
+  patientID: cuid(),
 })
 
 export type PatientAccessLogAdminParams = z.infer<

@@ -1,15 +1,16 @@
 import { z } from 'zod/v4'
 
+import { cuid } from './id.schema'
 import { pathwayTemplateSchema } from './index'
 import { slotTemplateResponseSchema } from './slotTemplate.schema'
 
 export const pathwayTemplateResponseSchema = pathwayTemplateSchema.extend({
-  id: z.cuid(),
+  id: cuid(),
   secondaryTags: z.array(z.string()),
   displayOrder: z.number(),
   slotTemplates: z.array(
     slotTemplateResponseSchema.extend({
-      id: z.cuid(),
+      id: cuid(),
     }),
   ),
 })
@@ -19,7 +20,7 @@ export const pathwayTemplatesResponseSchema = z.array(
 )
 
 export const getPathwayTemplateByIdParamsSchema = z.object({
-  pathwayTemplateID: z.cuid(),
+  pathwayTemplateID: cuid(),
 })
 
 export const createPathwayTemplateSchema = pathwayTemplateSchema
@@ -32,7 +33,7 @@ export const createPathwayTemplateSchema = pathwayTemplateSchema
     prerequisiteIDs: true,
   })
   .extend({
-    slotTemplateIDs: z.array(z.cuid()),
+    slotTemplateIDs: z.array(cuid()),
     secondaryTags: z.array(z.string()).default([]),
   })
 
@@ -48,10 +49,10 @@ export const updatePathwayTemplateByIdSchema = {
     })
     .partial()
     .extend({
-      slotTemplateIDs: z.array(z.cuid()).optional().default([]),
+      slotTemplateIDs: z.array(cuid()).optional().default([]),
       secondaryTags: z.array(z.string()).optional(),
-      prerequisiteIDs: z.array(z.cuid()).optional(),
-      // pathwayIDs: z.array(z.cuid()).optional().default([]),
+      prerequisiteIDs: z.array(cuid()).optional(),
+      // pathwayIDs: z.array(cuid()).optional().default([]),
     })
     .refine((data) => Object.keys(data).length > 0, {
       message: 'At least one field must be updated',

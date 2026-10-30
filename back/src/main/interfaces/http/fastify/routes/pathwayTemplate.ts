@@ -2,6 +2,7 @@ import Boom from '@hapi/boom'
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod/v4'
 
+import { cuid } from '../schemas/id.schema'
 import {
   type CreatePathwayTemplateBody,
   createPathwayTemplateSchema,
@@ -134,7 +135,7 @@ const pathwayTemplateRouter: FastifyPluginAsync = (fastify) => {
     '/reorder',
     {
       schema: {
-        body: z.object({ orderedIds: z.array(z.cuid()) }),
+        body: z.object({ orderedIds: z.array(cuid()) }),
         response: {
           204: z.null(),
         },

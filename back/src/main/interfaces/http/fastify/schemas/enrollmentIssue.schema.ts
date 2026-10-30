@@ -1,7 +1,9 @@
 import { z } from 'zod/v4'
 
+import { cuid } from './id.schema'
+
 export const enrollmentIssueResponseSchema = z.object({
-  id: z.cuid(),
+  id: cuid(),
   patientId: z.string(),
   pathwayTemplateID: z.string(),
   pathwayName: z.string().optional().nullable(),
@@ -15,12 +17,12 @@ export const enrollmentIssuesResponseSchema = z.array(
 )
 
 export const enrollmentIssuePatientParamsSchema = z.object({
-  patientID: z.cuid(),
+  patientID: cuid(),
 })
 
 export const enrollmentIssueParamsSchema = z.object({
-  patientID: z.cuid(),
-  issueID: z.cuid(),
+  patientID: cuid(),
+  issueID: cuid(),
 })
 
 export type EnrollmentIssueResponse = z.infer<

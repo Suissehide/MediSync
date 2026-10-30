@@ -1,5 +1,7 @@
 import { z } from 'zod/v4'
 
+import { cuid } from './id.schema'
+
 const patientEntity = {
   firstName: z.string(),
   lastName: z.string(),
@@ -28,7 +30,7 @@ export const patientSchema = z.object({
 })
 
 export const enrollmentIssueSchema = z.object({
-  id: z.cuid(),
+  id: cuid(),
   pathwayName: z.string().optional().nullable(),
   pathwayTemplateID: z.string(),
   reason: z.string(),
@@ -37,7 +39,7 @@ export const enrollmentIssueSchema = z.object({
 })
 
 export const patientResponseSchema = z.object({
-  id: z.cuid(),
+  id: cuid(),
   ...patientEntity,
   enrollmentIssues: z.array(enrollmentIssueSchema).optional(),
 })
@@ -110,7 +112,7 @@ export const searchPatientIdentityQuerySchema = z
 // choisir l'identite (rattachement au service courant), il n'ajoute aucune information nouvelle
 // puisque l'appelant le reçoit pour un patient qu'il vient de trouver par son nom.
 export const patientIdentityMatchSchema = z.object({
-  id: z.cuid(),
+  id: cuid(),
   firstName: z.string(),
   lastName: z.string(),
   birthDate: z.coerce.date().nullable(),
@@ -135,7 +137,7 @@ export type SearchPatientIdentityQuery = z.infer<
 >
 
 export const getPatientByIdParamsSchema = z.object({
-  patientID: z.cuid(),
+  patientID: cuid(),
 })
 
 // `.strict()` : les seize colonnes de parcours/clinique ont quitté ce schéma pour
@@ -169,7 +171,7 @@ export const timeOfDaySchema = z.enum(['ALL_DAY', 'MORNING', 'AFTERNOON'])
 export const pathwayEnrollmentSchema = z.object({
   tag: z.string().min(1),
   timeOfDay: timeOfDaySchema,
-  thematicID: z.cuid().optional(),
+  thematicID: cuid().optional(),
   type: z.preprocess(
     (value) => (value === '' ? undefined : value),
     z.enum(['ambulatory', 'hospital', 'telephonic']).optional(),
@@ -190,13 +192,13 @@ export const enrollPatientInPathwaysSchema = z.object({
 })
 
 export const enrollExistingPatientInPathwaysSchema = z.object({
-  patientID: z.cuid(),
+  patientID: cuid(),
   startDate: z.coerce.date().optional(),
   pathways: z.array(pathwayEnrollmentSchema).optional().default([]),
 })
 
 export const enrollmentPreviewSchema = z.object({
-  patientID: z.cuid().optional(),
+  patientID: cuid().optional(),
   pathways: z.array(
     pathwayEnrollmentSchema.extend({ startDate: z.coerce.date() }),
   ),
@@ -211,7 +213,7 @@ export const enrollmentPreviewResponseSchema = z.array(
 )
 
 export const enrollmentAppointmentSchema = z.object({
-  id: z.cuid().optional(),
+  id: cuid().optional(),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
   success: z.boolean(),
@@ -251,8 +253,8 @@ export type EnrollmentResult = z.infer<typeof enrollmentResultSchema>
 export type EnrollmentPreviewBody = z.infer<typeof enrollmentPreviewSchema>
 
 export const patientPathwayParamsSchema = z.object({
-  patientID: z.cuid(),
-  pathwayID: z.cuid(),
+  patientID: cuid(),
+  pathwayID: cuid(),
 })
 export type PatientPathwayParams = z.infer<typeof patientPathwayParamsSchema>
 
@@ -266,7 +268,7 @@ export const removeFromPathwayResponseSchema = z.object({
 })
 
 export const patientPathwayItemSchema = z.object({
-  pathwayID: z.cuid(),
+  pathwayID: cuid(),
   templateID: z.string().nullable(),
   templateName: z.string().nullable(),
   templateColor: z.string().nullable(),
@@ -278,7 +280,7 @@ export const patientPathwayItemSchema = z.object({
 export const patientPathwaysResponseSchema = z.array(patientPathwayItemSchema)
 
 export const reorderPatientPathwaysBodySchema = z.object({
-  pathwayIDs: z.array(z.cuid()),
+  pathwayIDs: z.array(cuid()),
 })
 
 export type PatientPathwayItem = z.infer<typeof patientPathwayItemSchema>

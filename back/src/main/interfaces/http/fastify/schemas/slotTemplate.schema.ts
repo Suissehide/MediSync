@@ -1,17 +1,18 @@
 import { z } from 'zod/v4'
 
+import { cuid } from './id.schema'
 import { slotTemplateSchema, thematicIdInputSchema } from './index'
 import { soignantResponseSchema } from './soignant.schema'
 
 export const slotTemplateResponseSchema = slotTemplateSchema.extend({
-  id: z.cuid(),
-  soignants: z.array(soignantResponseSchema.extend({ id: z.cuid() })),
+  id: cuid(),
+  soignants: z.array(soignantResponseSchema.extend({ id: cuid() })),
 })
 
 export const slotTemplatesResponseSchema = z.array(slotTemplateResponseSchema)
 
 export const getSlotTemplateByIdParamsSchema = z.object({
-  slotTemplateID: z.cuid(),
+  slotTemplateID: cuid(),
 })
 
 export const createSlotTemplateSchema = slotTemplateSchema
@@ -27,8 +28,8 @@ export const createSlotTemplateSchema = slotTemplateSchema
     capacity: true,
   })
   .extend({
-    soignantIDs: z.array(z.cuid()).optional(),
-    templateID: z.cuid().optional(),
+    soignantIDs: z.array(cuid()).optional(),
+    templateID: cuid().optional(),
     thematicId: thematicIdInputSchema,
   })
 
@@ -41,8 +42,8 @@ export const updateSlotTemplateByIdSchema = {
     .omit({ soignants: true, thematic: true })
     .partial()
     .extend({
-      soignantIDs: z.array(z.cuid()).optional(),
-      templateID: z.cuid().optional(),
+      soignantIDs: z.array(cuid()).optional(),
+      templateID: cuid().optional(),
       thematicId: thematicIdInputSchema,
     }),
 }

@@ -1,5 +1,6 @@
 import { z } from 'zod/v4'
 
+import { cuid } from './id.schema'
 import { locationResponseSchema } from './location.schema'
 import { patientSchema } from './patient.schema'
 import { soignantSchema } from './soignant.schema'
@@ -27,7 +28,7 @@ export const appointmentTypeSchema = emptyToNull(
   z.enum(['ambulatory', 'hospital', 'telephonic']),
 )
 export const appointmentStatusSchema = emptyToNull(z.enum(['yes', 'no']))
-export const thematicIdInputSchema = emptyToNull(z.cuid())
+export const thematicIdInputSchema = emptyToNull(cuid())
 
 // En réponse, `thematic` est le nom de la relation Thematic ; l'écriture passe par `thematicId`.
 const thematicNameFromRelation = z.codec(
@@ -44,7 +45,7 @@ export const appointmentSchema = z.object({
   endDate: z.coerce.date(),
   // `thematic` = nom (affichage) ; `thematicId` = FK (pré-sélection formulaire).
   thematic: thematicNameFromRelation,
-  thematicId: z.cuid().nullish(),
+  thematicId: cuid().nullish(),
   type: appointmentTypeSchema,
   // Motif du rendez-vous — renseigné sur un créneau individuel uniquement.
   motif: z.string().trim().optional().nullable(),
@@ -77,8 +78,8 @@ export const slotTemplateSchema = z.object({
   offsetDays: z.number(),
 
   thematic: thematicNameFromRelation,
-  thematicId: z.cuid().nullish(),
-  locationID: z.cuid().optional().nullable(),
+  thematicId: cuid().nullish(),
+  locationID: cuid().optional().nullable(),
   description: z.string().optional().nullable(),
   color: z.string(),
   isIndividual: z.boolean(),
@@ -123,7 +124,7 @@ export const pathwayTemplateSchema = z.object({
   secondaryTags: z.array(z.string()).default([]),
   motifRequired: z.boolean().default(false),
   firstAppointmentOnly: z.boolean().default(false),
-  prerequisiteIDs: z.array(z.cuid()).default([]),
+  prerequisiteIDs: z.array(cuid()).default([]),
 
   get slotTemplates() {
     return z.array(slotTemplateSchema).optional().nullable()
@@ -154,8 +155,8 @@ const s = z.string().optional().nullable()
 export const diagnosticEducatifSchema = z.object({
   title: s,
   activeFields: z.array(z.string()).default([]),
-  patientId: z.cuid(),
-  templateId: z.cuid().optional().nullable(),
+  patientId: cuid(),
+  templateId: cuid().optional().nullable(),
 
   // Facteurs de risque
   facteursRisque: s,

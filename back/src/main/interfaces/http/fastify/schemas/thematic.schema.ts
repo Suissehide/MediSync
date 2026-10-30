@@ -1,5 +1,7 @@
 import { z } from 'zod/v4'
 
+import { cuid } from './id.schema'
+
 const thematicRole = z.enum([
   'DIAGNOSTIC_EDUCATIF',
   'REACTUALISATION',
@@ -14,12 +16,12 @@ const thematicEntity = {
 }
 
 export const thematicResponseSchema = z.object({
-  id: z.cuid(),
+  id: cuid(),
   name: z.string(),
   duration: z.number().optional().nullable(),
   pdfNotice: z.string().optional().nullable(),
   role: thematicRole.optional().nullable(),
-  soignants: z.array(z.object({ id: z.cuid(), name: z.string() })),
+  soignants: z.array(z.object({ id: cuid(), name: z.string() })),
 })
 
 export const thematicsResponseSchema = z.array(thematicResponseSchema)
@@ -29,12 +31,12 @@ export const listThematicsQuerySchema = z.object({
 })
 
 export const getThematicByIdParamsSchema = z.object({
-  thematicID: z.cuid(),
+  thematicID: cuid(),
 })
 
 export const createThematicSchema = z.object({
   ...thematicEntity,
-  soignantIDs: z.array(z.cuid()).default([]),
+  soignantIDs: z.array(cuid()).default([]),
 })
 
 export const updateThematicSchema = z.object({
@@ -42,7 +44,7 @@ export const updateThematicSchema = z.object({
   duration: z.number().optional().nullable(),
   pdfNotice: z.string().optional().nullable(),
   role: thematicRole.optional().nullable(),
-  soignantIDs: z.array(z.cuid()).optional(),
+  soignantIDs: z.array(cuid()).optional(),
   archived: z.boolean().optional(),
 })
 

@@ -1,19 +1,17 @@
 import { z } from 'zod/v4'
 
+import { cuid } from './id.schema'
 import { pathwaySchema, pathwayTemplateSchema } from './index'
 
 export const pathwayResponseSchema = pathwaySchema.extend({
-  id: z.cuid(),
-  template: pathwayTemplateSchema
-    .extend({ id: z.cuid() })
-    .optional()
-    .nullable(),
+  id: cuid(),
+  template: pathwayTemplateSchema.extend({ id: cuid() }).optional().nullable(),
 })
 
 export const pathwaysResponseSchema = z.array(pathwayResponseSchema)
 
 export const getPathwayByIdParamsSchema = z.object({
-  pathwayID: z.cuid(),
+  pathwayID: cuid(),
 })
 
 export const createPathwaySchema = pathwaySchema
@@ -21,8 +19,8 @@ export const createPathwaySchema = pathwaySchema
     startDate: true,
   })
   .extend({
-    templateID: z.cuid(),
-    slotIDs: z.array(z.cuid()),
+    templateID: cuid(),
+    slotIDs: z.array(cuid()),
   })
 
 export const deletePathwayByIdParamsSchema = getPathwayByIdParamsSchema
@@ -33,18 +31,18 @@ export const updatePathwayByIdSchema = {
     .omit({ slots: true })
     .partial()
     .extend({
-      templateID: z.cuid().optional(),
-      slotIDs: z.array(z.cuid()),
+      templateID: cuid().optional(),
+      slotIDs: z.array(cuid()),
     }),
 }
 
 export const instantiatePathwayBody = z.object({
-  pathwayTemplateID: z.cuid(),
+  pathwayTemplateID: cuid(),
   startDate: z.coerce.date(),
 })
 
 export const regeneratePathwaysBody = z.object({
-  pathwayTemplateIDs: z.array(z.cuid()).min(1),
+  pathwayTemplateIDs: z.array(cuid()).min(1),
   fromDate: z.coerce.date(),
 })
 
@@ -81,14 +79,14 @@ const trackingAppointmentSchema = z.object({
 })
 
 const trackingPatientSchema = z.object({
-  id: z.cuid(),
+  id: cuid(),
   firstName: z.string(),
   lastName: z.string(),
   appointments: z.array(trackingAppointmentSchema),
 })
 
 const trackingPathwayTemplateSchema = z.object({
-  id: z.cuid(),
+  id: cuid(),
   name: z.string(),
   color: z.string(),
   mainTag: z.string(),
@@ -96,7 +94,7 @@ const trackingPathwayTemplateSchema = z.object({
 })
 
 export const trackingPathwaySchema = z.object({
-  id: z.cuid(),
+  id: cuid(),
   startDate: z.coerce.date(),
   endDate: z.coerce.date().nullable(),
   template: trackingPathwayTemplateSchema.nullable(),
