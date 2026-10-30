@@ -471,7 +471,7 @@
     "chardet": "2.2.0",
     "common-tags": "1.8.2",
     "dayjs": "1.11.23",
-    "dotenv": "17.2.3",
+    "dotenv": "18.0.9",
     "fastify": "5.12.7",
     "fastify-graceful-shutdown": "5.0.0",
     "fastify-plugin": "6.0.1",
