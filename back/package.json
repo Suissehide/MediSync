@@ -504,6 +504,6 @@
     "tsx": "4.23.15",
     "typescript": "7.0.2",
     "typescript5": "npm:typescript@5.9.3",
-    "wireit": "0.14.13"
+    "wireit": "0.15.0"
   }
 }
