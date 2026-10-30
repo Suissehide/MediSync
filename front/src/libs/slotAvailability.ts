@@ -100,7 +100,12 @@ export const getTrancheChoice = (
   slot: Slot | undefined,
   durations: (number | null | undefined)[],
   time: Dayjs,
-): { tranches?: FreeInterval[]; tranche?: FreeInterval; minutes?: number } => {
+): {
+  tranches?: FreeInterval[]
+  tranche?: FreeInterval
+  minutes?: number
+  noFreeTranche?: boolean
+} => {
   const minutes = durations.find(Boolean)
   if (!slot?.slotTemplate?.isIndividual || !minutes) {
     return {}
@@ -111,6 +116,7 @@ export const getTrancheChoice = (
     tranche:
       tranches.find((t) => dayjs.utc(t.end).isAfter(time)) ?? tranches[0],
     minutes,
+    noFreeTranche: tranches.length === 0,
   }
 }
 

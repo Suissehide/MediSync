@@ -85,6 +85,13 @@ export const isMotifMissing = (
   motif: string,
 ) => !!selected?.isIndividual && !motif.trim()
 
+/** Création impossible : motif manquant, ou plus aucune tranche libre. */
+const isCreationBlocked = (
+  selected: SlotSuggestion | null,
+  motif: string,
+  noFreeTranche?: boolean,
+) => isMotifMissing(selected, motif) || !!noFreeTranche
+
 interface AddPatientToSlotFormProps {
   trigger?: React.ReactNode
   /** Patient présélectionné, depuis sa fiche. */
@@ -525,16 +532,21 @@ function TrancheTimeFields({
     <>
       <FormField>
         <Label>Début</Label>
-        <Select
-          options={tranches.map((t) => ({
-            value: t.start,
-            label: dayjs.utc(t.start).format('HH:mm'),
-          }))}
-          value={tranche?.start}
-          onValueChange={(value) => onStartChange(dayjs.utc(value))}
-          clearable={false}
-          placeholder="Aucune tranche libre"
-        />
+        {tranches.length === 0 ? (
+          <span className="text-sm text-destructive h-9 flex items-center">
+            Aucune tranche libre
+          </span>
+        ) : (
+          <Select
+            options={tranches.map((t) => ({
+              value: t.start,
+              label: dayjs.utc(t.start).format('HH:mm'),
+            }))}
+            value={tranche?.start}
+            onValueChange={(value) => onStartChange(dayjs.utc(value))}
+            clearable={false}
+          />
+        )}
       </FormField>
       <FormField>
         <Label htmlFor="appointment-duration">Durée</Label>
@@ -710,11 +722,10 @@ function AddPatientToSlotContent({
     : undefined
 
   const isJoining = !!joinedAppointment
-  const missingMotif = isMotifMissing(selected, motif)
   const areTimeFieldsDisabled = isJoining || !selected?.isIndividual
 
   // Individuel : débuts calés sur des tranches de la durée de la sous-thématique (à défaut, de la thématique).
-  const { tranches, tranche } = getTrancheChoice(
+  const { tranches, tranche, noFreeTranche } = getTrancheChoice(
     selected?.slot,
     [
       thematics?.find((thematic) => thematic.id === subThematicID)?.duration,
@@ -722,6 +733,7 @@ function AddPatientToSlotContent({
     ],
     startTime,
   )
+  const isBlocked = isCreationBlocked(selected, motif, noFreeTranche)
 
   const {
     freeInterval: individualFreeInterval,
@@ -794,12 +806,7 @@ function AddPatientToSlotContent({
     appointmentType: string
     motif: string
   }) {
-    if (
-      !selected ||
-      !value.patientID ||
-      missingMotif ||
-      (tranches && !tranche)
-    ) {
+    if (!selected || !value.patientID || isBlocked) {
       return
     }
 
@@ -1088,7 +1095,7 @@ function AddPatientToSlotContent({
           <Button
             variant="default"
             onClick={() => form.handleSubmit()}
-            disabled={missingMotif}
+            disabled={isBlocked}
             isLoading={
               createAppointment.isPending || updateAppointment.isPending
             }

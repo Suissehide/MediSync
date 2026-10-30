@@ -83,10 +83,10 @@ function AddAppointmentForm({
       patientIDs: (defaultPatientIDs ?? []) as string[],
     },
     onSubmit: ({ value }) => {
-      const start = tranche ? dayjs.utc(tranche.start) : value.startTime
-      if (tranches && !tranche) {
+      if (noFreeTranche) {
         return
       }
+      const start = tranche ? dayjs.utc(tranche.start) : value.startTime
       const newAppointment: CreateAppointmentParams = {
         startDate: start.toISOString(),
         endDate: tranche
@@ -132,6 +132,7 @@ function AddAppointmentForm({
     tranches,
     tranche,
     minutes: trancheMinutes,
+    noFreeTranche,
   } = getTrancheChoice(
     slot,
     [
@@ -296,6 +297,7 @@ function AddAppointmentForm({
           <Button
             variant="default"
             onClick={() => form.handleSubmit()}
+            disabled={noFreeTranche}
             isLoading={isPending}
           >
             <Check className="w-4 h-4" />

@@ -61,16 +61,21 @@ export function AppointmentTimeFields({
       <FormField className="flex-row items-center gap-2">
         <div className="text-sm text-text-light font-medium mb-0">à</div>
         <div>
-          {startTimeOptions ? (
+          {startTimeOptions?.length === 0 && (
+            <span className="text-sm text-destructive">
+              aucune tranche libre
+            </span>
+          )}
+          {!!startTimeOptions?.length && (
             <Select
               options={startTimeOptions}
               value={startTime.toISOString()}
               onValueChange={(value) => onStartTimeChange(dayjs.utc(value))}
               disabled={disabled}
               clearable={false}
-              placeholder="Aucune tranche libre"
             />
-          ) : (
+          )}
+          {!startTimeOptions && (
             <TimePicker
               value={startTime}
               onChange={(time) => onStartTimeChange(time ?? dayjs.utc())}
