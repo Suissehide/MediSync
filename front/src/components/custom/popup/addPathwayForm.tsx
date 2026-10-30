@@ -21,6 +21,7 @@ import {
 } from '../../ui/popup.tsx'
 import { MultiSelect } from '../../ui/select.tsx'
 import { TagInput } from '../../ui/tagInput.tsx'
+import { PathwayEnrollmentSettings } from '../form/pathwayEnrollmentSettings.tsx'
 
 interface AddPathwayFormProps {
   trigger?: React.ReactNode
@@ -173,18 +174,7 @@ function AddPathwayForm({ trigger }: AddPathwayFormProps) {
               </p>
             </div>
 
-            <form.AppField name="motifRequired">
-              {(field) => <field.Checkbox label="Motif obligatoire" />}
-            </form.AppField>
-
-            <form.AppField name="firstAppointmentOnly">
-              {(field) => (
-                <field.Checkbox
-                  label="Inscription au premier RDV uniquement"
-                  description="Le parcours devient individuel : le patient est inscrit uniquement au premier créneau disponible, au lieu de l’ensemble des créneaux du parcours."
-                />
-              )}
-            </form.AppField>
+            <PathwayEnrollmentSettings form={form} />
           </form>
         </PopupBody>
 

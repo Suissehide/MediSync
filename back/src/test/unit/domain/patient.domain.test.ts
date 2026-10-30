@@ -334,6 +334,33 @@ describe('PatientDomain – parcours individuel "premier créneau dispo"', () =>
     expect(indivApt.endDate).toEqual(monday(12))
   })
 
+  it('cale le rendez-vous sur une tranche de la durée de la thématique, sans laisser de trou', async () => {
+    const { domain, created } = buildDomain([
+      {
+        id: 'apt-existing',
+        startDate: monday(10),
+        endDate: monday(10, 30),
+        slotID: 'slot-group-mon',
+        patientIDs: ['patient-1'],
+      },
+    ])
+
+    const result = await domain.enrollExistingPatientInPathways(
+      {
+        patientID: 'patient-1',
+        startDate: monday(0),
+        pathways: [{ tag: 'INDIV', timeOfDay: 'ALL_DAY', duration: 60 }],
+      },
+      'user-1',
+    )
+
+    expect(result.failedEnrollments).toEqual([])
+    const indivApt = created.at(-1) as CreatedAppointment
+    expect(indivApt.slotID).toBe('slot-indiv-mon')
+    expect(indivApt.startDate).toEqual(monday(11))
+    expect(indivApt.endDate).toEqual(monday(12))
+  })
+
   it('passe au créneau suivant si aucune sous-fenêtre ne tient', async () => {
     const { domain, created } = buildDomain([
       {
