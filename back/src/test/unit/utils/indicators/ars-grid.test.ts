@@ -37,7 +37,7 @@ const presence = (p: Partial<CohortPresence> = {}): CohortPresence => ({
   soignants: [],
   ...p,
   status:
-    p.status !== undefined ? p.status : p.honored === false ? 'no' : 'yes',
+    p.status === undefined ? (p.honored === false ? 'no' : 'yes') : p.status,
 })
 
 const dossier = ({

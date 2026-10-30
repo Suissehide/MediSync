@@ -206,7 +206,8 @@ describe('scoping des repositories d etablissement', () => {
     })
     expect(calls[2]?.args).not.toHaveProperty('data.archived')
     expect(
-      (calls[2]?.args as { data: { archivedAt: Date } }).data.archivedAt,
+      (calls[2]?.args as { data: { archivedAt: Date } } | undefined)?.data
+        .archivedAt,
     ).toBeInstanceOf(Date)
   })
 
@@ -1089,7 +1090,8 @@ describe('scoping des repositories de diagnostic', () => {
     })
     expect(calls[4]?.args).not.toHaveProperty('data.archived')
     expect(
-      (calls[4]?.args as { data: { archivedAt: Date } }).data.archivedAt,
+      (calls[4]?.args as { data: { archivedAt: Date } } | undefined)?.data
+        .archivedAt,
     ).toBeInstanceOf(Date)
   })
 })
@@ -1220,8 +1222,8 @@ describe('scoping slotTemplate et slot', () => {
     // La suppression des anciens liens doit precéder la creation des
     // nouveaux dans l'objet d'ecriture imbriquee (ordre des cles).
     const soignantLinksWrite = (
-      calls[0]?.args.data as { soignantLinks: object }
-    ).soignantLinks
+      calls[0]?.args.data as { soignantLinks: object } | undefined
+    )?.soignantLinks
     expect(Object.keys(soignantLinksWrite)).toEqual(['deleteMany', 'create'])
     expect(calls[1]).toMatchObject({
       model: 'slot',
@@ -2016,7 +2018,7 @@ describe('PatientAccessLogRepository', () => {
       },
     })
     expect(
-      (calls[0]?.args.where as Record<string, unknown>).serviceId,
+      (calls[0]?.args.where as Record<string, unknown> | undefined)?.serviceId,
     ).toBeUndefined()
   })
 

@@ -78,7 +78,7 @@ class TenantContext implements TenantContextInterface {
 
   current(): Tenant {
     const store = this.storage.getStore()
-    if (!store || store.kind !== 'tenant') {
+    if (store?.kind !== 'tenant') {
       throw new TenantContextMissingError('no tenant in the current request')
     }
     return store.tenant

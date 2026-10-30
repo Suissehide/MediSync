@@ -66,11 +66,11 @@ export const projectUserStatus = <T extends UserWithLogin>(
   return {
     ...user,
     invitationStatus:
-      lastLoginAt !== null
-        ? null
-        : link?.active
+      lastLoginAt === null
+        ? link?.active
           ? ('pending' as const)
-          : ('expired' as const),
+          : ('expired' as const)
+        : null,
     // Fin du délai entre deux renvois, pour griser le bouton ; null si le renvoi est possible.
     invitationResendableAt: link?.resendableAt ?? null,
   }

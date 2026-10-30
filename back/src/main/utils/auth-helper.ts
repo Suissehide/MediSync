@@ -23,4 +23,4 @@ const verifyJwt = <T>(token: string, secret: string): T => {
   return verify(token, encodedJwtSecret) as T
 }
 
-export { hashSecret, generateJwt, verifyJwt }
+export { generateJwt, hashSecret, verifyJwt }

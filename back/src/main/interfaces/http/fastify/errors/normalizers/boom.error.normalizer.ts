@@ -47,7 +47,7 @@ const boomErrorNormalizer: ErrorNormalizer = (
 
 export {
   boomErrorNormalizer,
+  formatZodErrorFromBoomError,
   isBoomError,
   isZodError,
-  formatZodErrorFromBoomError,
 }

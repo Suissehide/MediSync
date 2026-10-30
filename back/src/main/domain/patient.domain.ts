@@ -588,7 +588,7 @@ class PatientDomain implements PatientDomainInterface {
     if (
       !preview &&
       matchingTemplate?.motifRequired &&
-      (!enrollment.motif || !enrollment.motif.trim())
+      !enrollment.motif?.trim()
     ) {
       return {
         failure: {

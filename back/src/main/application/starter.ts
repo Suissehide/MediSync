@@ -153,10 +153,10 @@ const startApp = async (): Promise<IocContainer> => {
 }
 
 export {
+  scheduleActivityLogCleanup,
+  scheduleNotificationMails,
+  scheduleNotifications,
+  schedulePatientAccessLogCleanup,
   startApp,
   startIocContainer,
-  scheduleActivityLogCleanup,
-  schedulePatientAccessLogCleanup,
-  scheduleNotifications,
-  scheduleNotificationMails,
 }

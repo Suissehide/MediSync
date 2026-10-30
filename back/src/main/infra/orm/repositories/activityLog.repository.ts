@@ -33,7 +33,7 @@ class ActivityLogRepository implements ActivityLogRepositoryInterface {
     serviceId: string | null
   } {
     const store = this.tenantContext.peek()
-    if (!store || store.kind !== 'tenant') {
+    if (store?.kind !== 'tenant') {
       return { establishmentId: null, serviceId: null }
     }
     return {

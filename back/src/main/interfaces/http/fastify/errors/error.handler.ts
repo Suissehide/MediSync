@@ -136,4 +136,4 @@ const buildErrorHandler = (...errorNormalizers: ErrorNormalizer[]) => {
 // réutilise pour la même raison qu'ici — un message d'erreur n'est sûr à afficher que si NOUS
 // l'avons écrit (Boom ou une des erreurs maison ci-dessus), jamais s'il vient de recopier une
 // erreur brute (Prisma, entre autres) qui peut porter une valeur soumise.
-export { buildErrorHandler, normalizeResponse, isOwnErrorMessage }
+export { buildErrorHandler, isOwnErrorMessage, normalizeResponse }

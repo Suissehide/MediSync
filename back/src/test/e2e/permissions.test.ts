@@ -259,10 +259,10 @@ describe('permissions par role de service', () => {
           payload: payload as never,
         })
         if (SERVICE_PERMISSIONS[role].includes(permission)) {
-          if (heldStatus !== undefined) {
-            expect(res.statusCode).toBe(heldStatus)
-          } else {
+          if (heldStatus === undefined) {
             expect(res.statusCode).not.toBe(403)
+          } else {
+            expect(res.statusCode).toBe(heldStatus)
           }
         } else {
           expect(res.statusCode).toBe(403)

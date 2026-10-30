@@ -119,4 +119,4 @@ const loadConfig = (env: NodeJS.Dict<string> = process.env) => {
   return configSchema.parse(configData)
 }
 
-export { loadConfig, configSchema }
+export { configSchema, loadConfig }

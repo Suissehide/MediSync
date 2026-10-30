@@ -79,5 +79,5 @@ class AppEventBus {
   }
 }
 
-export { AppEventBus }
 export type { AppEvents }
+export { AppEventBus }
